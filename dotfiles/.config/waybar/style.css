@@ -145,7 +145,7 @@ window#waybar {
 
 #custom-cava {
     background: transparent;
-    color: @primary;
+    color: @primary;;
     padding: 0 8px;
     font-size: 12px;
 }
