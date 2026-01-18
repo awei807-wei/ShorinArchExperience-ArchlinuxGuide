@@ -1,0 +1,24 @@
+{
+    "include": [
+        "modules.jsonc"
+    ],
+    "layer": "top",
+    "position": "top",
+    "fixed-center": true,
+    "reload_style_on_change": true,
+    "modules-left": [
+        "niri/workspaces"
+    ],
+    "modules-center": [
+        "bluetooth",
+        "network",
+        "custom/applauncher",
+        "clock",
+        "custom/cava"
+    ],
+    "modules-right": [
+        "pulseaudio",
+        "battery",
+        "tray"
+    ]
+}
