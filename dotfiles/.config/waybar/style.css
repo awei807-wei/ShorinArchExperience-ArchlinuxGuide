@@ -14,21 +14,24 @@ window#waybar {
 }
 
 .modules-left {
-    background: #000000;
+    background: @surface_container;
+ border: 1px solid @outline_variant;
     border-radius: 22px;
     margin: 6px 0 0 10px;
     padding: 2px 8px;
 }
 
 .modules-center {
-    background: #000000;
+    background: @surface_container;
+ border: 1px solid @outline_variant;
     border-radius: 26px;
     margin: 6px 0 0 0;
     padding: 4px 16px;
 }
 
 .modules-right {
-    background: #000000;
+    background: @surface_container;
+ border: 1px solid @outline_variant;
     border-radius: 22px;
     margin: 6px 10px 0 0;
     padding: 2px 8px;
@@ -143,11 +146,26 @@ window#waybar {
     padding: 0 4px;
 }
 
+/* === CAVA 频谱过渡 === */
 #custom-cava {
     background: transparent;
-    color: @primary
+    color: @primary;
     padding: 0 8px;
     font-size: 12px;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 400ms;
+    transition-timing-function: linear;
+}
+
+/* 可见状态 */
+#custom-cava.visible {
+    opacity: 1;
+}
+
+/* 淡出状态 */
+#custom-cava.fadeout {
+    opacity: 0;
 }
 
 #custom-applauncher {
@@ -212,4 +230,30 @@ tooltip label {
     padding: 0;
     margin: 0;
     min-width: 0;
+}/* 音量滑块样式 */
+#pulseaudio-slider {
+    background: transparent;
+    padding: 0 8px;
+}
+
+#pulseaudio-slider slider {
+    min-width: 0px;
+    min-height: 0px;
+    opacity: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+#pulseaudio-slider trough {
+    min-width: 80px;
+    min-height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+#pulseaudio-slider highlight {
+    min-height: 6px;
+    background: @primary;
+    border-radius: 3px;
 }

@@ -18,7 +18,7 @@
         "custom/cava"
     ],
     "modules-right": [
-        "pulseaudio",
+        "group/audio",
         "battery",
         "tray"
     ]
