@@ -11,12 +11,11 @@
 include "binds.kdl"
 include "rule.kdl"
 include "output.kdl"
-include "animation.kdl"
+
 // 截图保存位置
 screenshot-path "~/Pictures/Screenshots/Niri-screenshots/%Y-%m-%d %H-%M-%S.png"
 
 // 环境变量
-
 environment {
     //LC_CTYPE "zh_CN.UTF-8" 会导致输入法出现漏字
     // 设置界面语言
@@ -25,7 +24,7 @@ environment {
     XMODIFIERS "@im=fcitx"
     // qt主题
     QT_QPA_PLATFORMTHEME "qt6ct"
-    // GTK软件使用的渲染器，可以解决n卡双显卡导致的GTK应用启动缓慢问题，AMD或Intel单显卡不需要这行设置可以注释掉
+    // GTK软件使用的渲染器，可以解决n卡双显卡导致的GTK应用启动缓慢问题
     GSK_RENDERER "gl"
     // 默认文本编辑器
     EDITOR "vim"
@@ -319,13 +318,13 @@ spawn-at-startup "waypaper" "--random"
 // 有聚焦窗口时桌面自动模糊的脚本
 spawn-at-startup "~/.config/scripts/niri_auto_blur_bg.sh"
 // 屏幕分享、录屏相关的环境设置
-spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri & /usr/lib/xdg-desktop-portal-gnome"
+spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri "
 // GNOME tracker修复
 spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 // 通知程序
 spawn-at-startup "mako"
 // 任务栏
-spawn-at-startup "waybar"
+spawn-sh-at-startup "GDK_BACKEND=wayland eww daemon && eww open island"
 // 输入法
 spawn-at-startup "fcitx5" 
 // 剪贴板守护进程
