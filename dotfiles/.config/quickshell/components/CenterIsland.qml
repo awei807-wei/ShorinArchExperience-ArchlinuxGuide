@@ -27,9 +27,23 @@ Rectangle {
     
     // 动态切换属性
     property bool showVolume: false
+    property real shakeOffset: 0
     property int volume: 0
 
     signal togglePanel()
+
+    // 抖动动画
+    function shake() {
+        shakeAnim.start()
+    }
+
+    SequentialAnimation {
+        id: shakeAnim
+        loops: 2
+        NumberAnimation { target: centerIsland; property: "shakeOffset"; to: 4; duration: 45; easing.type: Easing.OutQuad }
+        NumberAnimation { target: centerIsland; property: "shakeOffset"; to: -4; duration: 45; easing.type: Easing.OutQuad }
+        NumberAnimation { target: centerIsland; property: "shakeOffset"; to: 0; duration: 45; easing.type: Easing.OutQuad }
+    }
 
     Timer {
         interval: 1000; running: true; repeat: true; triggeredOnStart: true
@@ -68,6 +82,7 @@ Rectangle {
 
     // 音量反馈布局
     Column {
+        transform: Translate { x: centerIsland.shakeOffset }
         anchors.centerIn: parent
         width: parent.width * 0.8
         spacing: unit * 0.2

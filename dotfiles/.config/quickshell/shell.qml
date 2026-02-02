@@ -107,6 +107,7 @@ ShellRoot {
     // 中岛音量反馈代理
     property var centerIslandRef: null
     property int lastVolume: 70
+    property int rawVolumePercent: 70
 
     function refreshPanelData() {
         netProc.running = true
@@ -138,7 +139,13 @@ ShellRoot {
     Process {
         id: volProc
         command: ["sh", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2*100)}'"]
-        stdout: SplitParser { onRead: data => root.volumePercent = Math.min(parseInt(data) || 0, 100) }
+        stdout: SplitParser {
+            onRead: data => {
+                let raw = parseInt(data) || 0
+                root.rawVolumePercent = raw
+                root.volumePercent = Math.min(raw, 100)
+            }
+        }
     }
     Process {
         id: briProc
@@ -252,6 +259,33 @@ ShellRoot {
         }
     }
 
+    // 音量到顶抖动检测
+    property string lastVolMaxTs: ""
+    Process {
+        id: volMaxCheckProc
+        command: ["cat", "/tmp/qs-vol-max"]
+        stdout: SplitParser {
+            onRead: data => {
+                let ts = data.trim()
+                if (ts && ts !== root.lastVolMaxTs && root.lastVolMaxTs !== "") {
+                    if (root.centerIslandRef) {
+                        root.centerIslandRef.showVolume = true
+                        root.centerIslandRef.shake()
+                        volFeedbackTimer.restart()
+                    }
+                }
+                root.lastVolMaxTs = ts
+            }
+        }
+    }
+    Timer {
+        id: volMaxPollTimer
+        interval: 200
+        running: true
+        repeat: true
+        onTriggered: volMaxCheckProc.running = true
+    }
+
     // 面板自动刷新（展开时每500ms刷新数据）
     Timer {
         id: autoRefreshTimer
@@ -267,11 +301,16 @@ ShellRoot {
 
     // 监听音量变化，触发中岛反馈
     onVolumePercentChanged: {
-        if (root.centerIslandRef && volumePercent !== lastVolume) {
+        if (root.centerIslandRef) {
             root.centerIslandRef.volume = Math.min(volumePercent, 100)
             root.centerIslandRef.showVolume = true
             volFeedbackTimer.restart()
             root.lastVolume = volumePercent
+        }
+    }// 监听原始音量，检测到顶抖动
+    onRawVolumePercentChanged: {
+        if (root.centerIslandRef && rawVolumePercent >= 100 && lastVolume >= 100) {
+            root.centerIslandRef.shake()
         }
     }
     Process { id: reloadProc; command: ["sh", "-c", "pkill quickshell; sleep 0.3; quickshell &"] }
