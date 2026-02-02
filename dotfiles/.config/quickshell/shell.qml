@@ -29,7 +29,7 @@ ShellRoot {
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
-    readonly property real centerIslandOffsetX: baseUnit * 15    // 中岛X偏移
+    readonly property real centerIslandOffsetX: baseUnit * 16    // 中岛X偏移
     readonly property real rightIslandOffsetX:  baseUnit * 0    // 右岛X偏移
 
     // ═══════════════════════════════════════════════════════
@@ -67,18 +67,18 @@ ShellRoot {
     readonly property var animEasing: Easing.OutQuad
 
     // ═══════════════════════════════════════════════════════
-    // 🎨 Cyber-Zen 配色
+    // 🎨 Cyber-Zen 配色 (带动态兜底逻辑)
     // ═══════════════════════════════════════════════════════
-    readonly property color zenVoid: "#0a0a0a"
-    readonly property color zenInk: "#141414"
-    readonly property color zenStone: "#1f1f1f"
-    readonly property color zenMist: "#2a2a2a"
-    readonly property color zenAsh: "#3a3a3a"
-    readonly property color zenSmoke: "#5a5a5a"
-    readonly property color zenCloud: "#8a8a8a"
-    readonly property color zenSnow: "#cacaca"
-    readonly property color zenPure: "#f0f0f0"
-    readonly property color zenAccent: "#5a9a8a"
+    property color zenVoid: "#0a0a0a"
+    property color zenInk: "#141414"
+    property color zenStone: "#1f1f1f"
+    property color zenMist: "#2a2a2a"
+    property color zenAsh: "#3a3a3a"
+    property color zenSmoke: "#5a5a5a"
+    property color zenCloud: "#8a8a8a"
+    property color zenSnow: "#cacaca"
+    property color zenPure: "#f0f0f0"
+    property color zenAccent: "#5a9a8a"
 
     // ═══════════════════════════════════════════════════════
     // 📊 系统状态数据
@@ -272,10 +272,84 @@ ShellRoot {
         uptimeProc.running = true
     }
 
-    Process { id: matugenProc; command: ["sh", "-c", "matugen image ~/.config/wallpaper.jpg"] }
-    Timer { id: centerPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.centerPanelClosing = false }
-    Timer { id: systemPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.systemPanelClosing = false }
+    // 🎨 动态配色加载引擎
+    property string colorFilePath: "file:///home/shiyi/.cache/matugen/colors.json"
+    property string lastColorFileMtime: ""
+    
+    function applyDynamicColors(fileContent) {
+        try {
+            var data = JSON.parse(fileContent);
+            var c = data.colors;
+            
+            root.zenVoid = c.surface;
+            root.zenInk = c.surface_container;
+            root.zenAccent = c.primary;
+            root.zenSnow = c.on_surface;
+            root.zenMist = c.outline_variant;
+            
+            root.zenStone = Qt.lighter(root.zenInk, 1.15);
+            root.zenAsh = Qt.darker(root.zenSnow, 1.8);
+            root.zenSmoke = Qt.darker(root.zenSnow, 2.5);
+            root.zenCloud = Qt.darker(root.zenSnow, 1.3);
+            
+            console.log("[shell] Dynamic colors applied: primary=" + c.primary);} catch (e) {
+            console.log("[shell] Dynamic colors parse failed: " + e);
+        }
+    }
+    
+    // 延迟读取 Timer（避免竞态条件）
+    Timer {
+        id: delayedColorRead
+        interval: 150
+        repeat: false
+        onTriggered: root.applyDynamicColors(colorFileView.text())
+    }
 
+    FileView {
+        id: colorFileView
+        path: Qt.resolvedUrl(root.colorFilePath)
+        watchChanges: true
+        
+        onFileChanged: {
+            this.reload()
+            delayedColorRead.start()
+        }
+        
+        onLoadedChanged: {
+            if (this.loaded) {
+                root.applyDynamicColors(this.text())
+            }
+        }
+        
+        onLoadFailed: {
+            console.log("[shell] Color file not found, using fallback")}
+    }
+    
+    // 🔄 文件修改时间检测（强制热更新）
+    Process {
+        id: colorMtimeProc
+        command: ["stat", "-c", "%Y", "/home/shiyi/.cache/matugen/colors.json"]
+        stdout: SplitParser {
+            onRead: data => {
+                let newMtime = data.trim()
+                if (root.lastColorFileMtime !== "" && newMtime !== root.lastColorFileMtime) {
+                    console.log("[shell] Color file mtime changed, forcing reload...")
+                    // 关键技巧：先清空再设回，强制 FileView 重新加载
+                    root.colorFilePath = ""
+                    root.colorFilePath = "file:///home/shiyi/.cache/matugen/colors.json"
+                }
+                root.lastColorFileMtime = newMtime
+            }
+        }
+    }
+    
+    Timer {
+        id: colorPollTimer
+        interval: 2000
+        running: true
+        repeat: true
+        onTriggered: colorMtimeProc.running = true
+    }
     // 音量轮询（每300ms检测系统音量变化）
     Timer {
         id: volPollTimer
@@ -333,7 +407,10 @@ ShellRoot {
             }
             if (root.systemPanelVisible) root.refreshSystemData()
         }
-        Component.onCompleted: root.refreshSystemData()  // 启动时加载一次系统数据
+        Component.onCompleted: {
+            root.refreshSystemData()
+            root.loadDynamicColors() // 启动时尝试加载动态颜色
+        }
     }
 
     // 监听音量变化，触发中岛反馈
