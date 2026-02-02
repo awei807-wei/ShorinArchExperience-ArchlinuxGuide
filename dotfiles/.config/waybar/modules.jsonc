@@ -304,6 +304,8 @@
     "tooltip": false,
     "format": "{}",
     "exec": "~/.config/waybar/scripts/cava.sh",
+    "return-type": "json",
+    "hide-empty-text": true,
   },
   //禁止熄屏
   "idle_inhibitor": {

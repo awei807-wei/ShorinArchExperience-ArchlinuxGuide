@@ -4,3 +4,16 @@ indicator
 indicator-radius=200
 indicator-thickness=15
 effect-blur=10x5
+ring-color=#004e5c
+key-hl-color=#55d6f4
+line-color=#8990a5
+inside-color=#1c1f29
+separator-color=#004e5c
+ring-ver-color=#2d4678
+inside-ver-color=#aec6ff
+text-ver-color=#122f60
+line-ver-color=#8990a5
+ring-wrong-color=#93000a
+inside-wrong-color=#ffb4ab
+text-wrong-color=#690005
+line-wrong-color=#8990a5

@@ -1,25 +1,85 @@
 {
-    "include": [
-        "modules.jsonc"
-    ],
+    "height": 30,
     "layer": "top",
-    "position": "top",
-    "fixed-center": true,
-    "reload_style_on_change": true,
-    "modules-left": [
-        "niri/workspaces"
-    ],
-    "modules-center": [
-    "custom/screenshot",
-        "bluetooth",
-        "network",
-        "custom/applauncher",
-        "clock",
-        "custom/cava"
-    ],
-    "modules-right": [
-        "group/audio",
-        "battery",
-        "tray"
-    ]
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-bottom": 0,
+    "margin-right": 10,
+    "spacing": 5,
+    "modules-left": ["custom/launcher", "cpu", "memory", "niri/workspaces", "custom/weather"],
+    "modules-center": ["custom/spotify"],
+    "modules-right": ["tray", "pulseaudio", "network", "clock", "custom/power-menu"],
+    "niri/workspaces": {"format": "{icon}",
+      "format-icons": {
+        "active": "",
+        "default": ""
+      }
+    },
+    "tray": {
+        "spacing": 10
+    },
+    "clock": {
+        "format": "<span color='#bf616a'> </span>{:%a %b %d}",
+        "format-alt": "<span color='#bf616a'> </span>{:%I:%M %p}",
+        "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+    "cpu": {
+      "interval": 10,
+      "format": " {}%",
+      "max-length": 10
+    },
+    "memory": {
+        "interval": 30,
+        "format": " {}%",
+        "format-alt":" {used:0.1f}G",
+        "max-length": 10
+    },
+    "network": {
+        "format-wifi": "直 {signalStrength}%",
+        "format-ethernet": " wired",
+        "format-disconnected": "Disconnected  ",
+        "on-click": "nm-connection-editor"
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-bluetooth": "  {volume}%",
+        "format-bluetooth-muted": " ",
+        "format-muted": "婢",
+        "format-icons": {
+            "headphone": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+    "bluetooth": {
+        "on-click": "blueman-manager",
+        "format": " {status}"
+    },
+    "custom/weather": {
+      "exec": "python3 ~/.config/waybar/scripts/weather.py",
+      "restart-interval": 300,
+      "return-type": "json",
+      "on-click": "xdg-open https://weather.com"
+    },
+   "custom/spotify": {
+    "exec": "python3 ~/.config/waybar/scripts/mediaplayer.py --player spotify",
+    "format": "{}  ",
+    "return-type": "json",
+    "on-click": "playerctl play-pause",
+    "on-double-click-right": "playerctl next",
+    "on-scroll-down": "playerctl previous"
+    },
+    "custom/power-menu": {
+        "format": " <span color='#6a92d7'>⏻ </span>",
+        "on-click": "nwg-bar"
+    },
+    "custom/launcher": {
+        "format": " <span color='#6a92d7'> </span>",
+        "on-click": "fuzzel"
+    }
 }
