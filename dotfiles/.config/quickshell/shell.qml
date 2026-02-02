@@ -58,6 +58,12 @@ ShellRoot {
     readonly property real sliderWidth: baseUnit * 12         // 滑块宽度
     readonly property real sliderHeight: 3                    // 滑块高度
     readonly property real sliderHitArea: 10// 滑块点击区域扩展
+    // ═══════════════════════════════════════════════════════
+    // 🎬 L5 · 动画配置
+    // ═══════════════════════════════════════════════════════
+    readonly property int animSpeedNormal: 200
+    readonly property int animSpeedFast: 150
+    readonly property var animEasing: Easing.OutQuad
 
     // ═══════════════════════════════════════════════════════
     // 🎨 Cyber-Zen 配色
@@ -225,8 +231,8 @@ ShellRoot {
     }
 
     Process { id: matugenProc; command: ["sh", "-c", "matugen image ~/.config/wallpaper.jpg"] }
-    Timer { id: centerPanelCloseTimer; interval: 250; onTriggered: root.centerPanelClosing = false }
-    Timer { id: systemPanelCloseTimer; interval: 250; onTriggered: root.systemPanelClosing = false }
+    Timer { id: centerPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.centerPanelClosing = false }
+    Timer { id: systemPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.systemPanelClosing = false }
 
     // 音量轮询（每300ms检测系统音量变化）
     Timer {
@@ -357,7 +363,7 @@ ShellRoot {
                     border.width: 1
                     radius: root.panelRadius
                     opacity: root.centerPanelVisible ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Behavior on opacity { NumberAnimation { duration: root.animSpeedNormal; easing.type: root.animEasing } }
 
                     // 拦截背景点击，防止穿透到底层关闭
                     MouseArea {
@@ -513,7 +519,7 @@ ShellRoot {
                     border.width: 1
                     radius: root.panelRadius
                     opacity: root.systemPanelVisible ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Behavior on opacity { NumberAnimation { duration: root.animSpeedNormal; easing.type: root.animEasing } }
 
                     // 拦截背景点击，防止穿透到底层关闭
                     MouseArea {
