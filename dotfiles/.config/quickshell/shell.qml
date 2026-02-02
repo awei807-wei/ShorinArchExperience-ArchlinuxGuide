@@ -1,6 +1,7 @@
 //@ pragma UseQApplication
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import QtQuick
 ShellRoot {
     id: root
@@ -28,7 +29,7 @@ ShellRoot {
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
-    readonly property real centerIslandOffsetX: baseUnit * 16    // 中岛X偏移
+    readonly property real centerIslandOffsetX: baseUnit * 15    // 中岛X偏移
     readonly property real rightIslandOffsetX:  baseUnit * 0    // 右岛X偏移
 
     // ═══════════════════════════════════════════════════════
@@ -91,9 +92,57 @@ ShellRoot {
     property string btStatus: "OFF"
     property int volumePercent: 70
     property int brightnessPercent: 50
-    property string mediaTitle: "No Media"
-    property string mediaArtist: "--"
-    property bool mediaPlaying: false
+    // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
+    property var lastActivePlayer: null
+    readonly property var mprisPlayer: {
+        const players = Mpris.players.values;
+        if (!players || players.length === 0) return null;
+
+        // 1. 优先选择正在播放的源
+        const playing = players.find(p => p.playbackState === MprisPlaybackState.Playing);
+        if (playing) return playing;
+
+        // 2. 其次选择记忆中且仍存在的源
+        if (root.lastActivePlayer && players.indexOf(root.lastActivePlayer) !== -1) {
+            return root.lastActivePlayer;
+        }
+
+        // 3. 兜底选择第一个
+        return players[0];
+    }
+
+    // 在绑定块外部安全更新记忆，防止 Binding Loop
+    onMprisPlayerChanged: {
+        if (mprisPlayer && mprisPlayer.playbackState === MprisPlaybackState.Playing) {
+            if (mprisPlayer !== lastActivePlayer) {
+                root.lastActivePlayer = mprisPlayer;
+            }
+        }
+    }
+
+    property string mediaTitle: mprisPlayer?.trackTitle ?? "No Media"
+    property string mediaArtist: mprisPlayer?.trackArtists?.join(", ") 
+    property bool mediaPlaying: mprisPlayer?.playbackState === MprisPlaybackState.Playing
+    property real mediaPosition: 0
+    Timer {
+        id: mediaSyncTimer
+        interval: 500
+        running: root.mediaPlaying
+        repeat: true
+        onTriggered: {
+            if (root.mprisPlayer) {
+                // QuickShell 的 position 已经是秒为单位，无需除以一百万
+                root.mediaPosition = root.mprisPlayer.position
+            }
+        }
+    }
+    function formatTime(s) {
+        if (!s || s < 0) return "00:00"
+        let totalSeconds = Math.floor(s) // 已经是秒单位
+        let mins = Math.floor(totalSeconds / 60)
+        let secs = totalSeconds % 60
+        return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs)
+    }
     property string gpuInfo: "loading..."
     property string nvmeUsage: "0%"
     property string loadAvg: "0.00"
@@ -114,7 +163,6 @@ ShellRoot {
         btProc.running = true
         volProc.running = true
         briProc.running = true
-        mediaProc.running = true
     }
 
     // Data Processes
@@ -152,25 +200,12 @@ ShellRoot {
         command: ["sh", "-c", "brightnessctl -m | cut -d, -f4 | tr -d '%' 2>/dev/null || echo 50"]
         stdout: SplitParser { onRead: data => root.brightnessPercent = parseInt(data) || 50 }
     }
-    Process {
-        id: mediaProc
-        command: ["sh", "-c", "playerctl metadata --format '{{title}}|||{{artist}}|||{{status}}' 2>/dev/null || echo 'No Media|||--|||Stopped'"]
-        stdout: SplitParser {
-            onRead: data => {
-                let parts = data.split("|||")
-                root.mediaTitle = parts[0] || "No Media"
-                root.mediaArtist = parts[1] || "--"
-                root.mediaPlaying = (parts[2] === "Playing")
-            }
-        }
-    }
+    // 媒体数据已通过 MPRIS 服务自动同步，无需轮询
 
     // Control Processes
     Process { id: volSetProc; command: ["echo"] }
     Process { id: briSetProc; command: ["echo"] }
-    Process { id: mediaPrevProc; command: ["playerctl", "previous"] }
-    Process { id: mediaPlayProc; command: ["playerctl", "play-pause"] }
-    Process { id: mediaNextProc; command: ["playerctl", "next"] }
+    // 媒体控制已改用 MPRIS 原生方法
 
     // System Panel Processes
     Process {
@@ -293,7 +328,9 @@ ShellRoot {
         running: root.centerPanelVisible || root.systemPanelVisible
         repeat: true
         onTriggered: {
-            if (root.centerPanelVisible) root.refreshPanelData()
+            if (root.centerPanelVisible) {
+                root.refreshPanelData()
+            }
             if (root.systemPanelVisible) root.refreshSystemData()
         }
         Component.onCompleted: root.refreshSystemData()  // 启动时加载一次系统数据
@@ -485,8 +522,12 @@ ShellRoot {
                         Row {
                             x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: root.baseUnit * 1.8; spacing: root.panelGap * 4
                             Column {
-                                width: parent.width - root.baseUnit * 4; anchors.verticalCenter: parent.verticalCenter; spacing: 3
+                                width: parent.width - root.baseUnit * 4; anchors.verticalCenter: parent.verticalCenter; spacing: 2
                                 Text { text: root.mediaTitle; font.pixelSize: root.fontSecondary * 1.1; color: root.zenSnow; width: parent.width; elide: Text.ElideRight }
+                                Text {
+                                    text: root.formatTime(root.mediaPosition) + ' / ' + root.formatTime(root.mprisPlayer?.length ?? 0)
+                                    font.pixelSize: root.fontTiny; color: root.zenCloud
+                                }
                                 Text { text: root.mediaArtist; font.pixelSize: root.fontTiny; color: root.zenSmoke }
                             }
                             Row {
@@ -503,9 +544,11 @@ ShellRoot {
                                         MouseArea {
                                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                             onClicked: {
-                                                if (modelData === "prev") mediaPrevProc.running = true
-                                                else if (modelData === "next") mediaNextProc.running = true
-                                                else mediaPlayProc.running = truemediaProc.running = true
+                                                if (root.mprisPlayer) {
+                                                    if (modelData === "prev") root.mprisPlayer.previous()
+                                                    else if (modelData === "next") root.mprisPlayer.next()
+                                                    else root.mprisPlayer.togglePlaying()
+                                                }
                                             }
                                         }
                                     }
