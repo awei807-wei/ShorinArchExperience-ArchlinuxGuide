@@ -12,6 +12,7 @@ Rectangle {
     property color zenCloud: "#8a8a8a"
     property color zenSnow: "#cacaca"
     property color zenPure: "#f0f0f0"
+    property color zenAccent: "#5a9a8a"
     property var panelWindow: null
     
     // 岛屿位置偏移参数
@@ -58,6 +59,7 @@ Rectangle {
             zenSmoke: bar.zenSmoke
             zenCloud: bar.zenCloud
             zenSnow: bar.zenSnow
+            zenAccent: bar.zenAccent
             onTogglePanel: bar.centerClicked()}
         
         Item { Layout.fillWidth: true }
@@ -75,6 +77,7 @@ Rectangle {
             zenSmoke: bar.zenSmoke
             zenCloud: bar.zenCloud
             zenSnow: bar.zenSnow
+            zenAccent: bar.zenAccent
             panelWindow: bar.panelWindow
             onToggleSystemPanel: bar.systemClicked()
         }

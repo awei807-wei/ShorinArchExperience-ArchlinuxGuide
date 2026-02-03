@@ -29,7 +29,7 @@ ShellRoot {
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
-    readonly property real centerIslandOffsetX: baseUnit * 16    // 中岛X偏移
+    readonly property real centerIslandOffsetX: baseUnit * 14    // 中岛X偏移
     readonly property real rightIslandOffsetX:  baseUnit * 0    // 右岛X偏移
 
     // ═══════════════════════════════════════════════════════
@@ -161,7 +161,7 @@ ShellRoot {
     function refreshPanelData() {
         netProc.running = true
         btProc.running = true
-        volProc.running = true
+        // 音量已完全移交给事件驱动，面板不再参与轮询
         briProc.running = true
     }
 
@@ -273,12 +273,13 @@ ShellRoot {
     }
 
     // 🎨 动态配色加载引擎
-    property string colorFilePath: "file:///home/shiyi/.cache/matugen/colors.json"
-    property string lastColorFileMtime: ""
+    readonly property string colorFilePath: "file:///home/shiyi/.cache/matugen/colors.json"
     
     function applyDynamicColors(fileContent) {
+        if (!fileContent) return;
         try {
             var data = JSON.parse(fileContent);
+            if (!data.colors) return;
             var c = data.colors;
             
             root.zenVoid = c.surface;
@@ -292,15 +293,15 @@ ShellRoot {
             root.zenSmoke = Qt.darker(root.zenSnow, 2.5);
             root.zenCloud = Qt.darker(root.zenSnow, 1.3);
             
-            console.log("[shell] Dynamic colors applied: primary=" + c.primary);} catch (e) {
-            console.log("[shell] Dynamic colors parse failed: " + e);
+            console.log("[shell] Dynamic colors applied: primary=" + c.primary);
+        } catch (e) {
+            // 忽略半截 JSON 导致的解析错误
         }
     }
     
-    // 延迟读取 Timer（避免竞态条件）
     Timer {
         id: delayedColorRead
-        interval: 150
+        interval: 200
         repeat: false
         onTriggered: root.applyDynamicColors(colorFileView.text())
     }
@@ -310,6 +311,7 @@ ShellRoot {
         path: Qt.resolvedUrl(root.colorFilePath)
         watchChanges: true
         
+        // 简化热更新：watchChanges 触发时 reload，reload 触发 onLoadedChanged
         onFileChanged: {
             this.reload()
             delayedColorRead.start()
@@ -322,42 +324,45 @@ ShellRoot {
         }
         
         onLoadFailed: {
-            console.log("[shell] Color file not found, using fallback")}
+            console.log("[shell] Color file not found, using fallback")
+        }
     }
-    
-    // 🔄 文件修改时间检测（强制热更新）
+
+    // 音量同步防抖器：防止频繁信号导致进程堆叠
+    Timer {
+        id: volDebounceTimer
+        interval: 150
+        repeat: false
+        onTriggered: volProc.running = true
+    }
+
+    // 全链路音量事件驱动：仅监听 Sink（物理输出）变更
     Process {
-        id: colorMtimeProc
-        command: ["stat", "-c", "%Y", "/home/shiyi/.cache/matugen/colors.json"]
+        id: volSubscribeProc
+        running: true
+        command: ["pactl", "subscribe"]
         stdout: SplitParser {
             onRead: data => {
-                let newMtime = data.trim()
-                if (root.lastColorFileMtime !== "" && newMtime !== root.lastColorFileMtime) {
-                    console.log("[shell] Color file mtime changed, forcing reload...")
-                    // 关键技巧：先清空再设回，强制 FileView 重新加载
-                    root.colorFilePath = ""
-                    root.colorFilePath = "file:///home/shiyi/.cache/matugen/colors.json"
+                // 仅在 sink（输出设备）发生 change 事件时触发刷新
+                if (data.includes("'change' on sink")) {
+                    volDebounceTimer.restart()
                 }
-                root.lastColorFileMtime = newMtime
             }
         }
     }
-    
+
+    // 亮度依然没有标准的轻量级监听机制，保留低频轮询作为兜底
     Timer {
-        id: colorPollTimer
+        id: briPollTimer
         interval: 2000
         running: true
         repeat: true
-        onTriggered: colorMtimeProc.running = true
+        onTriggered: briProc.running = true
     }
-    // 音量轮询（每300ms检测系统音量变化）
-    Timer {
-        id: volPollTimer
-        interval: 300
-        running: true
-        repeat: true
-        onTriggered: volProc.running = true
-    }
+
+    // 面板关闭计时器（修复鼠标锁定 Bug）
+    Timer { id: centerPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.centerPanelClosing = false }
+    Timer { id: systemPanelCloseTimer; interval: root.animSpeedNormal + 50; onTriggered: root.systemPanelClosing = false }
 
     // 音量反馈计时器（2秒后切回时间显示）
     Timer {
@@ -368,37 +373,10 @@ ShellRoot {
         }
     }
 
-    // 音量到顶抖动检测
-    property string lastVolMaxTs: ""
-    Process {
-        id: volMaxCheckProc
-        command: ["cat", "/tmp/qs-vol-max"]
-        stdout: SplitParser {
-            onRead: data => {
-                let ts = data.trim()
-                if (ts && ts !== root.lastVolMaxTs && root.lastVolMaxTs !== "") {
-                    if (root.centerIslandRef) {
-                        root.centerIslandRef.showVolume = true
-                        root.centerIslandRef.shake()
-                        volFeedbackTimer.restart()
-                    }
-                }
-                root.lastVolMaxTs = ts
-            }
-        }
-    }
-    Timer {
-        id: volMaxPollTimer
-        interval: 200
-        running: true
-        repeat: true
-        onTriggered: volMaxCheckProc.running = true
-    }
-
-    // 面板自动刷新（展开时每500ms刷新数据）
+    // 面板自动刷新（展开时每 1s 刷新数据，降低性能消耗）
     Timer {
         id: autoRefreshTimer
-        interval: 500
+        interval: 1000
         running: root.centerPanelVisible || root.systemPanelVisible
         repeat: true
         onTriggered: {
@@ -409,7 +387,8 @@ ShellRoot {
         }
         Component.onCompleted: {
             root.refreshSystemData()
-            root.loadDynamicColors() // 启动时尝试加载动态颜色
+            volProc.running = true // 初始化时执行一次同步
+            // 修复：移除未定义的 loadDynamicColors 调用，FileView 会在加载时自动触发 apply
         }
     }
 
@@ -421,10 +400,21 @@ ShellRoot {
             volFeedbackTimer.restart()
             root.lastVolume = volumePercent
         }
-    }// 监听原始音量，检测到顶抖动
-    onRawVolumePercentChanged: {
-        if (root.centerIslandRef && rawVolumePercent >= 100 && lastVolume >= 100) {
-            root.centerIslandRef.shake()
+    }
+
+    // 监听到顶信号文件（事件驱动版：基于 inotify）
+    FileView {
+        id: volMaxFileView
+        path: "file:///tmp/qs-vol-max"
+        watchChanges: true
+        onFileChanged: {
+            // 收到 inotify 信号，强制唤起音量条并触发反馈
+            if (root.centerIslandRef) {
+                root.centerIslandRef.volume = 100
+                root.centerIslandRef.showVolume = true
+                root.centerIslandRef.shake()
+                volFeedbackTimer.restart() // 重启计时器，确保音量条持续显示
+            }
         }
     }
     Process { id: reloadProc; command: ["sh", "-c", "pkill quickshell; sleep 0.3; quickshell &"] }
@@ -457,6 +447,7 @@ ShellRoot {
                     zenCloud: root.zenCloud
                     zenSnow: root.zenSnow
                     zenPure: root.zenPure
+                    zenAccent: root.zenAccent
                     unit: root.baseUnit
                     leftIslandOffsetX: root.leftIslandOffsetX
                     centerIslandOffsetX: root.centerIslandOffsetX

@@ -13,7 +13,7 @@ Rectangle {
     property color zenSmoke: parent?.zenSmoke ?? "#5a5a5a"
     property color zenCloud: parent?.zenCloud ?? "#8a8a8a"
     property color zenSnow: parent?.zenSnow ?? "#cacaca"
-    property color zenAccent: "#5a9a8a"
+    property color zenAccent: parent?.zenAccent ?? "#5a9a8a"
 
     implicitWidth: unit * 10
     implicitHeight: parent?.height ?? unit * 2
