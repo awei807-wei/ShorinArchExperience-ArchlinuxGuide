@@ -1,85 +1,97 @@
-import QtQuick
-import QtQuick.Layouts
-import "components"
+// 模块：Bar（顶栏容器）
+// 功能：组合左/中/右三个岛屿组件，形成一整条顶部栏（Bar）。
+// 关联功能：
+// - LeftIsland：工作区指示/切换（通常与 niri 工作区相关）
+// - CenterIsland：时间显示/音量反馈（点击触发中心面板开关）
+// - RightIslands：系统信息/托盘/电源按钮（点击触发系统面板开关）
+// 与外部交互：
+// - 通过 signal centerClicked/systemClicked 把“点击意图”上报给 shell.qml 统一处理（切换面板窗口可见性、触发数据刷新）。
+// - 通过 property alias centerIsland 把 CenterIsland 实例暴露给外部（shell.qml 用它做音量反馈联动）。
+
+import QtQuick // QML 基础类型（Rectangle/Item/Row 等）
+import QtQuick.Layouts // RowLayout / Layout.*：用于顶栏左右分布布局
+import "components" // 引入本目录组件（LeftIsland/CenterIsland/RightIslands）
 Rectangle {
     id: bar
-    property real unit: 13.6
-    property color zenInk: "#141414"
-    property color zenMist: "#2a2a2a"
-    property color zenStone: "#1f1f1f"
-    property color zenAsh: "#3a3a3a"
-    property color zenSmoke: "#5a5a5a"
-    property color zenCloud: "#8a8a8a"
-    property color zenSnow: "#cacaca"
-    property color zenPure: "#f0f0f0"
-    property color zenAccent: "#5a9a8a"
-    property var panelWindow: null
+    property real unit: 13.6 // 尺寸基准（由 shell 注入；用于 spacing、字体、图标等的统一缩放）
+    property color zenInk: "#141414" // 主背景色（岛屿底色）
+    property color zenMist: "#2a2a2a" // 边框/分割线色
+    property color zenStone: "#1f1f1f" // hover 背景色
+    property color zenAsh: "#3a3a3a" // 次级文本/弱对比色
+    property color zenSmoke: "#5a5a5a" // 文本/图标弱化色
+    property color zenCloud: "#8a8a8a" // 文本中等对比色
+    property color zenSnow: "#cacaca" // 文本高对比色
+    property color zenPure: "#f0f0f0" // 备用纯色（更亮的文本/图标）
+    property color zenAccent: "#5a9a8a" // 强调色（进度条/高亮等）
+    property var panelWindow: null // 顶栏所在 PanelWindow；用于托盘菜单锚点定位（RightIslands）
     
     // 岛屿位置偏移参数
-    property real leftIslandOffsetX: 0
-    property real centerIslandOffsetX: 0
-    property real rightIslandOffsetX: 0
+    property real leftIslandOffsetX: 0 // 左岛 X 偏移（由 shell 注入；用于整体微调位置）
+    property real centerIslandOffsetX: 0 // 中岛 X 偏移（由 shell 注入）
+    property real rightIslandOffsetX: 0 // 右岛 X 偏移（由 shell 注入）
     
-    signal centerClicked()
-    signal systemClicked()
+    signal centerClicked() // 用户点击中岛时发出（由 shell 处理：切换中心面板）
+    signal systemClicked() // 用户点击系统岛时发出（由 shell 处理：切换系统面板）
 
     // 暴露中岛引用给外部
-    property alias centerIsland: centerIslandItem
-    color: "transparent"
+    property alias centerIsland: centerIslandItem // 对外暴露 CenterIsland 实例（用于音量反馈/动画联动）
+    color: "transparent" // Bar 自身不绘制底色（由各岛屿组件绘制）
     
     RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: 0
-        anchors.rightMargin: 0
-        spacing: unit * 0.8
+        anchors.fill: parent // 顶栏布局填充整个 Bar 区域
+        anchors.leftMargin: 0 // 左侧不额外留白（由各岛屿自己处理 padding）
+        anchors.rightMargin: 0 // 右侧不额外留白
+        spacing: unit * 0.8 // 左/中/右岛之间的基础间距（与 unit 联动）
         
         LeftIsland {
-            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter
-            Layout.fillHeight: true
-            Layout.leftMargin: bar.leftIslandOffsetX
-            unit: bar.unit
-            zenInk: bar.zenInk
-            zenMist: bar.zenMist
-            zenStone: bar.zenStone
-            zenCloud: bar.zenCloud
-            zenSnow: bar.zenSnow}
+            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter // 靠左并垂直居中
+            Layout.fillHeight: true // 高度跟随 Bar 高度（形成“岛屿”外形）
+            Layout.leftMargin: bar.leftIslandOffsetX // 左岛整体 X 偏移
+            unit: bar.unit // 传入尺寸基准
+            zenInk: bar.zenInk // 传入主题色：背景
+            zenMist: bar.zenMist // 传入主题色：边框/分割线
+            zenStone: bar.zenStone // 传入主题色：hover
+            zenCloud: bar.zenCloud // 传入主题色：中等文本
+            zenSnow: bar.zenSnow // 传入主题色：高对比文本
+        }
         
-        Item { Layout.fillWidth: true }
+        Item { Layout.fillWidth: true } // 弹性占位：把 CenterIsland 推到中间
         
         CenterIsland {
             id: centerIslandItem
-            Layout.alignment: Qt.AlignCenter | Qt.AlignVCenter
-            Layout.fillHeight: true
-            Layout.leftMargin: bar.centerIslandOffsetX
-            unit: bar.unit
-            zenInk: bar.zenInk
-            zenMist: bar.zenMist
-            zenStone: bar.zenStone
-            zenAsh: bar.zenAsh
-            zenSmoke: bar.zenSmoke
-            zenCloud: bar.zenCloud
-            zenSnow: bar.zenSnow
-            zenAccent: bar.zenAccent
-            onTogglePanel: bar.centerClicked()}
+            Layout.alignment: Qt.AlignCenter | Qt.AlignVCenter // 居中并垂直居中
+            Layout.fillHeight: true // 高度跟随 Bar 高度
+            Layout.leftMargin: bar.centerIslandOffsetX // 中岛整体 X 偏移
+            unit: bar.unit // 传入尺寸基准
+            zenInk: bar.zenInk // 传入主题色：背景
+            zenMist: bar.zenMist // 传入主题色：边框/分割线
+            zenStone: bar.zenStone // 传入主题色：hover
+            zenAsh: bar.zenAsh // 传入主题色：弱对比文本
+            zenSmoke: bar.zenSmoke // 传入主题色：图标/弱文本
+            zenCloud: bar.zenCloud // 传入主题色：中等文本
+            zenSnow: bar.zenSnow // 传入主题色：高对比文本
+            zenAccent: bar.zenAccent // 传入主题色：强调色（音量条等）
+            onTogglePanel: bar.centerClicked() // 把中岛点击信号上报给外部（shell）
+        }
         
-        Item { Layout.fillWidth: true }
+        Item { Layout.fillWidth: true } // 弹性占位：把 RightIslands 推到右侧
         
         RightIslands {
             id: rightIslandsItem
-            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-            Layout.fillHeight: true
-            Layout.rightMargin: -bar.rightIslandOffsetX
-            unit: bar.unit
-            zenInk: bar.zenInk
-            zenMist: bar.zenMist
-            zenStone: bar.zenStone
-            zenAsh: bar.zenAsh
-            zenSmoke: bar.zenSmoke
-            zenCloud: bar.zenCloud
-            zenSnow: bar.zenSnow
-            zenAccent: bar.zenAccent
-            panelWindow: bar.panelWindow
-            onToggleSystemPanel: bar.systemClicked()
+            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter // 靠右并垂直居中
+            Layout.fillHeight: true // 高度跟随 Bar 高度
+            Layout.rightMargin: -bar.rightIslandOffsetX // 右岛 X 偏移（这里用负号保持与其他岛一致的“正值向右”语义）
+            unit: bar.unit // 传入尺寸基准
+            zenInk: bar.zenInk // 传入主题色：背景
+            zenMist: bar.zenMist // 传入主题色：边框/分割线
+            zenStone: bar.zenStone // 传入主题色：hover
+            zenAsh: bar.zenAsh // 传入主题色：弱对比文本
+            zenSmoke: bar.zenSmoke // 传入主题色：图标/弱文本
+            zenCloud: bar.zenCloud // 传入主题色：中等文本
+            zenSnow: bar.zenSnow // 传入主题色：高对比文本
+            zenAccent: bar.zenAccent // 传入主题色：强调色（频谱/进度条等）
+            panelWindow: bar.panelWindow // 传入窗口引用（托盘右键菜单锚点需要）
+            onToggleSystemPanel: bar.systemClicked() // 把系统岛点击信号上报给外部（shell）
         }
     }
 }
