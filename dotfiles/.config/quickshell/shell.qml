@@ -43,7 +43,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real islandPaddingH: baseUnit * 1.4     // 岛屿水平内边距
     readonly property real islandPaddingV: baseUnit * 0.4     // 岛屿垂直内边距
     readonly property real islandGap: baseUnit * 0.8          // 岛屿之间间距
-    readonly property real barMarginTop: baseUnit * 0.8       // 顶栏距屏幕顶部
+    readonly property real barMarginTop: baseUnit * 0.2       // 顶栏距屏幕顶部
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距（用于避免贴边）
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
