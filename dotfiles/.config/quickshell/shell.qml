@@ -10,7 +10,7 @@
 // 关联功能：
 // - Bar.qml：顶栏容器（组合 LeftIsland/CenterIsland/RightIslands）
 // - CenterIsland：用于时间显示与音量反馈（通过 centerIslandRef 进行联动）
-// - 面板窗口：在本文件内“内联”构建 UI（并非使用 components/CenterPanel/SystemPanel）
+// - 面板窗口：中心面板使用 components/CenterPanel；系统面板仍在本文件内“内联”构建（待抽离）
 // 注意：
 // - 外部命令执行依赖系统工具：nmcli/bluetoothctl/wpctl/brightnessctl/pactl/playerctl 等。
 // - 为降低开销，音量采用“事件驱动（pactl subscribe）+ 去抖”，亮度采用“低频轮询兜底”。
@@ -19,6 +19,7 @@ import Quickshell // ShellRoot/PanelWindow/Variants/screen 枚举等
 import Quickshell.Io // Process/SplitParser/FileView：命令执行、流式解析、文件监听
 import Quickshell.Services.Mpris // MPRIS：播放器列表与播放状态
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
+import "components"
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
     id: root
@@ -26,7 +27,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 🎛️ 主控参数 - 只需要调这一个
     // ═══════════════════════════════════════════════════════
-    readonly property real k: 6                    // UI 缩放主控参数：k 越大 baseUnit 越小（UI 越小）
+    readonly property real k: 6.6                    // UI 缩放主控参数：k 越大 baseUnit 越小（UI 越小）
 
     // ═══════════════════════════════════════════════════════
     // 📐 L0 · 基准单位（自动计算）
@@ -517,167 +518,46 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
     // ===== CENTER PANEL WINDOW =====
-    Variants {
-        model: Quickshell.screens // 多屏支持：为每个 screen 创建一套“中心面板”窗口（全屏透明层 + 居中面板）
-        delegate: Component {
-            PanelWindow {
-                id: panelWindow
-                required property var modelData // Variants 委托注入：当前 screen 对象
-                screen: modelData // 将窗口绑定到当前屏幕
-                visible: root.centerPanelVisible || root.centerPanelClosing // 可见条件：打开或处于关闭动画缓冲期
-                exclusiveZone: -1 // 不占用布局保留区（允许窗口覆盖全屏）
-                anchors { top: true; bottom: true; left: true; right: true } // 覆盖全屏：用于捕获“点击外部关闭”
-                color: "transparent" // 窗口透明：只显示面板本体
-
-                // 底层：点击外部关闭
-                MouseArea {
-                    z: 0 // 底层：在面板之下，用于捕获空白处点击
-                    anchors.fill: parent // 覆盖整个窗口（全屏）
-                    onClicked: {
-                        if (root.centerPanelVisible) {
-                            root.centerPanelClosing = true // 进入关闭缓冲期（让动画/事件有时间完成）
-                            root.centerPanelVisible = false // 关闭面板“打开态”
-                            centerPanelCloseTimer.start() // 启动定时器：动画结束后清除 closing 标志
-                        }
-                    }
-                }
-
-                // 上层：Panel 内容
-                Rectangle {
-                    id: panelBg
-                    z: 1 // 上层：实际可见的面板本体
-                    x: (panelWindow.width - root.panelWidth) / 2 // 面板水平居中
-                    y: root.panelOffsetY // 面板距顶部偏移（与顶栏保持视觉间距）
-                    width: root.panelWidth // 面板固定宽度
-                    height: panelContent.height + root.panelPadding * 2 // 面板高度 = 内容高度 + 上下内边距
-                    color: root.zenInk // 面板背景色
-                    border.color: root.zenMist // 面板边框色
-                    border.width: 1 // 面板边框宽度
-                    radius: root.panelRadius // 面板圆角
-                    opacity: root.centerPanelVisible ? 1 : 0 // 透明度：用淡入淡出做开关动画
-                    Behavior on opacity { NumberAnimation { duration: root.animSpeedNormal; easing.type: root.animEasing } } // 透明度动画
-
-                    // 拦截背景点击，防止穿透到底层关闭
-                    MouseArea {
-                        anchors.fill: parent // 覆盖面板本体区域
-                        propagateComposedEvents: false // 不传播 composed events（减少“穿透”概率）
-                        onPressed: function(mouse) { mouse.accepted = false } // 不吞掉 press：让内部控件（滑块/按钮）仍可响应；空白处可能仍被底层关闭层捕获
-                    }
-
-                    Column {
-                        id: panelContent
-                        anchors.top: parent.top // 内容从面板顶部开始布局
-                        anchors.topMargin: root.panelPadding // 顶部内边距
-                        anchors.left: parent.left // 左对齐
-                        anchors.right: parent.right // 右对齐（撑满宽度）
-                        spacing: root.panelGap // 行间距（统一控制视觉密度）
-
-                        // CONNECTIVITY
-                        Text { x: root.panelPadding; text: "CONNECTIVITY"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：连接性
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 对齐并预留左右内边距
-                            Text { text: "NETWORK"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth } // 标签：网络
-                            Text { text: root.netSSID; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：SSID/Disconnected
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 与上一行对齐
-                            Text { text: "INTERFACE"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth } // 标签：网卡接口
-                            Text { text: root.netInterface; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：接口名（当前为静态占位）
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 与上一行对齐
-                            Text { text: "BLUETOOTH"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth } // 标签：蓝牙
-                            Text { text: "archshiyi - " + root.btStatus; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：蓝牙电源状态（示例前缀 + ON/OFF）
-                        }
-                        Rectangle { x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: 1; color: root.zenMist } // 分割线
-
-                        // AUDIO / DISPLAY
-                        Text { x: root.panelPadding; text: "AUDIO / DISPLAY"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：音频/显示
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2; spacing: root.panelGap * 3; height: root.panelRowHeight // 一行：音量
-                            Text { text: "VOL"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter } // 标签：音量
-                            Rectangle {
-                                clip: false // 不裁剪：允许点击热区 margins 扩展到外侧
-                                width: root.sliderWidth; height: root.sliderHeight; color: root.zenMist; anchors.verticalCenter: parent.verticalCenter // 进度条背景
-                                Rectangle { width: parent.width * Math.min(root.volumePercent / 100, 1.0); height: root.sliderHeight; color: root.zenCloud } // 进度条填充（0~100）
-                                MouseArea {
-                                    anchors.fill: parent; anchors.margins: -root.sliderHitArea; cursorShape: Qt.PointingHandCursor // 扩大点击热区并提示可点击
-                                    onClicked: mouse => {
-                                        let pct = Math.min(Math.round(mouse.x / parent.width * 100), 100) // 点击位置映射到 0~100，并限制最大 100
-                                        let vol = (pct / 100).toFixed(2)  // 把百分比转为 0.00~1.00（wpctl 需要）
-                                        volSetProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", vol] // 组装设置音量命令
-                                        volSetProc.running = true // 异步执行设置音量
-                                        root.volumePercent = pct // 立即更新 UI（不等待命令回写）
-                                    }
-                                }
-                            }
-                            Text { text: root.volumePercent + "%"; font.pixelSize: root.fontSecondary; color: root.zenCloud; width: root.panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter } // 音量数值
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2; spacing: root.panelGap * 3; height: root.panelRowHeight // 一行：亮度
-                            Text { text: "BRI"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter } // 标签：亮度
-                            Rectangle {
-                                width: root.sliderWidth; height: root.sliderHeight; color: root.zenMist; anchors.verticalCenter: parent.verticalCenter // 进度条背景
-                                Rectangle { width: parent.width * root.brightnessPercent / 100; height: root.sliderHeight; color: root.zenCloud } // 进度条填充（0~100）
-                                MouseArea {
-                                    anchors.fill: parent; anchors.margins: -root.sliderHitArea; cursorShape: Qt.PointingHandCursor // 扩大点击热区并提示可点击
-                                    onClicked: mouse => {
-                                        let pct = Math.round(mouse.x / parent.width * 100) // 点击位置映射到 0~100
-                                        briSetProc.command = ["brightnessctl", "set", pct + "%"] // 组装设置亮度命令
-                                        briSetProc.running = true // 异步执行设置亮度
-                                        root.brightnessPercent = pct // 立即更新 UI（不等待命令回写）
-                                    }
-                                }
-                            }
-                            Text { text: root.brightnessPercent + "%"; font.pixelSize: root.fontSecondary; color: root.zenCloud; width: root.panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter } // 亮度数值
-                        }
-                        Rectangle { x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: 1; color: root.zenMist } // 分割线
-
-                        // NOW PLAYING
-                        Text { x: root.panelPadding; text: "NOW PLAYING"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：媒体播放
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: root.baseUnit * 1.8; spacing: root.panelGap * 4 // 一行：媒体信息 + 控制按钮
-                            Column {
-                                width: parent.width - root.baseUnit * 4; anchors.verticalCenter: parent.verticalCenter; spacing: 2 // 左侧信息区（右侧预留按钮空间）
-                                Text { text: root.mediaTitle; font.pixelSize: root.fontSecondary * 1.1; color: root.zenSnow; width: parent.width; elide: Text.ElideRight } // 标题（过长省略）
-                                Text {
-                                    text: root.formatTime(root.mediaPosition) + " / " + root.formatTime(root.mprisPlayer?.length ?? 0) // 进度：当前位置 / 总时长（总时长缺失则 00:00）
-                                    font.pixelSize: root.fontTiny; color: root.zenCloud // 辅助信息字号与颜色
-                                }
-                                Text { text: root.mediaArtist; font.pixelSize: root.fontTiny; color: root.zenSmoke } // 艺术家（弱化显示）
-                            }
-                            Row {
-                                anchors.verticalCenter: parent.verticalCenter; spacing: root.panelGap * 2.5 // 右侧按钮组
-                                Repeater {
-                                    model: ["prev", "play", "next"] // 三个按钮：上一首/播放暂停/下一首
-                                    Rectangle {
-                                        width: root.baseUnit * 1.1; height: root.baseUnit * 1.1; color: "transparent"; radius: 2 // 按钮容器（透明背景）
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: modelData === "prev" ? "⏮" : (modelData === "next" ? "⏭" : (root.mediaPlaying ? "⏸" : "▶")) // 根据按钮类型与播放状态选择图标
-                                            font.pixelSize: root.fontSecondary; color: root.zenSmoke // 图标字号与颜色
-                                        }
-                                        MouseArea {
-                                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor // 点击热区覆盖按钮并提示可点击
-                                            onClicked: {
-                                                if (root.mprisPlayer) { // 只有在存在播放器时才执行控制
-                                                    if (modelData === "prev") root.mprisPlayer.previous() // 上一首
-                                                    else if (modelData === "next") root.mprisPlayer.next() // 下一首
-                                                    else root.mprisPlayer.togglePlaying() // 播放/暂停切换
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Item { width: 1; height: root.panelGap * 2 } // 底部留白（避免内容贴边）
-                    }
-                }
-            }
-        }
+    CenterPanel {
+        root: root
+        volSetProc: volSetProc
+        briSetProc: briSetProc
+        centerPanelCloseTimer: centerPanelCloseTimer
+        animEasing: root.animEasing
+        animSpeedNormal: root.animSpeedNormal
+        baseUnit: root.baseUnit
+        brightnessPercent: root.brightnessPercent
+        btStatus: root.btStatus
+        centerPanelClosing: root.centerPanelClosing
+        centerPanelVisible: root.centerPanelVisible
+        fontSecondary: root.fontSecondary
+        fontSection: root.fontSection
+        fontTiny: root.fontTiny
+        mediaArtist: root.mediaArtist
+        mediaPlaying: root.mediaPlaying
+        mediaPosition: root.mediaPosition
+        mediaTitle: root.mediaTitle
+        mprisPlayer: root.mprisPlayer
+        netInterface: root.netInterface
+        netSSID: root.netSSID
+        panelGap: root.panelGap
+        panelLabelWidth: root.panelLabelWidth
+        panelOffsetY: root.panelOffsetY
+        panelPadding: root.panelPadding
+        panelRadius: root.panelRadius
+        panelRowHeight: root.panelRowHeight
+        panelWidth: root.panelWidth
+        sliderHeight: root.sliderHeight
+        sliderHitArea: root.sliderHitArea
+        sliderWidth: root.sliderWidth
+        volumePercent: root.volumePercent
+        zenAsh: root.zenAsh
+        zenCloud: root.zenCloud
+        zenInk: root.zenInk
+        zenMist: root.zenMist
+        zenSmoke: root.zenSmoke
+        zenSnow: root.zenSnow
     }
-
     // ===== SYSTEM PANEL WINDOW =====
     Variants {
         model: Quickshell.screens // 多屏支持：为每个 screen 创建一套“系统面板”窗口（全屏透明层 + 右侧面板）
