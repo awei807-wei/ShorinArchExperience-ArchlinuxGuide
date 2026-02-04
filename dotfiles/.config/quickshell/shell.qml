@@ -64,17 +64,19 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 📦 L3 · 子面板
     // ═══════════════════════════════════════════════════════
     readonly property real panelWidth: baseUnit * 22          // 面板宽度
-    readonly property real panelPadding: baseUnit * 0.8       // 面板内边距
+    readonly property real panelPadding: baseUnit * 1       // 面板内边距
     readonly property real panelRadius: baseUnit * 0.15       // 面板圆角
     readonly property real panelGap: baseUnit * 0.15          // 面板内元素间距
-    readonly property real panelOffsetY: baseUnit * 3       // 面板 Y 偏移（面板从顶栏向下的距离）
+    readonly property real panelOffsetY: baseUnit * 2.4       // 面板 Y 偏移（面板从顶栏向下的距离）
     readonly property real panelLabelWidth: baseUnit * 5      // 面板标签宽度
-    readonly property real panelRowHeight: baseUnit * 0.9     // 面板行高
+    readonly property real panelRowHeight: baseUnit * 0.9
+    readonly property real panelSectionGap: baseUnit * 1.2      // 面板分区间距（盒子之间的距离）
+    readonly property real panelRowGap: baseUnit * 0.35         // 面板行间距（盒子内部行距）     // 面板行高
 
     // ═══════════════════════════════════════════════════════
     // 🎚️ L4 · 滑块/进度条
     // ═══════════════════════════════════════════════════════
-    readonly property real sliderWidth: baseUnit * 12         // 滑块宽度
+    readonly property real sliderWidth: baseUnit * 14.8         // 滑块宽度
     readonly property real sliderHeight: 3                    // 滑块高度
     readonly property real sliderHitArea: 10                // 滑块点击热区扩展（像素；便于小尺寸下操作）
     // ═══════════════════════════════════════════════════════
@@ -439,9 +441,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         Component.onCompleted: {
             configRoot.refreshSystemData() // 启动后主动采集一次系统信息（避免首次打开系统面板仍是 loading）
             volProc.running = true // 启动后同步一次音量（让中岛反馈与面板默认值一致）
-            // 修复：移除未定义的 loadDynamicColors 调用，FileView 会在加载时自动触发 apply
         }
     }
+
 
     // 监听音量变化，触发中岛反馈
     onVolumePercentChanged: {
@@ -521,45 +523,80 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
     // ===== CENTER PANEL WINDOW =====
-    CenterPanel {
-        root: configRoot
-        volSetProc: volSetProc
-        briSetProc: briSetProc
-        centerPanelCloseTimer: configRoot.centerPanelCloseTimer
-        animEasing: configRoot.animEasing
-        animSpeedNormal: configRoot.animSpeedNormal
-        baseUnit: configRoot.baseUnit
-        brightnessPercent: configRoot.brightnessPercent
-        btStatus: configRoot.btStatus
-        centerPanelClosing: configRoot.centerPanelClosing
-        centerPanelVisible: configRoot.centerPanelVisible
-        fontSecondary: configRoot.fontSecondary
-        fontSection: configRoot.fontSection
-        fontTiny: configRoot.fontTiny
-        mediaArtist: configRoot.mediaArtist
-        mediaPlaying: configRoot.mediaPlaying
-        mediaPosition: configRoot.mediaPosition
-        mediaTitle: configRoot.mediaTitle
-        mprisPlayer: configRoot.mprisPlayer
-        netInterface: configRoot.netInterface
-        netSSID: configRoot.netSSID
-        panelGap: configRoot.panelGap
-        panelLabelWidth: configRoot.panelLabelWidth
-        panelOffsetY: configRoot.panelOffsetY
-        panelPadding: configRoot.panelPadding
-        panelRadius: configRoot.panelRadius
-        panelRowHeight: configRoot.panelRowHeight
-        panelWidth: configRoot.panelWidth
-        sliderHeight: configRoot.sliderHeight
-        sliderHitArea: configRoot.sliderHitArea
-        sliderWidth: configRoot.sliderWidth
-        volumePercent: configRoot.volumePercent
-        zenAsh: configRoot.zenAsh
-        zenCloud: configRoot.zenCloud
-        zenInk: configRoot.zenInk
-        zenMist: configRoot.zenMist
-        zenSmoke: configRoot.zenSmoke
-        zenSnow: configRoot.zenSnow
+    Variants {
+        model: Quickshell.screens
+        delegate: Component {
+            PanelWindow {
+                id: centerPanelWindow
+                required property var modelData
+                screen: modelData
+                visible: configRoot.centerPanelVisible || configRoot.centerPanelClosing
+                exclusiveZone: -1
+                anchors { top: true; bottom: true; left: true; right: true }
+                color: "transparent"
+
+                // 底层：点击外部关闭
+                MouseArea {
+                    z: 0
+                    anchors.fill: parent
+                    onClicked: {
+                        if (configRoot.centerPanelVisible) {
+                            configRoot.centerPanelClosing = true
+                            configRoot.centerPanelVisible = false
+                            configRoot.centerPanelCloseTimer.start()
+                        }
+                    }
+                }
+
+                CenterPanel {
+                    root: configRoot
+                    volSetProc: volSetProc
+                    briSetProc: briSetProc
+                    centerPanelCloseTimer: configRoot.centerPanelCloseTimer
+
+                    centerPanelVisible: configRoot.centerPanelVisible
+                    centerPanelClosing: configRoot.centerPanelClosing
+
+                    // 核心重构：真正的相对绑定。直接使用中岛的实时坐标，无视复杂的布局计算
+                    panelX: (configRoot.centerIslandRef ? (configRoot.centerIslandRef.x + configRoot.centerIslandRef.width / 2) : (modelData.width / 2)) - configRoot.panelWidth / 2
+
+                    animEasing: configRoot.animEasing
+                    animSpeedNormal: configRoot.animSpeedNormal
+                    baseUnit: configRoot.baseUnit
+                    brightnessPercent: configRoot.brightnessPercent
+                    btStatus: configRoot.btStatus
+                    fontSecondary: configRoot.fontSecondary
+                    fontSection: configRoot.fontSection
+                    fontTiny: configRoot.fontTiny
+                    mediaArtist: configRoot.mediaArtist
+                    mediaPlaying: configRoot.mediaPlaying
+                    mediaPosition: configRoot.mediaPosition
+                    mediaTitle: configRoot.mediaTitle
+                    mprisPlayer: configRoot.mprisPlayer
+                    netInterface: configRoot.netInterface
+                    netSSID: configRoot.netSSID
+                    panelGap: configRoot.panelGap
+                    panelLabelWidth: configRoot.panelLabelWidth
+                    panelOffsetY: configRoot.panelOffsetY
+                    panelPadding: configRoot.panelPadding
+                    panelRadius: configRoot.panelRadius
+                    panelRowHeight: configRoot.panelRowHeight
+                    panelRowGap: configRoot.panelRowGap
+                    panelSectionGap: configRoot.panelSectionGap
+                    panelWidth: configRoot.panelWidth
+                    sliderHeight: configRoot.sliderHeight
+                    sliderHitArea: configRoot.sliderHitArea
+                    sliderWidth: configRoot.sliderWidth
+                    volumePercent: configRoot.volumePercent
+                    zenAsh: configRoot.zenAsh
+                    zenCloud: configRoot.zenCloud
+                    zenInk: configRoot.zenInk
+                    zenMist: configRoot.zenMist
+                    zenSmoke: configRoot.zenSmoke
+                    zenSnow: configRoot.zenSnow
+                }
+            }
+        }
     }
     // ===== SYSTEM PANEL WINDOW =====
     Variants {
