@@ -75,20 +75,32 @@ Variants {
                 }
             }
 
-            // 上层：Panel 内容
-            Rectangle {
-                id: panelBg
-                z: 1 // 上层：实际可见的面板本体
-                x: (panelWindow.width - panelWidth) / 2 // 面板水平居中
-                y: panelOffsetY // 面板距顶部偏移（与顶栏保持视觉间距）
-                width: panelWidth // 面板固定宽度
-                height: panelContent.height + panelPadding * 2 // 面板高度 = 内容高度 + 上下内边距
-                color: zenInk // 面板背景色
-                border.color: zenMist // 面板边框色
-                border.width: 1 // 面板边框宽度
-                radius: panelRadius // 面板圆角
-                opacity: centerPanelVisible ? 1 : 0 // 透明度：用淡入淡出做开关动画
-                Behavior on opacity { NumberAnimation { duration: animSpeedNormal; easing.type: animEasing } } // 透明度动画
+            // 上层：裁剪容器（模拟 CSS clip-path 从上往下擦除）
+            Item {
+                id: clipContainer
+                z: 1
+                x: (panelWindow.width - panelWidth) / 2
+                y: panelOffsetY
+                width: panelWidth
+                // 高度动画：关闭时为 0，展开时为实际高度（模拟卷轴擦除）
+                height: centerPanelVisible ? (panelContent.height + panelPadding * 2) : 0
+                Behavior on height { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+                clip: true // 开启裁剪
+
+                Rectangle {
+                    id: panelBg
+                    width: parent.width
+                    height: panelContent.height + panelPadding * 2
+                    color: zenInk
+                    border.color: zenMist
+                    border.width: 1
+                    radius: panelRadius
+                    // Y 轴微浮动画：关闭时上移 8px，展开时归位
+                    y: centerPanelVisible ? 0 : -8
+                    Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                    // 透明度淡入淡出
+                    opacity: centerPanelVisible ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
 
                 // 拦截背景点击，防止穿透到底层关闭
                 MouseArea {
@@ -207,6 +219,7 @@ Variants {
                     Item { width: 1; height: panelGap * 2 } // 底部留白（避免内容贴边）
                 }
             }
+        }
         }
     }
 }

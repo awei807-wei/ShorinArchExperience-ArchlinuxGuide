@@ -22,7 +22,7 @@ import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation �
 import "components"
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
-    id: root
+    id: configRoot
 
     // ═══════════════════════════════════════════════════════
     // 🎛️ 主控参数 - 只需要调这一个
@@ -105,6 +105,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property bool centerPanelVisible: false                 // 中心面板是否可见（用于 window.visible 绑定）
     property bool centerPanelClosing: false                 // 中心面板“关闭动画期间”的占位可见（避免点击后立刻消失造成事件/动画问题）
     property bool systemPanelClosing: false                 // 系统面板“关闭动画期间”的占位可见
+    // 提供给子组件的显式引用（避免组件内出现 undefined / 自引用绑定）
+    property alias centerPanelCloseTimer: centerPanelCloseTimer
+    property alias systemPanelCloseTimer: systemPanelCloseTimer
     property string netSSID: "loading..."                   // 网络 SSID（由 nmcli 采集）
     property string netInterface: "wlo1"                    // 网络接口名（展示用/占位；当前不随命令自动更新）
     property string btStatus: "OFF"                         // 蓝牙电源状态（ON/OFF；由 bluetoothctl 采集）
@@ -124,8 +127,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         if (playing) return playing; // 有播放态则优先使用（符合用户直觉）
 
         // 2. 其次选择记忆中且仍存在的源
-        if (root.lastActivePlayer && players.indexOf(root.lastActivePlayer) !== -1) {
-            return root.lastActivePlayer; // 播放器暂停/停止时仍保持上一次来源（避免频繁切换）
+        if (configRoot.lastActivePlayer && players.indexOf(configRoot.lastActivePlayer) !== -1) {
+            return configRoot.lastActivePlayer; // 播放器暂停/停止时仍保持上一次来源（避免频繁切换）
         }
 
         // 3. 兜底选择第一个
@@ -136,7 +139,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     onMprisPlayerChanged: {
         if (mprisPlayer && mprisPlayer.playbackState === MprisPlaybackState.Playing) {
             if (mprisPlayer !== lastActivePlayer) {
-                root.lastActivePlayer = mprisPlayer; // 仅在“正在播放”时更新记忆（避免暂停时抖动）
+                configRoot.lastActivePlayer = mprisPlayer; // 仅在“正在播放”时更新记忆（避免暂停时抖动）
             }
         }
     }
@@ -148,12 +151,12 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Timer {
         id: mediaSyncTimer
         interval: 500 // 每 500ms 同步一次播放位置（足够平滑，且开销可控）
-        running: root.mediaPlaying // 仅在播放态运行（暂停时不需要更新）
+        running: configRoot.mediaPlaying // 仅在播放态运行（暂停时不需要更新）
         repeat: true // 周期性触发
         onTriggered: {
-            if (root.mprisPlayer) {
+            if (configRoot.mprisPlayer) {
                 // QuickShell 的 position 已经是秒为单位，无需除以一百万
-                root.mediaPosition = root.mprisPlayer.position // 同步当前播放位置（秒）
+                configRoot.mediaPosition = configRoot.mprisPlayer.position // 同步当前播放位置（秒）
             }
         }
     }
@@ -204,7 +207,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             onRead: data => {
                 let parts = data.split(":") // 拆分为 [NAME, TYPE]
                 if (parts[1] === "802-11-wireless") { // 仅关心 Wi-Fi 连接（忽略有线等）
-                    root.netSSID = parts[0] || "Disconnected" // 写回 SSID（空值回退）
+                    configRoot.netSSID = parts[0] || "Disconnected" // 写回 SSID（空值回退）
                 }
             }
         }
@@ -212,7 +215,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Process {
         id: btProc
         command: ["sh", "-c", "bluetoothctl show | grep -q 'Powered: yes' && echo 'ON' || echo 'OFF'"] // 判断蓝牙电源是否开启
-        stdout: SplitParser { onRead: data => root.btStatus = data.trim() } // 写回 ON/OFF（驱动 UI）
+        stdout: SplitParser { onRead: data => configRoot.btStatus = data.trim() } // 写回 ON/OFF（驱动 UI）
     }
     Process {
         id: volProc
@@ -220,15 +223,15 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         stdout: SplitParser {
             onRead: data => {
                 let raw = parseInt(data) || 0 // 解析音量百分比（可能因解析失败得到 NaN，因此兜底 0）
-                root.rawVolumePercent = raw // 记录原始值（便于排查 >100% 的情况）
-                root.volumePercent = Math.min(raw, 100) // 对外展示统一截断到 0~100（UI 不显示 >100%）
+                configRoot.rawVolumePercent = raw // 记录原始值（便于排查 >100% 的情况）
+                configRoot.volumePercent = Math.min(raw, 100) // 对外展示统一截断到 0~100（UI 不显示 >100%）
             }
         }
     }
     Process {
         id: briProc
         command: ["sh", "-c", "brightnessctl -m | cut -d, -f4 | tr -d '%' 2>/dev/null || echo 50"] // 读取亮度百分比；失败回退 50
-        stdout: SplitParser { onRead: data => root.brightnessPercent = parseInt(data) || 50 } // 写回亮度百分比
+        stdout: SplitParser { onRead: data => configRoot.brightnessPercent = parseInt(data) || 50 } // 写回亮度百分比
     }
     // 媒体数据已通过 MPRIS 服务自动同步，无需轮询
 
@@ -241,45 +244,45 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Process {
         id: gpuProc
         command: ["sh", "-c", "lspci | grep -i vga | cut -d: -f3 | head -1 | xargs"] // 取第一条 VGA 控制器描述
-        stdout: SplitParser { onRead: data => root.gpuInfo = data.trim() || "Unknown" } // 写回 GPU 文本
+        stdout: SplitParser { onRead: data => configRoot.gpuInfo = data.trim() || "Unknown" } // 写回 GPU 文本
     }
     Process {
         id: nvmeProc
         command: ["sh", "-c", "df -h / | awk 'NR==2 {print $5}'"] // 取根分区使用率（如 42%）
-        stdout: SplitParser { onRead: data => root.nvmeUsage = data.trim() || "0%" } // 写回占用百分比
+        stdout: SplitParser { onRead: data => configRoot.nvmeUsage = data.trim() || "0%" } // 写回占用百分比
     }
     Process {
         id: loadProc
         command: ["sh", "-c", "cat /proc/loadavg | cut -d' ' -f1"] // 取 1 分钟 load average
-        stdout: SplitParser { onRead: data => root.loadAvg = data.trim() || "0.00" } // 写回 load average
+        stdout: SplitParser { onRead: data => configRoot.loadAvg = data.trim() || "0.00" } // 写回 load average
     }
     Process {
         id: procCountProc
         command: ["sh", "-c", "ps aux | wc -l"] // 粗略统计进程行数（包含表头；用于“趋势”而非精确值）
-        stdout: SplitParser { onRead: data => root.processCount = parseInt(data) || 0 } // 写回进程数量
+        stdout: SplitParser { onRead: data => configRoot.processCount = parseInt(data) || 0 } // 写回进程数量
     }
     Process {
         id: memTotalProc
         command: ["sh", "-c", "free -g | awk 'NR==2 {print $2}'"] // 取总内存（GB）
-        stdout: SplitParser { onRead: data => root.memTotal = parseFloat(data) || 32 } // 写回总内存（解析失败回退 32）
+        stdout: SplitParser { onRead: data => configRoot.memTotal = parseFloat(data) || 32 } // 写回总内存（解析失败回退 32）
     }
     Process {
         id: memUsedProc
         command: ["sh", "-c", "free -g | awk 'NR==2 {print $3}'"] // 取已用内存（GB）
-        stdout: SplitParser { onRead: data => root.memUsed = parseFloat(data) || 0 } // 写回已用内存
+        stdout: SplitParser { onRead: data => configRoot.memUsed = parseFloat(data) || 0 } // 写回已用内存
     }
     Process {
         id: kernelProc
         command: ["sh", "-c", "uname -r"] // 读取内核版本
-        stdout: SplitParser { onRead: data => root.kernelVer = data.trim() } // 写回内核版本字符串
+        stdout: SplitParser { onRead: data => configRoot.kernelVer = data.trim() } // 写回内核版本字符串
     }
     Process {
         id: cpuModelProc
         command: ["cat", "/proc/cpuinfo"] // 读取 CPU 信息（多行；SplitParser 会逐行回调）
         stdout: SplitParser { 
             onRead: data => {
-                if (data.includes("model name") && root.cpuModel === "loading...") { // 仅在首次命中时写入（避免重复覆盖）
-                    root.cpuModel = data.split(":")[1].trim() // 提取冒号后面的型号字符串
+                if (data.includes("model name") && configRoot.cpuModel === "loading...") { // 仅在首次命中时写入（避免重复覆盖）
+                    configRoot.cpuModel = data.split(":")[1].trim() // 提取冒号后面的型号字符串
                 }
             }
         }
@@ -287,7 +290,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Process {
         id: uptimeProc
         command: ["sh", "-c", "uptime -p | sed 's/up //' | cut -d, -f1"] // 取简化 uptime（只保留第一段，如 2 hours）
-        stdout: SplitParser { onRead: data => root.uptime = data.trim() } // 写回 uptime 字符串
+        stdout: SplitParser { onRead: data => configRoot.uptime = data.trim() } // 写回 uptime 字符串
     }
 
     function refreshSystemData() {
@@ -322,16 +325,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             if (!data.colors) return; // 结构不符合预期则忽略
             var c = data.colors; // 提取 colors 字段（减少后续访问层级）
             
-            root.zenVoid = c.surface; // 深色基底
-            root.zenInk = c.surface_container; // 主背景色（岛屿/面板底色）
-            root.zenAccent = c.primary; // 强调色（进度条/频谱等）
-            root.zenSnow = c.on_surface; // 高对比前景色（文本）
-            root.zenMist = c.outline_variant; // 边框/分割线色
+            configRoot.zenVoid = c.surface; // 深色基底
+            configRoot.zenInk = c.surface_container; // 主背景色（岛屿/面板底色）
+            configRoot.zenAccent = c.primary; // 强调色（进度条/频谱等）
+            configRoot.zenSnow = c.on_surface; // 高对比前景色（文本）
+            configRoot.zenMist = c.outline_variant; // 边框/分割线色
             
-            root.zenStone = Qt.lighter(root.zenInk, 1.15); // hover 背景：在主背景上提亮
-            root.zenAsh = Qt.darker(root.zenSnow, 1.8); // 弱标题色：在文本色上压暗
-            root.zenSmoke = Qt.darker(root.zenSnow, 2.5); // 更弱文本色：进一步压暗
-            root.zenCloud = Qt.darker(root.zenSnow, 1.3); // 中等文本色：轻微压暗
+            configRoot.zenStone = Qt.lighter(configRoot.zenInk, 1.15); // hover 背景：在主背景上提亮
+            configRoot.zenAsh = Qt.darker(configRoot.zenSnow, 1.8); // 弱标题色：在文本色上压暗
+            configRoot.zenSmoke = Qt.darker(configRoot.zenSnow, 2.5); // 更弱文本色：进一步压暗
+            configRoot.zenCloud = Qt.darker(configRoot.zenSnow, 1.3); // 中等文本色：轻微压暗
             
             console.log("[shell] Dynamic colors applied: primary=" + c.primary); // 调试日志：记录主题已更新
         } catch (e) {
@@ -343,12 +346,12 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         id: delayedColorRead
         interval: 200 // 延迟读取：用于避免“写文件中途触发”导致读到半截 JSON
         repeat: false // 单次触发
-        onTriggered: root.applyDynamicColors(colorFileView.text()) // 读取 FileView 当前文本并应用配色
+        onTriggered: configRoot.applyDynamicColors(colorFileView.text()) // 读取 FileView 当前文本并应用配色
     }
 
     FileView {
         id: colorFileView
-        path: Qt.resolvedUrl(root.colorFilePath) // 解析为绝对 URL（避免相对路径解析问题）
+        path: Qt.resolvedUrl(configRoot.colorFilePath) // 解析为绝对 URL（避免相对路径解析问题）
         watchChanges: true // 开启文件变更监听（inotify）
         
         // 简化热更新：watchChanges 触发时 reload，reload 触发 onLoadedChanged
@@ -359,7 +362,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         
         onLoadedChanged: {
             if (this.loaded) {
-                root.applyDynamicColors(this.text()) // 文件已成功加载时立刻应用（首次加载/手动 reload）
+                configRoot.applyDynamicColors(this.text()) // 文件已成功加载时立刻应用（首次加载/手动 reload）
             }
         }
         
@@ -403,13 +406,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 面板关闭计时器（修复鼠标锁定 Bug）
     Timer {
         id: centerPanelCloseTimer // 中心面板关闭“缓冲期”定时器（配合 opacity 动画）
-        interval: root.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志（多给 50ms 保险）
-        onTriggered: root.centerPanelClosing = false // 关闭缓冲期结束：允许 window 彻底不可见
+        interval: configRoot.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志（多给 50ms 保险）
+        onTriggered: configRoot.centerPanelClosing = false // 关闭缓冲期结束：允许 window 彻底不可见
     }
     Timer {
         id: systemPanelCloseTimer // 系统面板关闭“缓冲期”定时器
-        interval: root.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志
-        onTriggered: root.systemPanelClosing = false // 关闭缓冲期结束
+        interval: configRoot.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志
+        onTriggered: configRoot.systemPanelClosing = false // 关闭缓冲期结束
     }
 
     // 音量反馈计时器（2秒后切回时间显示）
@@ -417,7 +420,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         id: volFeedbackTimer
         interval: 2000 // 音量反馈展示时长（ms）
         onTriggered: {
-            if (root.centerIslandRef) root.centerIslandRef.showVolume = false // 到时后隐藏音量布局，回到时间布局
+            if (configRoot.centerIslandRef) configRoot.centerIslandRef.showVolume = false // 到时后隐藏音量布局，回到时间布局
         }
     }
 
@@ -425,16 +428,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Timer {
         id: autoRefreshTimer
         interval: 1000 // 刷新周期（ms）：面板展开时每秒刷新一次
-        running: root.centerPanelVisible || root.systemPanelVisible // 仅在任一面板可见时运行（降低后台开销）
+        running: configRoot.centerPanelVisible || configRoot.systemPanelVisible // 仅在任一面板可见时运行（降低后台开销）
         repeat: true // 周期性触发
         onTriggered: {
-            if (root.centerPanelVisible) { // 中心面板展开时才刷新其数据
-                root.refreshPanelData() // 刷新网络/蓝牙/亮度等
+            if (configRoot.centerPanelVisible) { // 中心面板展开时才刷新其数据
+                configRoot.refreshPanelData() // 刷新网络/蓝牙/亮度等
             }
-            if (root.systemPanelVisible) root.refreshSystemData() // 系统面板展开时刷新系统信息
+            if (configRoot.systemPanelVisible) configRoot.refreshSystemData() // 系统面板展开时刷新系统信息
         }
         Component.onCompleted: {
-            root.refreshSystemData() // 启动后主动采集一次系统信息（避免首次打开系统面板仍是 loading）
+            configRoot.refreshSystemData() // 启动后主动采集一次系统信息（避免首次打开系统面板仍是 loading）
             volProc.running = true // 启动后同步一次音量（让中岛反馈与面板默认值一致）
             // 修复：移除未定义的 loadDynamicColors 调用，FileView 会在加载时自动触发 apply
         }
@@ -442,11 +445,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
     // 监听音量变化，触发中岛反馈
     onVolumePercentChanged: {
-        if (root.centerIslandRef) { // 只有拿到 CenterIsland 实例引用时才做联动
-            root.centerIslandRef.volume = Math.min(volumePercent, 100) // 写入音量数值（确保不超过 100）
-            root.centerIslandRef.showVolume = true // 切换到音量反馈布局
+        if (configRoot.centerIslandRef) { // 只有拿到 CenterIsland 实例引用时才做联动
+            configRoot.centerIslandRef.volume = Math.min(volumePercent, 100) // 写入音量数值（确保不超过 100）
+            configRoot.centerIslandRef.showVolume = true // 切换到音量反馈布局
             volFeedbackTimer.restart() // 重置“回到时间显示”的计时
-            root.lastVolume = volumePercent // 记录上一次音量（可用于后续差分/调试）
+            configRoot.lastVolume = volumePercent // 记录上一次音量（可用于后续差分/调试）
         }
     }
 
@@ -457,10 +460,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         watchChanges: true // 开启文件变更监听（inotify）
         onFileChanged: {
             // 收到 inotify 信号，强制唤起音量条并触发反馈
-            if (root.centerIslandRef) {
-                root.centerIslandRef.volume = 100 // 强制显示 100%（语义：到顶）
-                root.centerIslandRef.showVolume = true // 切换到音量反馈布局
-                root.centerIslandRef.shake() // 触发抖动动画（增强提示）
+            if (configRoot.centerIslandRef) {
+                configRoot.centerIslandRef.volume = 100 // 强制显示 100%（语义：到顶）
+                configRoot.centerIslandRef.showVolume = true // 切换到音量反馈布局
+                configRoot.centerIslandRef.shake() // 触发抖动动画（增强提示）
                 volFeedbackTimer.restart() // 重启计时器，确保音量条持续显示一段时间
             }
         }
@@ -481,37 +484,37 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     left: true // 贴左
                     right: true // 贴右（形成整条顶栏）
                 }
-                implicitHeight: root.islandHeight // 顶栏高度（与岛屿高度一致）
-                margins.top: root.barMarginTop // 距离屏幕顶部的留白
-                margins.left: root.barMarginSide // 左边距
-                margins.right: root.barMarginSide // 右边距
+                implicitHeight: configRoot.islandHeight // 顶栏高度（与岛屿高度一致）
+                margins.top: configRoot.barMarginTop // 距离屏幕顶部的留白
+                margins.left: configRoot.barMarginSide // 左边距
+                margins.right: configRoot.barMarginSide // 右边距
                 color: "transparent" // 窗口透明，实际视觉由 Bar/岛屿绘制
                 Bar {
                     anchors.fill: parent // Bar 填充整个窗口
-                    zenInk: root.zenInk // 主题色注入：背景
-                    zenMist: root.zenMist // 主题色注入：边框
-                    zenStone: root.zenStone // 主题色注入：hover
-                    zenAsh: root.zenAsh // 主题色注入：弱标题
-                    zenSmoke: root.zenSmoke // 主题色注入：弱文本
-                    zenCloud: root.zenCloud // 主题色注入：中等文本
-                    zenSnow: root.zenSnow // 主题色注入：高对比文本
-                    zenPure: root.zenPure // 主题色注入：备用亮色
-                    zenAccent: root.zenAccent // 主题色注入：强调色
-                    unit: root.baseUnit // 尺寸基准注入
-                    leftIslandOffsetX: root.leftIslandOffsetX // 位置偏移注入：左岛
-                    centerIslandOffsetX: root.centerIslandOffsetX // 位置偏移注入：中岛
-                    rightIslandOffsetX: root.rightIslandOffsetX // 位置偏移注入：右岛
+                    zenInk: configRoot.zenInk // 主题色注入：背景
+                    zenMist: configRoot.zenMist // 主题色注入：边框
+                    zenStone: configRoot.zenStone // 主题色注入：hover
+                    zenAsh: configRoot.zenAsh // 主题色注入：弱标题
+                    zenSmoke: configRoot.zenSmoke // 主题色注入：弱文本
+                    zenCloud: configRoot.zenCloud // 主题色注入：中等文本
+                    zenSnow: configRoot.zenSnow // 主题色注入：高对比文本
+                    zenPure: configRoot.zenPure // 主题色注入：备用亮色
+                    zenAccent: configRoot.zenAccent // 主题色注入：强调色
+                    unit: configRoot.baseUnit // 尺寸基准注入
+                    leftIslandOffsetX: configRoot.leftIslandOffsetX // 位置偏移注入：左岛
+                    centerIslandOffsetX: configRoot.centerIslandOffsetX // 位置偏移注入：中岛
+                    rightIslandOffsetX: configRoot.rightIslandOffsetX // 位置偏移注入：右岛
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
-                    Component.onCompleted: root.centerIslandRef = centerIsland // 记录 CenterIsland 实例（用于音量反馈联动）
+                    Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 CenterIsland 实例（用于音量反馈联动）
                     onCenterClicked: {
                         console.log("[shell] centerClicked, toggling panel") // 调试日志：记录点击
-                        root.centerPanelVisible = !root.centerPanelVisible // 切换中心面板可见性
-                        if (root.centerPanelVisible) root.refreshPanelData() // 打开时立刻刷新数据（避免陈旧）
+                        configRoot.centerPanelVisible = !configRoot.centerPanelVisible // 切换中心面板可见性
+                        if (configRoot.centerPanelVisible) configRoot.refreshPanelData() // 打开时立刻刷新数据（避免陈旧）
                     }
                     onSystemClicked: {
                         console.log("[shell] systemClicked, toggling system panel") // 调试日志：记录点击
-                        root.systemPanelVisible = !root.systemPanelVisible // 切换系统面板可见性
-                        if (root.systemPanelVisible) root.refreshSystemData() // 打开时立刻刷新数据
+                        configRoot.systemPanelVisible = !configRoot.systemPanelVisible // 切换系统面板可见性
+                        if (configRoot.systemPanelVisible) configRoot.refreshSystemData() // 打开时立刻刷新数据
                     }
                 }
             }
@@ -519,44 +522,44 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     }
     // ===== CENTER PANEL WINDOW =====
     CenterPanel {
-        root: root
+        root: configRoot
         volSetProc: volSetProc
         briSetProc: briSetProc
-        centerPanelCloseTimer: centerPanelCloseTimer
-        animEasing: root.animEasing
-        animSpeedNormal: root.animSpeedNormal
-        baseUnit: root.baseUnit
-        brightnessPercent: root.brightnessPercent
-        btStatus: root.btStatus
-        centerPanelClosing: root.centerPanelClosing
-        centerPanelVisible: root.centerPanelVisible
-        fontSecondary: root.fontSecondary
-        fontSection: root.fontSection
-        fontTiny: root.fontTiny
-        mediaArtist: root.mediaArtist
-        mediaPlaying: root.mediaPlaying
-        mediaPosition: root.mediaPosition
-        mediaTitle: root.mediaTitle
-        mprisPlayer: root.mprisPlayer
-        netInterface: root.netInterface
-        netSSID: root.netSSID
-        panelGap: root.panelGap
-        panelLabelWidth: root.panelLabelWidth
-        panelOffsetY: root.panelOffsetY
-        panelPadding: root.panelPadding
-        panelRadius: root.panelRadius
-        panelRowHeight: root.panelRowHeight
-        panelWidth: root.panelWidth
-        sliderHeight: root.sliderHeight
-        sliderHitArea: root.sliderHitArea
-        sliderWidth: root.sliderWidth
-        volumePercent: root.volumePercent
-        zenAsh: root.zenAsh
-        zenCloud: root.zenCloud
-        zenInk: root.zenInk
-        zenMist: root.zenMist
-        zenSmoke: root.zenSmoke
-        zenSnow: root.zenSnow
+        centerPanelCloseTimer: configRoot.centerPanelCloseTimer
+        animEasing: configRoot.animEasing
+        animSpeedNormal: configRoot.animSpeedNormal
+        baseUnit: configRoot.baseUnit
+        brightnessPercent: configRoot.brightnessPercent
+        btStatus: configRoot.btStatus
+        centerPanelClosing: configRoot.centerPanelClosing
+        centerPanelVisible: configRoot.centerPanelVisible
+        fontSecondary: configRoot.fontSecondary
+        fontSection: configRoot.fontSection
+        fontTiny: configRoot.fontTiny
+        mediaArtist: configRoot.mediaArtist
+        mediaPlaying: configRoot.mediaPlaying
+        mediaPosition: configRoot.mediaPosition
+        mediaTitle: configRoot.mediaTitle
+        mprisPlayer: configRoot.mprisPlayer
+        netInterface: configRoot.netInterface
+        netSSID: configRoot.netSSID
+        panelGap: configRoot.panelGap
+        panelLabelWidth: configRoot.panelLabelWidth
+        panelOffsetY: configRoot.panelOffsetY
+        panelPadding: configRoot.panelPadding
+        panelRadius: configRoot.panelRadius
+        panelRowHeight: configRoot.panelRowHeight
+        panelWidth: configRoot.panelWidth
+        sliderHeight: configRoot.sliderHeight
+        sliderHitArea: configRoot.sliderHitArea
+        sliderWidth: configRoot.sliderWidth
+        volumePercent: configRoot.volumePercent
+        zenAsh: configRoot.zenAsh
+        zenCloud: configRoot.zenCloud
+        zenInk: configRoot.zenInk
+        zenMist: configRoot.zenMist
+        zenSmoke: configRoot.zenSmoke
+        zenSnow: configRoot.zenSnow
     }
     // ===== SYSTEM PANEL WINDOW =====
     Variants {
@@ -566,7 +569,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 id: sysPanelWindow
                 required property var modelData // Variants 委托注入：当前 screen 对象
                 screen: modelData // 将窗口绑定到当前屏幕
-                visible: root.systemPanelVisible || root.systemPanelClosing // 可见条件：打开或处于关闭动画缓冲期
+                visible: configRoot.systemPanelVisible || configRoot.systemPanelClosing // 可见条件：打开或处于关闭动画缓冲期
                 exclusiveZone: -1 // 不占用布局保留区（允许窗口覆盖全屏）
                 anchors { top: true; bottom: true; left: true; right: true } // 覆盖全屏：用于捕获“点击外部关闭”
                 color: "transparent" // 窗口透明：只显示面板本体
@@ -576,103 +579,54 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     z: 0 // 底层：在面板之下，用于捕获空白处点击
                     anchors.fill: parent // 覆盖整个窗口（全屏）
                     onClicked: {
-                        if (root.systemPanelVisible) {
-                            root.systemPanelClosing = true // 进入关闭缓冲期（让动画/事件有时间完成）
-                            root.systemPanelVisible = false // 关闭面板“打开态”
-                            systemPanelCloseTimer.start() // 启动定时器：动画结束后清除 closing 标志
+                        if (configRoot.systemPanelVisible) {
+                            configRoot.systemPanelClosing = true // 进入关闭缓冲期（让动画/事件有时间完成）
+                            configRoot.systemPanelVisible = false // 关闭面板“打开态”
+                            configRoot.systemPanelCloseTimer.start() // 启动定时器：动画结束后清除 closing 标志
                         }
                     }
                 }
 
                 // 上层：Panel 内容
-                Rectangle {
-                    id: sysPanelBg
-                    z: 1 // 上层：实际可见的面板本体
-                    x: sysPanelWindow.width - root.panelWidth - root.barMarginSide // 面板靠右（预留右侧边距）
-                    y: root.panelOffsetY // 面板距顶部偏移（与顶栏保持视觉间距）
-                    width: root.panelWidth // 面板固定宽度（与中心面板一致）
-                    height: sysPanelContent.height + root.panelPadding * 2 // 面板高度 = 内容高度 + 上下内边距
-                    color: root.zenInk // 面板背景色
-                    border.color: root.zenMist // 面板边框色
-                    border.width: 1 // 面板边框宽度
-                    radius: root.panelRadius // 面板圆角
-                    opacity: root.systemPanelVisible ? 1 : 0 // 透明度：用淡入淡出做开关动画
-                    Behavior on opacity { NumberAnimation { duration: root.animSpeedNormal; easing.type: root.animEasing } } // 透明度动画
+                SystemPanel {
+                    root: configRoot
+                    systemPanelCloseTimer: configRoot.systemPanelCloseTimer
 
-                    // 拦截背景点击，防止穿透到底层关闭
-                    MouseArea {
-                        anchors.fill: parent // 覆盖面板本体区域
-                        propagateComposedEvents: false // 不传播 composed events（减少“穿透”概率）
-                        onPressed: function(mouse) { mouse.accepted = false } // 不吞掉 press：让内部控件仍可响应；空白处可能仍被底层关闭层捕获
-                    }
-                    Column {
-                        id: sysPanelContent
-                        anchors.top: parent.top // 内容从面板顶部开始布局
-                        anchors.topMargin: root.panelPadding // 顶部内边距
-                        anchors.left: parent.left // 左对齐
-                        anchors.right: parent.right // 右对齐（撑满宽度）
-                        spacing: root.panelGap // 行间距（统一控制视觉密度）
+                    systemPanelVisible: configRoot.systemPanelVisible
+                    systemPanelClosing: configRoot.systemPanelClosing
 
-                        // GRAPHICS
-                        Text { x: root.panelPadding; text: "GRAPHICS"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：图形
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 对齐并预留左右内边距
-                            Text { text: "GPU"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：GPU
-                            Text { text: root.gpuInfo; font.pixelSize: root.fontSecondary; color: root.zenCloud; width: parent.width - root.panelLabelWidth; elide: Text.ElideRight } // 值：GPU 描述（过长省略）
-                        }
-                        Rectangle { x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: 1; color: root.zenMist } // 分割线
+                    barMarginSide: configRoot.barMarginSide
+                    panelGap: configRoot.panelGap
+                    panelLabelWidth: configRoot.panelLabelWidth
+                    panelOffsetY: configRoot.panelOffsetY
+                    panelPadding: configRoot.panelPadding
+                    panelRadius: configRoot.panelRadius
+                    panelWidth: configRoot.panelWidth
+                    sliderWidth: configRoot.sliderWidth
 
-                        // STORAGE
-                        Text { x: root.panelPadding; text: "STORAGE"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：存储
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2; spacing: root.panelGap * 3 // 一行：根分区占用
-                            Text { text: "NVME"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：NVME/根分区
-                            Rectangle {
-                                width: root.sliderWidth * 0.8; height: 4; color: root.zenMist; anchors.verticalCenter: parent.verticalCenter // 进度条背景
-                                Rectangle { width: parent.width * parseInt(root.nvmeUsage) / 100; height: 4; color: root.zenCloud } // 填充条：按百分比缩放
-                            }
-                            Text { text: root.nvmeUsage; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 数值：如 42%
-                        }
-                        Rectangle { x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: 1; color: root.zenMist } // 分割线
+                    fontSecondary: configRoot.fontSecondary
+                    fontSection: configRoot.fontSection
 
-                        // PERFORMANCE
-                        Text { x: root.panelPadding; text: "PERFORMANCE"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：性能
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：load average
-                            Text { text: "LOAD"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：load
-                            Text { text: root.loadAvg; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：1min load average
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：进程数量
-                            Text { text: "PROCS"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：进程数
-                            Text { text: root.processCount; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：进程数量（粗略）
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：内存使用
-                            Text { text: "MEM"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：内存
-                            Text { text: root.memUsed.toFixed(1) + "G / " + root.memTotal.toFixed(0) + "G"; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：已用/总量（GB）
-                        }
-                        Rectangle { x: root.panelPadding; width: parent.width - root.panelPadding * 2; height: 1; color: root.zenMist } // 分割线
+                    gpuInfo: configRoot.gpuInfo
+                    nvmeUsage: configRoot.nvmeUsage
+                    loadAvg: configRoot.loadAvg
+                    processCount: configRoot.processCount
+                    memTotal: configRoot.memTotal
+                    memUsed: configRoot.memUsed
+                    kernelVer: configRoot.kernelVer
+                    cpuModel: configRoot.cpuModel
+                    uptime: configRoot.uptime
 
-                        // SYSTEM
-                        Text { x: root.panelPadding; text: "SYSTEM"; font.pixelSize: root.fontSection; font.letterSpacing: 3; color: root.zenAsh } // 分区标题：系统
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：内核版本
-                            Text { text: "KERNEL"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：内核
-                            Text { text: root.kernelVer; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：uname -r
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：CPU 型号
-                            Text { text: "CPU"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：CPU
-                            Text { text: root.cpuModel; font.pixelSize: root.fontSecondary; color: root.zenCloud; width: parent.width - root.panelLabelWidth; elide: Text.ElideRight } // 值：CPU 型号（过长省略）
-                        }
-                        Row {
-                            x: root.panelPadding; width: parent.width - root.panelPadding * 2 // 一行：运行时间
-                            Text { text: "UPTIME"; font.pixelSize: root.fontSecondary; color: root.zenSmoke; width: root.panelLabelWidth * 0.8 } // 标签：uptime
-                            Text { text: root.uptime; font.pixelSize: root.fontSecondary; color: root.zenCloud } // 值：uptime -p（简化）
-                        }
-                        Item { width: 1; height: root.panelGap * 2 } // 底部留白
-                    }
+                    zenVoid: configRoot.zenVoid
+                    zenInk: configRoot.zenInk
+                    zenStone: configRoot.zenStone
+                    zenMist: configRoot.zenMist
+                    zenAsh: configRoot.zenAsh
+                    zenSmoke: configRoot.zenSmoke
+                    zenCloud: configRoot.zenCloud
+                    zenSnow: configRoot.zenSnow
+                    zenPure: configRoot.zenPure
+                    zenAccent: configRoot.zenAccent
                 }
             }
         }
