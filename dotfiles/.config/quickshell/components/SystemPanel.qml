@@ -23,6 +23,8 @@ Rectangle {
     property real panelWidth: 0
     property real sliderWidth: 0
     property real barMarginSide: 0
+    property real panelSectionGap: 0
+    property real panelRowGap: 0
 
     // 字体尺寸（像素）
     property real fontSecondary: 12
@@ -84,74 +86,109 @@ Rectangle {
         anchors.topMargin: panelPadding
         anchors.left: parent.left
         anchors.right: parent.right
-        spacing: panelGap
+        spacing: panelSectionGap
 
-        // GRAPHICS
-        Text { x: panelPadding; text: "GRAPHICS"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "GPU"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: gpuInfo; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width - panelLabelWidth; elide: Text.ElideRight }
-        }
-        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+        // ===== 盒子1: GRAPHICS =====
+        Column {
+            x: panelPadding
+            width: parent.width - panelPadding * 2
+            spacing: panelRowGap
 
-        // STORAGE
-        Text { x: panelPadding; text: "STORAGE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2; spacing: panelGap * 3
-            Text { text: "NVME"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Rectangle {
-                width: sliderWidth * 0.8; height: 4; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                Rectangle {
-                    readonly property int pct: {
-                        var p = parseInt(nvmeUsage)
-                        if (isNaN(p)) return 0
-                        return Math.max(0, Math.min(100, p))
-                    }
-                    width: parent.width * pct / 100
-                    height: 4
-                    color: zenCloud
-                }
+            Text { text: "GRAPHICS"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "GPU"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: gpuInfo; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width * 0.6; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight }
             }
-            Text { text: nvmeUsage; font.pixelSize: fontSecondary; color: zenCloud }
         }
+
         Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
 
-        // PERFORMANCE
-        Text { x: panelPadding; text: "PERFORMANCE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "LOAD"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: loadAvg; font.pixelSize: fontSecondary; color: zenCloud }
+        // ===== 盒子2: STORAGE =====
+        Column {
+            x: panelPadding
+            width: parent.width - panelPadding * 2
+            spacing: panelRowGap
+
+            Text { text: "STORAGE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+
+            Row {
+                width: parent.width; spacing: panelGap * 3
+                Text { text: "NVME"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle {
+                    width: sliderWidth; height: 3; color: zenMist; anchors.verticalCenter: parent.verticalCenter
+                    Rectangle {
+                        readonly property int pct: {
+                            var p = parseInt(nvmeUsage)
+                            if (isNaN(p)) return 0
+                            return Math.max(0, Math.min(100, p))
+                        }
+                        width: parent.width * pct / 100
+                        height: 3
+                        color: zenCloud
+                    }
+                }
+                Text { text: nvmeUsage; font.pixelSize: fontSecondary; color: zenCloud; width: panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight }
+            }
         }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "PROCS"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: processCount; font.pixelSize: fontSecondary; color: zenCloud }
-        }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "MEM"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: memUsed.toFixed(1) + "G / " + memTotal.toFixed(0) + "G"; font.pixelSize: fontSecondary; color: zenCloud }
-        }
+
         Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
 
-        // SYSTEM
-        Text { x: panelPadding; text: "SYSTEM"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "KERNEL"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: kernelVer; font.pixelSize: fontSecondary; color: zenCloud }
+        // ===== 盒子3: PERFORMANCE =====
+        Column {
+            x: panelPadding
+            width: parent.width - panelPadding * 2
+            spacing: panelRowGap
+
+            Text { text: "PERFORMANCE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "LOAD"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: loadAvg; font.pixelSize: fontSecondary; color: zenCloud }
+            }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "PROCS"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: processCount.toString(); font.pixelSize: fontSecondary; color: zenCloud }
+            }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "MEM"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: memUsed.toFixed(1) + "G / " + memTotal.toFixed(0) + "G"; font.pixelSize: fontSecondary; color: zenCloud }
+            }
         }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "CPU"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: cpuModel; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width - panelLabelWidth; elide: Text.ElideRight }
-        }
-        Row {
-            x: panelPadding; width: parent.width - panelPadding * 2
-            Text { text: "UPTIME"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.8 }
-            Text { text: uptime; font.pixelSize: fontSecondary; color: zenCloud }
+
+        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+
+        // ===== 盒子4: SYSTEM =====
+        Column {
+            x: panelPadding
+            width: parent.width - panelPadding * 2
+            spacing: panelRowGap
+
+            Text { text: "SYSTEM"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "KERNEL"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: kernelVer; font.pixelSize: fontSecondary; color: zenCloud }
+            }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "CPU"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: cpuModel; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width * 0.6; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight }
+            }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "UPTIME"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: uptime; font.pixelSize: fontSecondary; color: zenCloud }
+            }
         }
 
         Item { width: 1; height: panelGap * 2 }

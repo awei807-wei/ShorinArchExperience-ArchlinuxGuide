@@ -63,7 +63,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 📦 L3 · 子面板
     // ═══════════════════════════════════════════════════════
-    readonly property real panelWidth: baseUnit * 22          // 面板宽度
+    readonly property real panelWidth: baseUnit * 30          // 面板宽度
     readonly property real panelPadding: baseUnit * 1       // 面板内边距
     readonly property real panelRadius: baseUnit * 0.15       // 面板圆角
     readonly property real panelGap: baseUnit * 0.15          // 面板内元素间距
