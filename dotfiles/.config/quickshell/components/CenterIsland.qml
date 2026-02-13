@@ -109,14 +109,17 @@ Rectangle {
         onTriggered: weatherProc.running = true
     }
 
-    // 时间与天气分栏布局
-    Row {
-        anchors.centerIn: parent
-        spacing: unit * 0.8
+    // 时间与天气分栏布局 - 弹性盒子重构
+    RowLayout {
+        anchors.fill: parent
+        anchors.leftMargin: unit * 1.2
+        anchors.rightMargin: unit * 1.2
+        spacing: 0
         visible: !centerIsland.showVolume
 
         // 左侧：时间 + 日期
         Column {
+            Layout.alignment: Qt.AlignVCenter
             spacing: 0
             Text {
                 text: centerIsland.timeStr
@@ -124,32 +127,36 @@ Rectangle {
                 font.family: "JetBrains Mono"
                 font.letterSpacing: 1
                 color: zenSnow
-                anchors.right: parent.right
             }
             Text {
                 text: centerIsland.dateStr
                 font.pixelSize: unit * 0.26
                 font.family: "JetBrains Mono"
                 color: zenSmoke
-                anchors.right: parent.right
             }
         }
+
+        // 弹性占位 1
+        Item { Layout.fillWidth: true }
 
         // 中间：分隔竖线
         Rectangle {
             width: 1
             height: unit * 1.2
             color: zenMist
-            anchors.verticalCenter: parent.verticalCenter
+            Layout.alignment: Qt.AlignVCenter
         }
+
+        // 弹性占位 2
+        Item { Layout.fillWidth: true }
 
         // 右侧：天气
         Text {
             text: centerIsland.weatherStr
+            Layout.alignment: Qt.AlignVCenter
             font.pixelSize: unit * 0.5
             font.family: "JetBrains Mono"
             color: zenCloud
-            anchors.verticalCenter: parent.verticalCenter
         }
     }
 
