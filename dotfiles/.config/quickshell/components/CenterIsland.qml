@@ -35,7 +35,8 @@ Rectangle {
     radius: 2 // 圆角半径（像素；与 unit 无关，保持“硬朗”风格）
 
     property string timeStr: "00:00" // 时间字符串（Timer 每秒刷新）
-    property string dateStr: "2026.01.30 THU" // 日期字符串（Timer 每秒刷新；包含星期缩写）
+    property string dateStr: "2026.01.30" // 日期字符串
+    property string weekdayStr: "" // 周几字符串
     
     // 动态切换属性
     property bool showVolume: false // true=展示音量反馈布局；false=展示时间布局
