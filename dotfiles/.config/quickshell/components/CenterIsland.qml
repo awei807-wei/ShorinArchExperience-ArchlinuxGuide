@@ -68,12 +68,13 @@ Rectangle {
         repeat: true // 周期性触发
         triggeredOnStart: true // 创建后立即触发一次，避免首秒显示默认占位
         onTriggered: {
-            let now = new Date() // 获取当前本地时间
-            centerIsland.timeStr = now.toTimeString().slice(0, 5) // 提取 HH:MM（不含秒）
-            let weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] // 星期缩写表（与 getDay() 对应）
-            centerIsland.dateStr = now.getFullYear() + "." + // 年份
-                String(now.getMonth() + 1).padStart(2, "0") + "." + // 月份（0-based 转 1-based，并补零）
-                String(now.getDate()).padStart(2, "0") + " " + weekdays[now.getDay()] // 日 + 星期缩写
+            let now = new Date()
+            centerIsland.timeStr = now.toTimeString().slice(0, 5)
+            let weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+            centerIsland.weekdayStr = weekdays[now.getDay()]
+            centerIsland.dateStr = now.getFullYear() + "." +
+                String(now.getMonth() + 1).padStart(2, "0") + "." +
+                String(now.getDate()).padStart(2, "0")
         }
     }
 
@@ -109,54 +110,86 @@ Rectangle {
         onTriggered: weatherProc.running = true
     }
 
-    // 时间与天气分栏布局 - 弹性盒子重构
+    // 时间与天气分栏布局 - 网页级嵌套弹性盒子重构 (Nested Centering)
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: unit * 1.2
-        anchors.rightMargin: unit * 1.2
         spacing: 0
         visible: !centerIsland.showVolume
 
-        // 左侧：时间 + 日期
-        Column {
-            Layout.alignment: Qt.AlignVCenter
-            spacing: 0
-            Text {
-                text: centerIsland.timeStr
-                font.pixelSize: unit * 0.55
-                font.family: "JetBrains Mono"
-                font.letterSpacing: 1
-                color: zenSnow
-            }
-            Text {
-                text: centerIsland.dateStr
-                font.pixelSize: unit * 0.26
-                font.family: "JetBrains Mono"
-                color: zenSmoke
+        // 左子容器 (父 Div 1)
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            
+            // 嵌套弹性盒子重构：左子 Div(时间/日期) + 右子 Div(周几)
+            RowLayout {
+                anchors.centerIn: parent
+                spacing: 0
+
+                // 左子 Div (时间/日期)
+                Item {
+                    Layout.preferredWidth: unit * 3.8
+                    Layout.fillHeight: true
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        spacing: -unit * 0.1 // 稍微压缩行距，增加紧凑感
+                        Text {
+                            text: centerIsland.timeStr
+                            font.pixelSize: unit * 0.58 // 稍微放大 L1
+                            font.family: "JetBrains Mono"
+                            font.bold: true
+                            color: zenSnow
+                        }
+                        Text {
+                            text: centerIsland.dateStr
+                            font.pixelSize: unit * 0.22 // 缩小 L3
+                            font.family: "JetBrains Mono"
+                            color: zenSmoke
+                            anchors.right: parent.right
+                        }
+                    }
+                }
+
+                // 间距占位
+                Item { Layout.preferredWidth: unit * 0.4 }
+
+                // 右子 Div (周几) - 视觉中心对齐修正
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Text {
+                        text: centerIsland.weekdayStr
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.verticalCenterOffset: -unit * 0.02 // 极微调：对齐 L1 视觉重心
+                        anchors.left: parent.left
+                        font.pixelSize: unit * 0.36 // 稍微放大 L2，增加可读性
+                        font.family: "JetBrains Mono"
+                        color: zenCloud
+                    }
+                }
             }
         }
 
-        // 弹性占位 1
-        Item { Layout.fillWidth: true }
-
-        // 中间：分隔竖线
+        // 中间分隔线 (不参与弹性占位，固定居中)
         Rectangle {
             width: 1
-            height: unit * 1.2
+            height: unit * 1.1
             color: zenMist
             Layout.alignment: Qt.AlignVCenter
         }
 
-        // 弹性占位 2
-        Item { Layout.fillWidth: true }
-
-        // 右侧：天气
-        Text {
-            text: centerIsland.weatherStr
-            Layout.alignment: Qt.AlignVCenter
-            font.pixelSize: unit * 0.5
-            font.family: "JetBrains Mono"
-            color: zenCloud
+        // 右子容器 (Div 2)
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Text {
+                anchors.centerIn: parent // 子容器内绝对居中
+                text: centerIsland.weatherStr
+                font.pixelSize: unit * 0.48
+                font.family: "JetBrains Mono"
+                color: zenCloud
+            }
         }
     }
 
