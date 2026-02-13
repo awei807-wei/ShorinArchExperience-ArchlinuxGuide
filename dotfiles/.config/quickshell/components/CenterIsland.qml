@@ -69,7 +69,7 @@ Rectangle {
         onTriggered: {
             let now = new Date() // 获取当前本地时间
             centerIsland.timeStr = now.toTimeString().slice(0, 5) // 提取 HH:MM（不含秒）
-            let weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] // 星期缩写表（与 getDay() 对应）
+            let weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] // 星期缩写表（与 getDay() 对应）
             centerIsland.dateStr = now.getFullYear() + "." + // 年份
                 String(now.getMonth() + 1).padStart(2, "0") + "." + // 月份（0-based 转 1-based，并补零）
                 String(now.getDate()).padStart(2, "0") + " " + weekdays[now.getDay()] // 日 + 星期缩写
@@ -92,7 +92,7 @@ Rectangle {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter // 日期文本水平居中
             text: centerIsland.dateStr // 绑定 Timer 维护的 YYYY.MM.DD DDD 字符串
-            font.pixelSize: unit * 0.28 // 日期字号（更小）
+            font.pixelSize: unit * 0.3 // 日期字号（更小）
             font.family: "JetBrains Mono" // 与时间保持一致的字体风格
             font.letterSpacing: 1.5 // 轻微增加字距
             color: zenSmoke // 弱化颜色（层级低于时间）
