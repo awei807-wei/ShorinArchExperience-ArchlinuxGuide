@@ -1,4 +1,5 @@
 //@ pragma UseQApplication
+//1111
 
 // 模块：shell（Quickshell 入口 / 顶层装配）
 // 功能：作为 Quickshell 的主入口，统一完成以下职责：
