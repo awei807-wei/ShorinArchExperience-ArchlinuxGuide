@@ -122,49 +122,45 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             
-            // 嵌套弹性盒子重构：左子 Div(时间/日期) + 右子 Div(周几)
+            // 嵌套弹性盒子重构：左子 Div(时间/日期) + 右子 Div(周几) - 网页级居中修正版
             RowLayout {
-                anchors.centerIn: parent
+                anchors.fill: parent
                 spacing: 0
 
                 // 左子 Div (时间/日期)
                 Item {
-                    Layout.preferredWidth: unit * 3.8
+                    Layout.fillWidth: true
                     Layout.fillHeight: true
                     Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.right: parent.right
-                        spacing: -unit * 0.1 // 稍微压缩行距，增加紧凑感
+                        anchors.centerIn: parent
+                        spacing: -unit * 0.12
                         Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
                             text: centerIsland.timeStr
-                            font.pixelSize: unit * 0.58 // 稍微放大 L1
+                            font.pixelSize: unit * 0.6
                             font.family: "JetBrains Mono"
                             font.bold: true
                             color: zenSnow
                         }
                         Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
                             text: centerIsland.dateStr
-                            font.pixelSize: unit * 0.22 // 缩小 L3
+                            font.pixelSize: unit * 0.2
                             font.family: "JetBrains Mono"
                             color: zenSmoke
-                            anchors.right: parent.right
                         }
                     }
                 }
 
-                // 间距占位
-                Item { Layout.preferredWidth: unit * 0.4 }
-
-                // 右子 Div (周几) - 视觉中心对齐修正
+                // 右子 Div (周几)
                 Item {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Text {
                         text: centerIsland.weekdayStr
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.verticalCenterOffset: -unit * 0.02 // 极微调：对齐 L1 视觉重心
-                        anchors.left: parent.left
-                        font.pixelSize: unit * 0.36 // 稍微放大 L2，增加可读性
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: -unit * 0.02
+                        font.pixelSize: unit * 0.52
                         font.family: "JetBrains Mono"
                         color: zenCloud
                     }
