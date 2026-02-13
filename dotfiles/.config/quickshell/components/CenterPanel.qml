@@ -8,8 +8,6 @@ Rectangle {
 
     // 外部对象引用
     required property var root
-    required property var volSetProc
-    required property var briSetProc
     required property var centerPanelCloseTimer
 
     // 状态与主题属性
@@ -41,7 +39,6 @@ Rectangle {
     property real panelWidth
     property real sliderHeight
     property real sliderHitArea
-    property real sliderWidth
     property int volumePercent
     property color zenAsh
     property color zenCloud
@@ -73,8 +70,8 @@ Rectangle {
     // 拦截背景点击，防止穿透到底层关闭
     MouseArea {
         anchors.fill: parent
-        propagateComposedEvents: false
-        onPressed: function(mouse) { mouse.accepted = false }
+        onPressed: function(mouse) { mouse.accepted = true }
+        onClicked: function(mouse) { mouse.accepted = true }
     }
 
     Column {
@@ -123,44 +120,69 @@ Rectangle {
             Text { text: "AUDIO / DISPLAY"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
 
             // 音量行
-            Row {
-                width: parent.width; spacing: panelGap * 3; height: panelRowHeight
-                Text { text: "VOL"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter }
+            Item {
+                width: parent.width; height: panelRowHeight
+                Text {
+                    id: volLabel
+                    text: "VOL"; font.pixelSize: fontSecondary; color: zenSmoke
+                    width: panelLabelWidth * 0.5; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    id: volValue
+                    text: volumePercent + "%"; font.pixelSize: fontSecondary; color: zenCloud
+                    width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
+                }
                 Rectangle {
-                    width: sliderWidth; height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle { width: parent.width * Math.min(volumePercent / 100, 1.0); height: sliderHeight; color: zenCloud }
+                    id: volSlider
+                    anchors.left: volLabel.right; anchors.right: volValue.left
+                    anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
+                    height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
+                    Rectangle {
+                        id: volFill
+                        width: parent.width * Math.min(volumePercent / 100, 1.0)
+                        height: sliderHeight; color: zenCloud
+                    }
                     MouseArea {
                         anchors.fill: parent; anchors.margins: -sliderHitArea; cursorShape: Qt.PointingHandCursor
-                        onClicked: mouse => {
-                            let pct = Math.min(Math.round(mouse.x / parent.width * 100), 100)
-                            let vol = (pct / 100).toFixed(2)
-                            volSetProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", vol]
-                            volSetProc.running = true
-                            root.volumePercent = pct
+                        onClicked: function(mouse) {
+                            let pct = Math.min(Math.round(mouse.x / volSlider.width * 100), 100)
+                            root.setVolume(pct)
                         }
                     }
                 }
-                Text { text: volumePercent + "%"; font.pixelSize: fontSecondary; color: zenCloud; width: panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter }
             }
 
             // 亮度行
-            Row {
-                width: parent.width; spacing: panelGap * 3; height: panelRowHeight
-                Text { text: "BRI"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter }
+            Item {
+                width: parent.width; height: panelRowHeight
+                Text {
+                    id: briLabel
+                    text: "BRI"; font.pixelSize: fontSecondary; color: zenSmoke
+                    width: panelLabelWidth * 0.5; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    id: briValue
+                    text: brightnessPercent + "%"; font.pixelSize: fontSecondary; color: zenCloud
+                    width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
+                }
                 Rectangle {
-                    width: sliderWidth; height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle { width: parent.width * brightnessPercent / 100; height: sliderHeight; color: zenCloud }
+                    id: briSlider
+                    anchors.left: briLabel.right; anchors.right: briValue.left
+                    anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
+                    height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
+                    Rectangle {
+                        id: briFill
+                        width: parent.width * brightnessPercent / 100
+                        height: sliderHeight; color: zenCloud
+                    }
                     MouseArea {
                         anchors.fill: parent; anchors.margins: -sliderHitArea; cursorShape: Qt.PointingHandCursor
-                        onClicked: mouse => {
-                            let pct = Math.round(mouse.x / parent.width * 100)
-                            briSetProc.command = ["brightnessctl", "set", pct + "%"]
-                            briSetProc.running = true
-                            root.brightnessPercent = pct
+                        onClicked: function(mouse) {
+                            let pct = Math.round(mouse.x / briSlider.width * 100)
+                            root.setBrightness(pct)
                         }
                     }
                 }
-                Text { text: brightnessPercent + "%"; font.pixelSize: fontSecondary; color: zenCloud; width: panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter }
             }
         }
 

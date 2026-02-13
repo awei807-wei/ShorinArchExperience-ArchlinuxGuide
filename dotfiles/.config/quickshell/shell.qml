@@ -76,7 +76,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 🎚️ L4 · 滑块/进度条
     // ═══════════════════════════════════════════════════════
-    readonly property real sliderWidth: baseUnit * 14.8         // 滑块宽度
     readonly property real sliderHeight: 3                    // 滑块高度
     readonly property real sliderHitArea: 10                // 滑块点击热区扩展（像素；便于小尺寸下操作）
     // ═══════════════════════════════════════════════════════
@@ -208,8 +207,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         stdout: SplitParser {
             onRead: data => {
                 let parts = data.split(":") // 拆分为 [NAME, TYPE]
-                if (parts[1] === "802-11-wireless") { // 仅关心 Wi-Fi 连接（忽略有线等）
-                    configRoot.netSSID = parts[0] || "Disconnected" // 写回 SSID（空值回退）
+                // 逻辑：优先显示 Wi-Fi SSID，如果有线连接存在且当前没有 Wi-Fi，则显示有线名称
+                if (parts[1] === "802-11-wireless") {
+                    configRoot.netSSID = parts[0] || "Disconnected"
+                } else if (parts[1] === "802-3-ethernet" && (configRoot.netSSID === "loading..." || configRoot.netSSID === "Disconnected")) {
+                    configRoot.netSSID = parts[0] || "Wired"
                 }
             }
         }
@@ -241,6 +243,20 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     Process { id: volSetProc; command: ["echo"] } // 占位：设置音量时动态替换为 wpctl set-volume
     Process { id: briSetProc; command: ["echo"] } // 占位：设置亮度时动态替换为 brightnessctl set
     // 媒体控制已改用 MPRIS 原生方法
+    // 音量/亮度设置函数（供子组件通过 root.setVolume/root.setBrightness 调用）
+    // 解决 QML 名称遮蔽问题：子组件的同名属性会遮蔽 ShellRoot 的 id 引用
+    function setVolume(pct) {
+        let vol = (pct / 100).toFixed(2)
+        volSetProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", vol]
+        volSetProc.running = true
+        configRoot.volumePercent = pct
+    }
+    function setBrightness(pct) {
+        briSetProc.command = ["brightnessctl", "set", pct + "%"]
+        briSetProc.running = true
+        configRoot.brightnessPercent = pct
+    }
+
 
     // System Panel Processes（系统面板展示用状态采集）
     Process {
@@ -550,8 +566,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
                 CenterPanel {
                     root: configRoot
-                    volSetProc: volSetProc
-                    briSetProc: briSetProc
                     centerPanelCloseTimer: configRoot.centerPanelCloseTimer
 
                     centerPanelVisible: configRoot.centerPanelVisible
@@ -586,7 +600,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     panelWidth: configRoot.panelWidth
                     sliderHeight: configRoot.sliderHeight
                     sliderHitArea: configRoot.sliderHitArea
-                    sliderWidth: configRoot.sliderWidth
                     volumePercent: configRoot.volumePercent
                     zenAsh: configRoot.zenAsh
                     zenCloud: configRoot.zenCloud
@@ -639,10 +652,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     panelPadding: configRoot.panelPadding
                     panelRadius: configRoot.panelRadius
                     panelWidth: configRoot.panelWidth
-                    sliderWidth: configRoot.sliderWidth
+                    panelRowHeight: configRoot.panelRowHeight
+                    panelRowGap: configRoot.panelRowGap
+                    panelSectionGap: configRoot.panelSectionGap
 
                     fontSecondary: configRoot.fontSecondary
                     fontSection: configRoot.fontSection
+                    fontTiny: configRoot.fontTiny
 
                     gpuInfo: configRoot.gpuInfo
                     nvmeUsage: configRoot.nvmeUsage

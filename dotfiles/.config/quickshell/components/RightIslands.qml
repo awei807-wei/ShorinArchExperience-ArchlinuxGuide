@@ -68,7 +68,7 @@ Row {
 
     Process {
         id: cavaProc
-        command: ["/home/shiyi/.config/eww/scripts/cava.sh"] // 外部脚本：输出 JSON（bars/active）
+        command: ["/home/shiyi/.config/quickshell/scripts/cava.sh"] // 外部脚本：输出 JSON（bars/active）
         running: true // 常驻运行：持续输出频谱数据
         stdout: SplitParser {
             onRead: data => {

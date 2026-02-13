@@ -21,14 +21,15 @@ Rectangle {
     property real panelPadding: 0
     property real panelRadius: 0
     property real panelWidth: 0
-    property real sliderWidth: 0
     property real barMarginSide: 0
     property real panelSectionGap: 0
     property real panelRowGap: 0
+    property real panelRowHeight: 0
 
     // 字体尺寸（像素）
     property real fontSecondary: 12
     property real fontSection: 11
+    property real fontTiny: 10
 
     // 系统状态变量（由 shell.qml 绑定）
     property string gpuInfo: ""
@@ -97,9 +98,17 @@ Rectangle {
             Text { text: "GRAPHICS"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "GPU"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: gpuInfo; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width * 0.6; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    id: gpuLabel
+                    anchors.left: parent.left; text: "GPU"; font.pixelSize: fontSecondary; color: zenSmoke
+                }
+                Text {
+                    anchors.left: gpuLabel.right; anchors.right: parent.right
+                    anchors.leftMargin: panelGap
+                    text: gpuInfo; font.pixelSize: fontSecondary; color: zenCloud
+                    horizontalAlignment: Text.AlignRight; elide: Text.ElideRight
+                }
             }
         }
 
@@ -113,11 +122,22 @@ Rectangle {
 
             Text { text: "STORAGE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
 
-            Row {
-                width: parent.width; spacing: panelGap * 3
-                Text { text: "NVME"; font.pixelSize: fontSecondary; color: zenSmoke; width: panelLabelWidth * 0.5; anchors.verticalCenter: parent.verticalCenter }
+            Item {
+                width: parent.width; height: panelRowHeight
+                Text {
+                    id: nvmeLabel
+                    text: "NVME"; font.pixelSize: fontSecondary; color: zenSmoke
+                    width: panelLabelWidth * 0.5; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    id: nvmeValue
+                    text: nvmeUsage; font.pixelSize: fontSecondary; color: zenCloud
+                    width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
+                }
                 Rectangle {
-                    width: sliderWidth; height: 3; color: zenMist; anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: nvmeLabel.right; anchors.right: nvmeValue.left
+                    anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
+                    height: 3; color: zenMist; anchors.verticalCenter: parent.verticalCenter
                     Rectangle {
                         readonly property int pct: {
                             var p = parseInt(nvmeUsage)
@@ -129,7 +149,6 @@ Rectangle {
                         color: zenCloud
                     }
                 }
-                Text { text: nvmeUsage; font.pixelSize: fontSecondary; color: zenCloud; width: panelLabelWidth * 0.6; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight }
             }
         }
 
@@ -144,21 +163,39 @@ Rectangle {
             Text { text: "PERFORMANCE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "LOAD"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: loadAvg; font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    anchors.left: parent.left; text: "LOAD"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.right: parent.right; text: loadAvg; font.pixelSize: fontSecondary; color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "PROCS"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: processCount.toString(); font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    anchors.left: parent.left; text: "PROCS"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.right: parent.right; text: processCount.toString(); font.pixelSize: fontSecondary; color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "MEM"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: memUsed.toFixed(1) + "G / " + memTotal.toFixed(0) + "G"; font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    anchors.left: parent.left; text: "MEM"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.right: parent.right; text: memUsed.toFixed(1) + "G / " + memTotal.toFixed(0) + "G"; font.pixelSize: fontSecondary; color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
         }
 
@@ -173,21 +210,43 @@ Rectangle {
             Text { text: "SYSTEM"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "KERNEL"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: kernelVer; font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    anchors.left: parent.left; text: "KERNEL"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.right: parent.right; text: kernelVer; font.pixelSize: fontSecondary; color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "CPU"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: cpuModel; font.pixelSize: fontSecondary; color: zenCloud; width: parent.width * 0.6; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    id: cpuLabel
+                    anchors.left: parent.left; text: "CPU"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.left: cpuLabel.right; anchors.right: parent.right
+                    anchors.leftMargin: panelGap
+                    text: cpuModel; font.pixelSize: fontSecondary; color: zenCloud
+                    horizontalAlignment: Text.AlignRight; elide: Text.ElideRight
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "UPTIME"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: uptime; font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: panelRowHeight
+                Text {
+                    anchors.left: parent.left; text: "UPTIME"; font.pixelSize: fontSecondary; color: zenSmoke
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Text {
+                    anchors.right: parent.right; text: uptime; font.pixelSize: fontSecondary; color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
         }
 
