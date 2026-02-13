@@ -25,8 +25,9 @@ Rectangle {
     property color zenCloud: parent?.zenCloud ?? "#8a8a8a" // 文本中等对比色（默认回退值）
     property color zenSnow: parent?.zenSnow ?? "#cacaca" // 文本高对比色（默认回退值）
     property color zenAccent: parent?.zenAccent ?? "#5a9a8a" // 强调色（音量条填充色等）
+    property string weatherStr: "... °C" // 存储天气脚本输出
 
-    implicitWidth: unit * 10 // 默认宽度：按 unit 缩放（不强制固定宽度，供布局系统计算）
+    implicitWidth: unit * 12 // 增加宽度以容纳天气
     implicitHeight: parent?.height ?? unit * 2 // 默认高度：优先继承父高度，否则按 unit 给出
     color: zenInk // 背景填充色
     border.color: zenMist // 边框颜色
@@ -76,26 +77,79 @@ Rectangle {
         }
     }
 
-    // 时间布局
-    Column {
-        anchors.centerIn: parent // 时间布局整体居中
-        spacing: 1 // 两行文本之间的垂直间距（像素）
-        visible: !centerIsland.showVolume // 当未显示音量时显示时间布局
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter // 时间文本水平居中
-            text: centerIsland.timeStr // 绑定 Timer 维护的 HH:MM 字符串
-            font.pixelSize: unit * 0.5 // 时间字号（随 unit 缩放）
-            font.family: "JetBrains Mono" // 等宽字体（对齐更稳定）
-            font.letterSpacing: 3 // 增加字距以获得“仪表盘”观感
-            color: zenSnow // 高对比文本色
+    // 天气获取进程
+    Process {
+        id: weatherProc
+        command: ["python", "/home/shiyi/.config/waybar/scripts/weather.py"]
+        stdout: SplitParser {
+            onRead: data => {
+                let trimmed = data.trim()
+                // 防御性编程：确保只处理 JSON 行，过滤掉警告或空行
+                if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                    try {
+                        let obj = JSON.parse(trimmed)
+                        if (obj.text) {
+                            centerIsland.weatherStr = obj.text
+                        }
+                    } catch(e) {
+                        // 解析失败时不更新 UI，保持上一次的有效值，避免闪烁
+                        console.log("Weather parse error: " + e)
+                    }
+                }
+            }
         }
+    }
+
+    // 天气刷新定时器（每 15 分钟）
+    Timer {
+        interval: 900000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: weatherProc.running = true
+    }
+
+    // 时间与天气分栏布局
+    Row {
+        anchors.centerIn: parent
+        spacing: unit * 0.8
+        visible: !centerIsland.showVolume
+
+        // 左侧：时间 + 日期
+        Column {
+            spacing: 0
+            Text {
+                text: centerIsland.timeStr
+                font.pixelSize: unit * 0.55
+                font.family: "JetBrains Mono"
+                font.letterSpacing: 1
+                color: zenSnow
+                anchors.right: parent.right
+            }
+            Text {
+                text: centerIsland.dateStr
+                font.pixelSize: unit * 0.26
+                font.family: "JetBrains Mono"
+                color: zenSmoke
+                anchors.right: parent.right
+            }
+        }
+
+        // 中间：分隔竖线
+        Rectangle {
+            width: 1
+            height: unit * 1.2
+            color: zenMist
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        // 右侧：天气
         Text {
-            anchors.horizontalCenter: parent.horizontalCenter // 日期文本水平居中
-            text: centerIsland.dateStr // 绑定 Timer 维护的 YYYY.MM.DD DDD 字符串
-            font.pixelSize: unit * 0.3 // 日期字号（更小）
-            font.family: "JetBrains Mono" // 与时间保持一致的字体风格
-            font.letterSpacing: 1.5 // 轻微增加字距
-            color: zenSmoke // 弱化颜色（层级低于时间）
+            text: centerIsland.weatherStr
+            font.pixelSize: unit * 0.5
+            font.family: "JetBrains Mono"
+            color: zenCloud
+            anchors.verticalCenter: parent.verticalCenter
         }
     }
 
