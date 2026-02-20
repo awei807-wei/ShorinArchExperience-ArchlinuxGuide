@@ -170,26 +170,26 @@ Row {
             Rectangle { width: 1; height: unit * 0.7; color: zenMist; anchors.verticalCenter: parent.verticalCenter }
 
             Row {
-                spacing: 4 // 标签与数值之间的间距
-                anchors.verticalCenter: parent.verticalCenter // 垂直居中
-                Text { text: "MEM"; font.pixelSize: unit * 0.32; color: zenCloud } // 内存标签
-                Text { text: memPercent + "%"; font.pixelSize: unit * 0.38; color: zenSnow } // 内存百分比
+                spacing: 4
+                anchors.verticalCenter: parent.verticalCenter
+                Text { text: "MEM"; font.pixelSize: unit * 0.32; font.family: "JetBrainsMono Nerd Font"; color: zenCloud }
+                Text { text: memPercent + "%"; width: unit * 1.6; horizontalAlignment: Text.AlignRight; font.pixelSize: unit * 0.38; font.family: "JetBrainsMono Nerd Font"; color: zenSnow }
             }
 
             Rectangle { width: 1; height: unit * 0.7; color: zenMist; anchors.verticalCenter: parent.verticalCenter }
 
             Row {
-                spacing: 4 // 标签与数值之间的间距
-                anchors.verticalCenter: parent.verticalCenter // 垂直居中
-                Text { text: "CPU"; font.pixelSize: unit * 0.32; color: zenCloud } // CPU 标签
-                Text { text: cpuPercent + "%"; font.pixelSize: unit * 0.38; color: zenSnow } // CPU 百分比
+                spacing: 4
+                anchors.verticalCenter: parent.verticalCenter
+                Text { text: "CPU"; font.pixelSize: unit * 0.32; font.family: "JetBrainsMono Nerd Font"; color: zenCloud }
+                Text { text: cpuPercent + "%"; width: unit * 1.6; horizontalAlignment: Text.AlignRight; font.pixelSize: unit * 0.38; font.family: "JetBrainsMono Nerd Font"; color: zenSnow }
             }
 
             Rectangle { width: 1; height: unit * 0.7; color: zenMist; anchors.verticalCenter: parent.verticalCenter }
 
             Row {
-                spacing: 4 // 电池图标与百分比之间的间距
-                anchors.verticalCenter: parent.verticalCenter // 垂直居中
+                spacing: 4
+                anchors.verticalCenter: parent.verticalCenter
                 Rectangle {
                     width: 16 // 电池外框宽度（像素）
                     height: 7 // 电池外框高度（像素）
@@ -205,7 +205,7 @@ Row {
                         color: zenCloud // 填充颜色（中等对比）
                     }
                 }
-                Text { text: batPercent + "%"; font.pixelSize: unit * 0.38; color: zenSnow } // 电量百分比文本
+                Text { text: batPercent + "%"; width: unit * 1.6; horizontalAlignment: Text.AlignRight; font.pixelSize: unit * 0.38; font.family: "JetBrainsMono Nerd Font"; color: zenSnow }
             }
         }
     }
