@@ -64,6 +64,26 @@ Rectangle {
         text: "█"
     }
 
+    // 点/线填充字符宽度：用于把“像素宽度”换算为“字符数量”（从而实现动态填充）
+    TextMetrics {
+        id: dotCharMetrics
+        font.family: monoFont
+        font.pixelSize: fontTiny
+        text: "·"
+    }
+    TextMetrics {
+        id: lineCharMetrics
+        font.family: monoFont
+        font.pixelSize: fontTiny
+        text: "─"
+    }
+    TextMetrics {
+        id: spaceCharMetrics
+        font.family: monoFont
+        font.pixelSize: fontTiny
+        text: " "
+    }
+
     z: 1
     x: parent ? (parent.width - panelWidth - barMarginSide) : 0 // 固定贴右：panelWidth + barMarginSide 控制右侧留白
     y: panelOffsetY + (systemPanelVisible ? 0 : -8) // 收起时略向上偏移，配合 height 动画
@@ -90,23 +110,28 @@ Rectangle {
     }
 
     // 点线填充辅助函数
-    function dotFill(label, value, totalWidth) {
-        // 输入：
-        // - label: 左侧标签文本（例如 "LOAD"）
-        // - value: 右侧值文本（例如 "0.42"）
-        // - totalWidth: 可用于点线填充的总宽度（像素）
-        // 输出：用于“填满中间空隙”的点线字符串（例如 "········"）
-        // 用途：在等宽字体下模拟“左标签 + 点线 + 右值”的传统终端风格布局
-        // 注意：这里采用粗略估算（固定字符宽度近似），不追求像素级精确对齐
+    function repeatToWidth(pattern, patternWidthPx, totalWidthPx) {
+        // 把 pattern 重复到“足够长”，最终由 Text 的 clip 截断；适配面板宽度变化。
+        var w = patternWidthPx
+        if (!w || w <= 0) {
+            // 兜底：避免 metrics 未就绪导致返回空（等宽字体下此估算足够稳定）
+            w = fontTiny * 0.6
+        }
+        var n = Math.ceil(totalWidthPx / w) + 2
+        if (n <= 0) return ""
 
-        var fm = Qt.fontMetrics // 预留：如果未来要用真实 fontMetrics 计算，可从这里扩展
-        var charWidth = fontSecondary * 0.6 // 粗略估算单字符宽度（与字体/渲染相关）
-        var labelChars = label.length // 标签字符数（用于估算占用）
-        var valueChars = value.length // 值字符数（用于估算占用）
-        var availChars = Math.floor(totalWidth / charWidth) - labelChars - valueChars - 2 // 中间可用点线字符数
-        var dots = "" // 点线缓冲区（逐字符拼接）
-        for (var i = 0; i < availChars; i++) dots += "·" // 构造点线填充
-        return dots // 返回点线字符串
+        var out = ""
+        for (var i = 0; i < n; i++) out += pattern
+        return out
+    }
+
+    function dotFill(totalWidthPx) {
+        return repeatToWidth("·", dotCharMetrics.width, totalWidthPx)
+    }
+
+    function lineFill(totalWidthPx) {
+        // 保持原先“─ + 空格”的观感（更像终端分隔符），同时根据宽度动态生成
+        return repeatToWidth("─ ", lineCharMetrics.width + spaceCharMetrics.width, totalWidthPx)
     }
 
     Column {
@@ -146,7 +171,7 @@ Rectangle {
             }
         }
 
-        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: lineFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子2: STORAGE =====
         Column {
@@ -188,7 +213,7 @@ Rectangle {
             }
         }
 
-        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: lineFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子3: PERFORMANCE =====
         Column {
@@ -211,7 +236,7 @@ Rectangle {
                 Text {
                     id: loadDots; anchors.left: loadLabel.right; anchors.right: loadValue.left
                     anchors.leftMargin: panelGap; anchors.rightMargin: panelGap
-                    text: "····················"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
+                    text: dotFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
                 Text {
@@ -229,7 +254,7 @@ Rectangle {
                 Text {
                     anchors.left: procsLabel.right; anchors.right: procsValue.left
                     anchors.leftMargin: panelGap; anchors.rightMargin: panelGap
-                    text: "····················"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
+                    text: dotFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
                 Text {
@@ -247,7 +272,7 @@ Rectangle {
                 Text {
                     anchors.left: memLabel.right; anchors.right: memValue.left
                     anchors.leftMargin: panelGap; anchors.rightMargin: panelGap
-                    text: "····················"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
+                    text: dotFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
                 Text {
@@ -257,7 +282,7 @@ Rectangle {
             }
         }
 
-        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: lineFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子4: SYSTEM =====
         Column {
@@ -280,7 +305,7 @@ Rectangle {
                 Text {
                     anchors.left: kernelLabel.right; anchors.right: kernelValue.left
                     anchors.leftMargin: panelGap; anchors.rightMargin: panelGap
-                    text: "····················"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
+                    text: dotFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
                 Text {
@@ -313,7 +338,7 @@ Rectangle {
                 Text {
                     anchors.left: uptimeLabel.right; anchors.right: uptimeValue.left
                     anchors.leftMargin: panelGap; anchors.rightMargin: panelGap
-                    text: "····················"; font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
+                    text: dotFill(width); font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
                 Text {
