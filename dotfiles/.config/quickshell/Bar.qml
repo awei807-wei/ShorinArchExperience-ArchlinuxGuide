@@ -13,6 +13,8 @@ import QtQuick.Layouts // RowLayout / Layout.*：用于顶栏左右分布布局
 import "components" // 引入本目录组件（LeftIsland/CenterIsland/RightIslands）
 Rectangle {
     id: bar
+    // ShellRoot 引用（由 shell.qml 注入），用于把工具函数下发到子组件（例如 CenterIsland 的 ASCII 条）
+    property var root: null
     property real unit: 13.6 // 尺寸基准（由 shell 注入；用于 spacing、字体、图标等的统一缩放）
     property color zenInk: "#141414" // 主背景色（岛屿底色）
     property color zenMist: "#2a2a2a" // 边框/分割线色
@@ -62,6 +64,7 @@ Rectangle {
             Layout.alignment: Qt.AlignCenter | Qt.AlignVCenter // 居中并垂直居中
             Layout.fillHeight: true // 高度跟随 Bar 高度
             Layout.leftMargin: bar.centerIslandOffsetX // 中岛整体 X 偏移
+            root: bar.root
             unit: bar.unit // 传入尺寸基准
             zenInk: bar.zenInk // 传入主题色：背景
             zenMist: bar.zenMist // 传入主题色：边框/分割线

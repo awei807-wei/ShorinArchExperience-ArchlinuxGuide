@@ -1,73 +1,88 @@
 import QtQuick
 
-// SystemPanel（系统面板内容组件）
-// - 从 shell.qml 抽离并组件化
-// - 动画复刻 CenterPanel.qml 的"卷轴展开"逻辑：height 展开 + y 微调 + opacity
+// 模块：SystemPanel（系统面板内容组件）
+// 功能：承载“系统面板”UI（GPU/存储/负载/进程/内存/系统信息），由 shell.qml 创建 PanelWindow 后嵌入本组件。
+// 数据来源：所有字段均由 shell.qml 注入（gpuInfo/nvmeUsage/loadAvg/...），本组件只负责展示与动画。
+// 动画：复刻 CenterPanel 的“卷轴展开”逻辑：height 展开 + y 微调 + opacity 渐变
 Rectangle {
     id: systemPanel
 
-    required property var root
-    required property var systemPanelCloseTimer
+    required property var root // ShellRoot 引用（来自 shell.qml），保留以便未来扩展（例如格式化/工具函数）
+    required property var systemPanelCloseTimer // 关闭缓冲期定时器引用（来自 shell.qml，用于动画结束后清理 closing 状态）
 
-    property bool systemPanelVisible: false
-    property bool systemPanelClosing: false
+    property bool systemPanelVisible: false // 打开态标志：true 时展开并显示
+    property bool systemPanelClosing: false // 关闭缓冲期标志：用于确保收起动画期间仍可见/可拦截点击
 
-    property real panelGap: 0
-    property real panelLabelWidth: 0
-    property real panelOffsetY: 0
-    property real panelPadding: 0
-    property real panelRadius: 0
-    property real panelWidth: 0
-    property real barMarginSide: 0
-    property real panelSectionGap: 0
-    property real panelRowGap: 0
-    property real panelRowHeight: 0
+    // 布局参数（由 shell 注入）
+    property real panelGap: 0 // 标签/值之间的水平间隔基准
+    property real panelLabelWidth: 0 // 左侧标签区域宽度基准（保留字段，当前布局主要用 anchors 对齐）
+    property real panelOffsetY: 0 // 面板相对顶栏的 Y 偏移
+    property real panelPadding: 0 // 面板内边距
+    property real panelRadius: 0 // 面板圆角半径
+    property real panelWidth: 0 // 面板宽度
+    property real barMarginSide: 0 // 顶栏左右边距（用于把系统面板贴到右侧但不贴边）
+    property real panelSectionGap: 0 // 分区之间的垂直间隔
+    property real panelRowGap: 0 // 分区内部相邻行的垂直间隔
+    property real panelRowHeight: 0 // 分区内部单行高度
 
-    property real fontSecondary: 12
-    property real fontSection: 11
-    property real fontTiny: 10
+    // 字体参数（由 shell 注入）
+    property real fontSecondary: 12 // 常规行文本字号
+    property real fontSection: 11 // 分区标题字号
+    property real fontTiny: 10 // 点线填充/分隔线字号
 
-    property string gpuInfo: ""
-    property string nvmeUsage: "0%"
-    property string loadAvg: ""
-    property int processCount: 0
-    property real memTotal: 0
-    property real memUsed: 0
-    property string kernelVer: ""
-    property string cpuModel: ""
-    property string uptime: ""
+    // 系统信息字段（由 shell 注入）
+    property string gpuInfo: "" // GPU 信息（lspci 摘要）
+    property string nvmeUsage: "0%" // 根分区占用（百分比 + used/total 文本）
+    property string loadAvg: "" // 1 分钟 load average
+    property int processCount: 0 // 进程数量（粗略）
+    property real memTotal: 0 // 总内存（GB）
+    property real memUsed: 0 // 已用内存（GB）
+    property string kernelVer: "" // 内核版本（uname -r）
+    property string cpuModel: "" // CPU 型号（/proc/cpuinfo 摘要）
+    property string uptime: "" // uptime 简化文本
 
-    property color zenVoid: "transparent"
-    property color zenInk: "transparent"
-    property color zenStone: "transparent"
-    property color zenMist: "transparent"
-    property color zenAsh: "transparent"
-    property color zenSmoke: "transparent"
-    property color zenCloud: "transparent"
-    property color zenSnow: "transparent"
-    property color zenPure: "transparent"
-    property color zenAccent: "transparent"
+    // 主题色（由 shell 注入；默认透明用于在缺参时不“炸眼”）
+    property color zenVoid: "transparent" // 最深底色
+    property color zenInk: "transparent" // 主背景色
+    property color zenStone: "transparent" // 悬停底色（此组件基本不使用 hover）
+    property color zenMist: "transparent" // 边框/分割线色
+    property color zenAsh: "transparent" // 弱标题色
+    property color zenSmoke: "transparent" // 弱文本色
+    property color zenCloud: "transparent" // 中等文本色
+    property color zenSnow: "transparent" // 高对比文本色
+    property color zenPure: "transparent" // 备用亮色
+    property color zenAccent: "transparent" // 强调色（此组件当前未使用）
 
     // 全局字体常量
-    readonly property string monoFont: "JetBrainsMono Nerd Font"
+    readonly property string monoFont: "JetBrainsMono Nerd Font" // 等宽字体：保证点线/对齐稳定
+
+    // ASCII 进度条字符宽度：用于把“像素宽度”换算为“字符数量”
+    TextMetrics {
+        id: asciiBarCharMetrics
+        font.family: monoFont
+        font.pixelSize: fontSecondary
+        text: "█"
+    }
 
     z: 1
-    x: parent ? (parent.width - panelWidth - barMarginSide) : 0
-    y: panelOffsetY + (systemPanelVisible ? 0 : -8)
-    width: panelWidth
-    height: systemPanelVisible ? (panelContent.height + panelPadding * 2) : 0
+    x: parent ? (parent.width - panelWidth - barMarginSide) : 0 // 固定贴右：panelWidth + barMarginSide 控制右侧留白
+    y: panelOffsetY + (systemPanelVisible ? 0 : -8) // 收起时略向上偏移，配合 height 动画
+    width: panelWidth // 固定宽度（由 shell 统一定义）
+    height: systemPanelVisible ? (panelContent.height + panelPadding * 2) : 0 // 展开时高度=内容高度+上下 padding；收起时为 0
 
-    color: zenInk
-    border.color: zenMist
-    border.width: 1
-    radius: panelRadius
-    clip: true
-    opacity: systemPanelVisible ? 1 : 0
+    color: zenInk // 面板底色
+    border.color: zenMist // 面板描边色
+    border.width: 1 // 边框宽度（像素）
+    radius: panelRadius // 圆角
+    clip: true // 裁剪：收起时隐藏内部内容，避免溢出
+    opacity: systemPanelVisible ? 1 : 0 // 展开/收起时渐隐渐现
 
+    // 展开/收起动画：QML Behavior 绑定属性变化时自动播放
     Behavior on height { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
     Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
     Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
 
+    // 吞掉面板内部点击：防止点击面板内容触发外层“点击空白关闭”逻辑
     MouseArea {
         anchors.fill: parent
         propagateComposedEvents: false
@@ -76,15 +91,22 @@ Rectangle {
 
     // 点线填充辅助函数
     function dotFill(label, value, totalWidth) {
-        var fm = Qt.fontMetrics
-        // 粗略估算：用固定字符宽度近似
-        var charWidth = fontSecondary * 0.6
-        var labelChars = label.length
-        var valueChars = value.length
-        var availChars = Math.floor(totalWidth / charWidth) - labelChars - valueChars - 2
-        var dots = ""
-        for (var i = 0; i < availChars; i++) dots += "·"
-        return dots
+        // 输入：
+        // - label: 左侧标签文本（例如 "LOAD"）
+        // - value: 右侧值文本（例如 "0.42"）
+        // - totalWidth: 可用于点线填充的总宽度（像素）
+        // 输出：用于“填满中间空隙”的点线字符串（例如 "········"）
+        // 用途：在等宽字体下模拟“左标签 + 点线 + 右值”的传统终端风格布局
+        // 注意：这里采用粗略估算（固定字符宽度近似），不追求像素级精确对齐
+
+        var fm = Qt.fontMetrics // 预留：如果未来要用真实 fontMetrics 计算，可从这里扩展
+        var charWidth = fontSecondary * 0.6 // 粗略估算单字符宽度（与字体/渲染相关）
+        var labelChars = label.length // 标签字符数（用于估算占用）
+        var valueChars = value.length // 值字符数（用于估算占用）
+        var availChars = Math.floor(totalWidth / charWidth) - labelChars - valueChars - 2 // 中间可用点线字符数
+        var dots = "" // 点线缓冲区（逐字符拼接）
+        for (var i = 0; i < availChars; i++) dots += "·" // 构造点线填充
+        return dots // 返回点线字符串
     }
 
     Column {
@@ -152,15 +174,16 @@ Rectangle {
                 }
                 Text {
                     anchors.left: nvmeLabel.right; anchors.right: nvmeValue.left
-                    anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
+                    anchors.leftMargin: 20; anchors.rightMargin: 20
                     text: {
                         var p = parseInt(nvmeUsage)
                         var pct = isNaN(p) ? 0 : Math.max(0, Math.min(100, p))
-                        return root.getAsciiBar(pct, 18)
+                        return root.getAsciiBarAuto(pct, width, asciiBarCharMetrics.width)
                     }
                     font.pixelSize: fontSecondary; font.family: monoFont; color: zenCloud
                     anchors.verticalCenter: parent.verticalCenter
                     horizontalAlignment: Text.AlignHCenter
+                    clip: true
                 }
             }
         }

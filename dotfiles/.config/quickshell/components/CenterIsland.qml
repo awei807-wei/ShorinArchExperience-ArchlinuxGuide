@@ -16,6 +16,8 @@ import Quickshell.Io // 运行时 IO（此文件未直接依赖；若未来增�
 
 Rectangle {
     id: centerIsland
+    // ShellRoot 引用（由 Bar.qml 下发）。用于调用 shell 提供的工具函数（例如 getAsciiBar）。
+    property var root: parent?.root ?? null
     property real unit: parent?.unit ?? 13.6 // 尺寸基准：优先继承父组件（Bar），否则使用默认值
     property color zenInk: parent?.zenInk ?? "#141414" // 背景色（默认回退值）
     property color zenMist: parent?.zenMist ?? "#2a2a2a" // 边框/分割线色（默认回退值）
@@ -218,7 +220,7 @@ Rectangle {
         
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.getAsciiBar(centerIsland.volume, 16)
+            text: centerIsland.root ? centerIsland.root.getAsciiBar(centerIsland.volume, 16) : ""
             font.pixelSize: unit * 0.38
             font.family: "JetBrainsMono Nerd Font"
             color: zenAccent

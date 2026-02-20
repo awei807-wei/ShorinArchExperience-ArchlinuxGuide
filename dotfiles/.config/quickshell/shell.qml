@@ -70,9 +70,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real panelGap: baseUnit * 0.15          // 面板内元素间距
     readonly property real panelOffsetY: baseUnit * 2.4       // 面板 Y 偏移（面板从顶栏向下的距离）
     readonly property real panelLabelWidth: baseUnit * 5      // 面板标签宽度
-    readonly property real panelRowHeight: baseUnit * 0.9
+    readonly property real panelRowHeight: baseUnit * 0.9     // 面板行高（每一行数据/滑条的基准高度）
     readonly property real panelSectionGap: baseUnit * 1.2      // 面板分区间距（盒子之间的距离）
-    readonly property real panelRowGap: baseUnit * 0.35         // 面板行间距（盒子内部行距）     // 面板行高
+    readonly property real panelRowGap: baseUnit * 0.35         // 面板行间距（盒子内部相邻行的垂直间隔）
 
     // ═══════════════════════════════════════════════════════
     // 🎚️ L4 · 滑块/进度条
@@ -89,16 +89,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 🎨 Cyber-Zen 配色 (带动态兜底逻辑)
     // ═══════════════════════════════════════════════════════
-    readonly property color zenVoid: "#050505"
-    readonly property color zenInk: "#0a0a0a"
-    readonly property color zenStone: "#151515"
-    readonly property color zenMist: "#1a1a1a"
-    readonly property color zenAsh: "#2a2a2a"
-    readonly property color zenSmoke: "#4a4a4a"
-    readonly property color zenCloud: "#808080"
-    readonly property color zenSnow: "#c0c0c0"
-    readonly property color zenPure: "#e0e0e0"
-    property color zenAccent: "#5a9a8a"                     // 强调色（频谱专用，保留动态）
+    readonly property color zenVoid: "#080808"               // 最深底色：用于极暗背景/外层遮罩
+    readonly property color zenInk: "#101010"                // 主背景色：Bar/面板主体底色
+    readonly property color zenStone: "#1c1c1c"              // 悬停底色：hover 时的背景提升
+    readonly property color zenMist: "#252525"               // 边框/分割线：用于描边和细分隔
+    readonly property color zenAsh: "#404040"                // 弱标题/弱边框：低对比辅助信息
+    readonly property color zenSmoke: "#707070"              // 弱文本：次要文字/图标
+    readonly property color zenCloud: "#999999"              // 中等文本：常规信息
+    readonly property color zenSnow: "#d0d0d0"               // 高对比文本：主要内容
+    readonly property color zenPure: "#ffffff"               // 备用亮色：需要更亮的强调文本/图标
+    property color zenAccent: "#5a9a8a"                      // 强调色：进度条/关键状态（支持动态热更新）
 
     // ═══════════════════════════════════════════════════════
     // 📊 系统状态数据
@@ -147,7 +147,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     }
 
     property string mediaTitle: mprisPlayer?.trackTitle ?? "No Media" // 当前曲目标题（无播放器/无曲目时回退）
-    property string mediaArtist: mprisPlayer?.trackArtists?.join(", ") // 当前曲目艺术家（数组拼接；无时为 undefined）
+    property string mediaArtist: mprisPlayer?.trackArtists?.join(", ") ?? "" // 当前曲目艺术家（数组拼接；无时回退空串）
     property bool mediaPlaying: mprisPlayer?.playbackState === MprisPlaybackState.Playing // 是否播放态（驱动 UI 图标/计时）
     property real mediaPosition: 0                                  // 当前播放位置（秒；由 Timer 同步）
     Timer {
@@ -175,10 +175,31 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     }
 
     function getAsciiBar(pct, len) {
+        // 输入：
+        // - pct: 0~100 的百分比（音量/亮度等）
+        // - len: 条形长度（字符数量）
+        // 输出：形如 "[██░░░]" 的字符串（用于等宽字体展示“伪进度条”）
+        // 副作用：无
+
         var filled = Math.round((pct / 100) * len)
         var bar = ""
         for (var i = 0; i < len; i++) bar += (i < filled ? "█" : "░")
         return "[" + bar + "]"
+    }
+
+    function getAsciiBarAuto(pct, widthPx, charWidthPx) {
+        // 输入：
+        // - pct: 0~100 的百分比
+        // - widthPx: 目标显示区域的像素宽度（通常为 Text.width）
+        // - charWidthPx: 单个“条形字符”的像素宽度（由 QML TextMetrics 测得）
+        // 输出：按可用宽度动态决定 len 的伪进度条字符串
+        // 副作用：无
+
+        var cw = Math.max(1, Math.round(charWidthPx || 0)) // 防止 0/NaN 导致除零
+        var w = Math.max(0, Math.round(widthPx || 0))
+        var len = Math.floor(w / cw) - 2 // 预留 '[' 与 ']' 两个字符
+        if (len < 1) len = 1
+        return getAsciiBar(pct, len)
     }
 
     property string gpuInfo: "loading..."                    // GPU 信息（由 lspci 采集）
@@ -255,12 +276,24 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 音量/亮度设置函数（供子组件通过 root.setVolume/root.setBrightness 调用）
     // 解决 QML 名称遮蔽问题：子组件的同名属性会遮蔽 ShellRoot 的 id 引用
     function setVolume(pct) {
+        // 输入：pct（0~100 的整数百分比）
+        // 输出：无返回值
+        // 副作用：
+        // - 调用 wpctl 设置默认输出设备音量
+        // - 立即更新 volumePercent（让 UI 即时响应；真实值随后会被 volProc 校正）
+
         let vol = (pct / 100).toFixed(2)
         volSetProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", vol]
         volSetProc.running = true
         configRoot.volumePercent = pct
     }
     function setBrightness(pct) {
+        // 输入：pct（0~100 的整数百分比）
+        // 输出：无返回值
+        // 副作用：
+        // - 调用 brightnessctl 设置背光亮度
+        // - 立即更新 brightnessPercent（让 UI 即时响应；真实值随后会被 briProc 校正）
+
         briSetProc.command = ["brightnessctl", "set", pct + "%"]
         briSetProc.running = true
         configRoot.brightnessPercent = pct
@@ -509,6 +542,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 color: "transparent" // 窗口透明，实际视觉由 Bar/岛屿绘制
                 Bar {
                     anchors.fill: parent // Bar 填充整个窗口
+                    root: configRoot
                     zenInk: configRoot.zenInk // 主题色注入：背景
                     zenMist: configRoot.zenMist // 主题色注入：边框
                     zenStone: configRoot.zenStone // 主题色注入：hover
