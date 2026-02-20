@@ -216,15 +216,12 @@ Rectangle {
             }
         }
         
-        Rectangle {
-            width: parent.width // 进度条背景宽度占满音量布局
-            height: 3 // 进度条高度（像素）
-            color: zenMist // 进度条背景色
-            Rectangle {
-                width: parent.width * Math.min(centerIsland.volume / 100, 1.0) // 填充比例：volume/100，最大不超过 1
-                height: parent.height // 填充高度与背景一致
-                color: zenAccent // 填充颜色使用强调色
-            }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: root.getAsciiBar(centerIsland.volume, 16)
+            font.pixelSize: unit * 0.38
+            font.family: "JetBrainsMono Nerd Font"
+            color: zenAccent
         }
     }
 

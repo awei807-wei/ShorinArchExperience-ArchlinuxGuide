@@ -95,7 +95,9 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "GRAPHICS"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item { width: parent.width; height: fontSection
+                Text { text: "[ GPU_CORE ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             Item {
                 width: parent.width; height: panelRowHeight
@@ -112,7 +114,7 @@ Rectangle {
             }
         }
 
-        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子2: STORAGE =====
         Column {
@@ -120,7 +122,10 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "STORAGE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item { width: parent.width; height: fontSection
+                Text { text: "[ DISK_IO ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             Item {
                 width: parent.width; height: panelRowHeight
@@ -134,25 +139,24 @@ Rectangle {
                     text: nvmeUsage; font.pixelSize: fontSecondary; color: zenCloud
                     width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
+                Text {
                     anchors.left: nvmeLabel.right; anchors.right: nvmeValue.left
                     anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
-                    height: 3; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle {
-                        readonly property int pct: {
-                            var p = parseInt(nvmeUsage)
-                            if (isNaN(p)) return 0
-                            return Math.max(0, Math.min(100, p))
-                        }
-                        width: parent.width * pct / 100
-                        height: 3
-                        color: zenCloud
+                    text: {
+                        var p = parseInt(nvmeUsage)
+                        var pct = isNaN(p) ? 0 : Math.max(0, Math.min(100, p))
+                        return root.getAsciiBar(pct, 18)
                     }
+                    font.pixelSize: fontSecondary
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
         }
 
-        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子3: PERFORMANCE =====
         Column {
@@ -160,7 +164,10 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "PERFORMANCE"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item { width: parent.width; height: fontSection
+                Text { text: "[ PROC_MON ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             Item {
                 width: parent.width; height: panelRowHeight
@@ -199,7 +206,7 @@ Rectangle {
             }
         }
 
-        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+        Text { x: panelPadding; width: parent.width - panelPadding * 2; text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"; font.pixelSize: fontTiny; color: zenMist; horizontalAlignment: Text.AlignHCenter; clip: true }
 
         // ===== 盒子4: SYSTEM =====
         Column {
@@ -207,7 +214,10 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "SYSTEM"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item { width: parent.width; height: fontSection
+                Text { text: "[ SYS_INFO ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             Item {
                 width: parent.width; height: panelRowHeight

@@ -88,17 +88,21 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "CONNECTIVITY"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
-
             Item {
-                width: parent.width; height: fontSecondary
-                Text { anchors.left: parent.left; text: "NETWORK"; font.pixelSize: fontSecondary; color: zenSmoke }
-                Text { anchors.right: parent.right; text: netSSID; font.pixelSize: fontSecondary; color: zenCloud }
+                width: parent.width; height: fontSection
+                Text { text: "[ NET_IO ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
             }
 
             Item {
                 width: parent.width; height: fontSecondary
                 Text { anchors.left: parent.left; text: "INTERFACE"; font.pixelSize: fontSecondary; color: zenSmoke }
+                Text { anchors.right: parent.right; text: netSSID; font.pixelSize: fontSecondary; color: zenCloud }
+            }
+
+            Item {
+                width: parent.width; height: fontSecondary
+                Text { anchors.left: parent.left; text: "ADAPTER"; font.pixelSize: fontSecondary; color: zenSmoke }
                 Text { anchors.right: parent.right; text: netInterface; font.pixelSize: fontSecondary; color: zenCloud }
             }
 
@@ -109,7 +113,12 @@ Rectangle {
             }
         }
 
-        Rectangle { x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist }
+        Text {
+            x: panelPadding; width: parent.width - panelPadding * 2
+            text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"
+            font.pixelSize: fontTiny; color: zenMist
+            horizontalAlignment: Text.AlignHCenter; clip: true
+        }
 
         // ===== 盒子2: AUDIO / DISPLAY =====
         Column {
@@ -117,14 +126,18 @@ Rectangle {
             width: parent.width - panelPadding * 2
             spacing: panelRowGap
 
-            Text { text: "AUDIO / DISPLAY"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item {
+                width: parent.width; height: fontSection
+                Text { text: "[ SYS_IO ]"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             // 音量行
             Item {
                 width: parent.width; height: panelRowHeight
                 Text {
                     id: volLabel
-                    text: "VOL"; font.pixelSize: fontSecondary; color: zenSmoke
+                    text: "MASTER_GAIN"; font.pixelSize: fontSecondary; color: zenSmoke
                     width: panelLabelWidth * 0.5; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
@@ -132,16 +145,17 @@ Rectangle {
                     text: volumePercent + "%"; font.pixelSize: fontSecondary; color: zenCloud
                     width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
+                Text {
                     id: volSlider
                     anchors.left: volLabel.right; anchors.right: volValue.left
                     anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
-                    height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle {
-                        id: volFill
-                        width: parent.width * Math.min(volumePercent / 100, 1.0)
-                        height: sliderHeight; color: zenCloud
-                    }
+                    text: root.getAsciiBar(volumePercent, 18)
+                    font.pixelSize: fontSecondary
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
+
                     MouseArea {
                         anchors.fill: parent; anchors.margins: -sliderHitArea; cursorShape: Qt.PointingHandCursor
                         onClicked: function(mouse) {
@@ -157,7 +171,7 @@ Rectangle {
                 width: parent.width; height: panelRowHeight
                 Text {
                     id: briLabel
-                    text: "BRI"; font.pixelSize: fontSecondary; color: zenSmoke
+                    text: "BACKLIGHT"; font.pixelSize: fontSecondary; color: zenSmoke
                     width: panelLabelWidth * 0.5; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
@@ -165,16 +179,17 @@ Rectangle {
                     text: brightnessPercent + "%"; font.pixelSize: fontSecondary; color: zenCloud
                     width: panelLabelWidth * 0.8; anchors.right: parent.right; horizontalAlignment: Text.AlignRight; anchors.verticalCenter: parent.verticalCenter
                 }
-                Rectangle {
+                Text {
                     id: briSlider
                     anchors.left: briLabel.right; anchors.right: briValue.left
                     anchors.leftMargin: panelGap * 2; anchors.rightMargin: panelGap * 2
-                    height: sliderHeight; color: zenMist; anchors.verticalCenter: parent.verticalCenter
-                    Rectangle {
-                        id: briFill
-                        width: parent.width * brightnessPercent / 100
-                        height: sliderHeight; color: zenCloud
-                    }
+                    text: root.getAsciiBar(brightnessPercent, 18)
+                    font.pixelSize: fontSecondary
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud
+                    anchors.verticalCenter: parent.verticalCenter
+                    horizontalAlignment: Text.AlignHCenter
+
                     MouseArea {
                         anchors.fill: parent; anchors.margins: -sliderHitArea; cursorShape: Qt.PointingHandCursor
                         onClicked: function(mouse) {
@@ -186,8 +201,11 @@ Rectangle {
             }
         }
 
-        Rectangle {
-            x: panelPadding; width: parent.width - panelPadding * 2; height: 1; color: zenMist
+        Text {
+            x: panelPadding; width: parent.width - panelPadding * 2
+            text: "─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─"
+            font.pixelSize: fontTiny; color: zenMist
+            horizontalAlignment: Text.AlignHCenter; clip: true
             visible: mediaTitle !== "No Media" && mediaTitle !== ""
         }
 
@@ -198,7 +216,11 @@ Rectangle {
             spacing: panelRowGap
             visible: mediaTitle !== "No Media" && mediaTitle !== ""
 
-            Text { text: "NOW PLAYING"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh }
+            Item {
+                width: parent.width; height: fontSection
+                Text { text: "// MEDIA_STREAM"; font.pixelSize: fontSection; font.letterSpacing: 3; color: zenAsh; anchors.left: parent.left }
+                Text { text: "⌜"; font.pixelSize: fontSection; color: zenMist; anchors.right: parent.right }
+            }
 
             Row {
                 width: parent.width; height: baseUnit * 1.8; spacing: panelGap * 4

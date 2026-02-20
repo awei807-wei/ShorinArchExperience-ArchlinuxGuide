@@ -89,16 +89,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 🎨 Cyber-Zen 配色 (带动态兜底逻辑)
     // ═══════════════════════════════════════════════════════
-    property color zenVoid: "#0a0a0a"                       // 备用极深色（用于更深背景/阴影）
-    property color zenInk: "#141414"                        // 主背景色（岛屿底色/面板底色）
-    property color zenStone: "#1f1f1f"                      // hover 背景色（比 zenInk 略亮）
-    property color zenMist: "#2a2a2a"                       // 边框/分割线色（弱对比）
-    property color zenAsh: "#3a3a3a"                        // 分区标题等弱文本色
-    property color zenSmoke: "#5a5a5a"                      // 图标/弱文本色
-    property color zenCloud: "#8a8a8a"                      // 数值/中等文本色
-    property color zenSnow: "#cacaca"                       // 高对比文本色
-    property color zenPure: "#f0f0f0"                       // 备用更亮色（极少使用）
-    property color zenAccent: "#5a9a8a"                     // 强调色（进度条/频谱条等）
+    readonly property color zenVoid: "#050505"
+    readonly property color zenInk: "#0a0a0a"
+    readonly property color zenStone: "#151515"
+    readonly property color zenMist: "#1a1a1a"
+    readonly property color zenAsh: "#2a2a2a"
+    readonly property color zenSmoke: "#4a4a4a"
+    readonly property color zenCloud: "#808080"
+    readonly property color zenSnow: "#c0c0c0"
+    readonly property color zenPure: "#e0e0e0"
+    property color zenAccent: "#5a9a8a"                     // 强调色（频谱专用，保留动态）
 
     // ═══════════════════════════════════════════════════════
     // 📊 系统状态数据
@@ -173,6 +173,14 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         let secs = totalSeconds % 60 // 计算秒数（0-59）
         return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs) // 补零并拼接成 MM:SS
     }
+
+    function getAsciiBar(pct, len) {
+        var filled = Math.round((pct / 100) * len)
+        var bar = ""
+        for (var i = 0; i < len; i++) bar += (i < filled ? "█" : "░")
+        return "[" + bar + "]"
+    }
+
     property string gpuInfo: "loading..."                    // GPU 信息（由 lspci 采集）
     property string nvmeUsage: "0%"                          // 根分区占用百分比（由 df 采集）
     property string loadAvg: "0.00"                          // 1 分钟 load average（由 /proc/loadavg 采集）
@@ -267,8 +275,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     }
     Process {
         id: nvmeProc
-        command: ["sh", "-c", "df -h / | awk 'NR==2 {print $5}'"] // 取根分区使用率（如 42%）
-        stdout: SplitParser { onRead: data => configRoot.nvmeUsage = data.trim() || "0%" } // 写回占用百分比
+        command: ["df", "-h", "/"]
+        stdout: SplitParser { onRead: data => {
+            if (data.startsWith("/")) {
+                var p = data.trim().split(/\s+/)
+                if (p.length >= 5) configRoot.nvmeUsage = p[4] + " [" + p[2] + " / " + p[1] + "]"
+            }
+        }}
     }
     Process {
         id: loadProc
@@ -338,27 +351,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 副作用：更新 zen* 主题色属性（驱动 Bar/面板整体换肤）
         // 触发来源：FileView.onLoadedChanged / FileView.onFileChanged（热更新）
 
-        if (!fileContent) return; // 空内容直接忽略（避免 JSON.parse 抛错）
+        if (!fileContent) return;
         try {
-            var data = JSON.parse(fileContent); // 解析 matugen 生成的 JSON
-            if (!data.colors) return; // 结构不符合预期则忽略
-            var c = data.colors; // 提取 colors 字段（减少后续访问层级）
-            
-            configRoot.zenVoid = c.surface; // 深色基底
-            configRoot.zenInk = c.surface_container; // 主背景色（岛屿/面板底色）
-            configRoot.zenAccent = c.primary; // 强调色（进度条/频谱等）
-            configRoot.zenSnow = c.on_surface; // 高对比前景色（文本）
-            configRoot.zenMist = c.outline_variant; // 边框/分割线色
-            
-            configRoot.zenStone = Qt.lighter(configRoot.zenInk, 1.15); // hover 背景：在主背景上提亮
-            configRoot.zenAsh = Qt.darker(configRoot.zenSnow, 1.8); // 弱标题色：在文本色上压暗
-            configRoot.zenSmoke = Qt.darker(configRoot.zenSnow, 2.5); // 更弱文本色：进一步压暗
-            configRoot.zenCloud = Qt.darker(configRoot.zenSnow, 1.3); // 中等文本色：轻微压暗
-            
-            console.log("[shell] Dynamic colors applied: primary=" + c.primary); // 调试日志：记录主题已更新
-        } catch (e) {
-            // 忽略半截 JSON 导致的解析错误
-        }
+            var data = JSON.parse(fileContent);
+            if (!data.colors || !data.colors.primary) return;
+            configRoot.zenAccent = data.colors.primary;
+            console.log("[shell] Dynamic accent applied: " + data.colors.primary);
+        } catch (e) {}
     }
     
     Timer {
