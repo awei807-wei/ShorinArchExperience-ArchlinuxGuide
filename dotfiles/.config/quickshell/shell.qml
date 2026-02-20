@@ -270,8 +270,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // System Panel Processes（系统面板展示用状态采集）
     Process {
         id: gpuProc
-        command: ["sh", "-c", "lspci | grep -i vga | cut -d: -f3 | head -1 | xargs"] // 取第一条 VGA 控制器描述
-        stdout: SplitParser { onRead: data => configRoot.gpuInfo = data.trim() || "Unknown" } // 写回 GPU 文本
+        command: ["sh", "-c", "lspci | grep -i vga | sed 's/.*: //;s/Corporation //;s/\\[.*\\]//' | head -1 | xargs"]
+        stdout: SplitParser { onRead: data => configRoot.gpuInfo = data.trim() || "Unknown" }
     }
     Process {
         id: nvmeProc
