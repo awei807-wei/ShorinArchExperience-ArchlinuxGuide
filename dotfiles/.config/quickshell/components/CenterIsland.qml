@@ -137,16 +137,16 @@ Rectangle {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: centerIsland.timeStr
-                            font.pixelSize: unit * 0.6
-                            font.family: "JetBrains Mono"
+                            font.pixelSize: unit * 0.5
+                            font.family: "JetBrainsMono Nerd Font"
                             font.bold: true
                             color: zenSnow
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: centerIsland.dateStr
-                            font.pixelSize: unit * 0.2
-                            font.family: "JetBrains Mono"
+                            font.pixelSize: unit * 0.38
+                            font.family: "JetBrainsMono Nerd Font"
                             color: zenSmoke
                         }
                     }
@@ -161,7 +161,7 @@ Rectangle {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: -unit * 0.02
                         font.pixelSize: unit * 0.52
-                        font.family: "JetBrains Mono"
+                        font.family: "JetBrainsMono Nerd Font"
                         color: zenCloud
                     }
                 }
@@ -184,7 +184,7 @@ Rectangle {
                 anchors.centerIn: parent // 子容器内绝对居中
                 text: centerIsland.weatherStr
                 font.pixelSize: unit * 0.48
-                font.family: "JetBrains Mono"
+                font.family: "JetBrainsMono Nerd Font"
                 color: zenCloud
             }
         }
@@ -204,13 +204,13 @@ Rectangle {
             Text { 
                 text: "VOL" // 固定标签：表示当前展示的是音量
                 font.pixelSize: unit * 0.35 // 标签字号
-                font.family: "JetBrains Mono" // 等宽字体
+                font.family: "JetBrainsMono Nerd Font" // 等宽字体
                 color: zenCloud // 中等对比色
             }
             Text { 
                 text: centerIsland.volume + "%" // 当前音量百分比（由 shell 写入）
                 font.pixelSize: unit * 0.35 // 数值字号（与标签一致）
-                font.family: "JetBrains Mono" // 等宽字体
+                font.family: "JetBrainsMono Nerd Font" // 等宽字体
                 color: zenSnow // 高对比色（突出数值）
                 font.bold: true // 加粗（进一步突出）
             }
