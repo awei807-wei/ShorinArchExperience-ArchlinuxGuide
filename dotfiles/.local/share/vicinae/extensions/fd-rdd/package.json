@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "fd-rdd",
+  "title": "fd-rdd",
+  "description": "Search files using the local fd-rdd HTTP API.",
+  "categories": [],
+  "license": "MIT",
+  "author": "local",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "search",
+      "title": "fd-rdd Search",
+      "description": "Query fd-rdd and open a returned file path.",
+      "mode": "view",
+      "keywords": ["fd", "files", "search"],
+      "preferences": [
+        {
+          "name": "fd_rdd_port",
+          "title": "fd-rdd port",
+          "description": "The local fd-rdd HTTP port on 127.0.0.1.",
+          "type": "textfield",
+          "required": false,
+          "default": "6060",
+          "placeholder": "6060"
+        }
+      ]
+    }
+  ],
+  "preferences": [],
+  "dependencies": {
+    "@vicinae/api": "*"
+  }
+}
+
