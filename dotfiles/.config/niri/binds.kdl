@@ -39,10 +39,13 @@ binds {
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+T hotkey-overlay-title="终端 Terminal" { spawn "kitty"; }
     // 文档管理器。如果有thunar的话会优先打开thunar，没有的话会打开nautilus，不要问我为什么（）
-    Mod+E hotkey-overlay-title="文档管理器 Filemanager" { spawn-sh "thunar || env GSK_RENDERER=gl GTK_IM_MODULE=fcitx  nautilus"; }
+    //Mod+E hotkey-overlay-title="文档管理器 Filemanager" { spawn-sh "thunar || env XDG_SESSION_TYPE=wayland GDK_BACKEND=wayland GTK_USE_PORTAL=0 TRACKER_SPARQL_BACKEND=direct GSK_RENDERER=gl nautilus"; }
+    Mod+E { spawn-sh "nautilus -q; nautilus -n"; }
     // 另一个打开nautilus的快捷键，主要是为了在同时安装thunar和nautilus的情况下打开naultilus
-    Mod+Alt+E hotkey-overlay-title=null {spawn-sh "env GSK_RENDERER=gl GTK_IM_MODULE=fcitx  nautilus";}
-    Mod+Z hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
+    Mod+Alt+E hotkey-overlay-title=null {spawn-sh "env XDG_SESSION_TYPE=wayland GDK_BACKEND=wayland GTK_USE_PORTAL=0 TRACKER_SPARQL_BACKEND=direct GSK_RENDERER=gl nautilus";}
+    //Alt+Space { spawn "notify-send" "按键测试" "Vicinae 触发了"; }
+    Alt+Space hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
+    //Alt+Space hotkey-overlay-title="搜索面板" { spawn "fuzeel"; }
     // 锁屏
     Mod+Alt+L hotkey-overlay-title="锁屏 Lock screen" { spawn "swaylock"; } 
     Mod+P hotkey-overlay-title="选取屏幕颜色 Pick color " { spawn-sh "hyprpicker | wl-copy"; }

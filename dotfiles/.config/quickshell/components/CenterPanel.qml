@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 
 // 模块：CenterPanel（中心面板内容组件）
 // 功能：承载“中心面板”UI（网络/蓝牙/音量/亮度/媒体控制），由 shell.qml 创建 PanelWindow 后嵌入本组件。
@@ -68,6 +69,10 @@ Rectangle {
     readonly property int leaderGapPx: 3 // 点线填充距离左右文字的空白
     readonly property int sepGapPx: 3 // 分隔线左右空白
     readonly property int sliderGapPx: 20 // 进度条距离左右文字的空白
+
+    // 蓝牙控制 Process
+    Process { id: btToggleProc; command: ["echo"] } // 占位：动态替换为 bluetoothctl power on/off
+    Process { id: btGuiProc; command: ["kitty", "--class", "bluetui", "-e", "bluetui"] } // 打开蓝牙 TUI 管理器
 
     // SYS_IO 标签补齐：让不同标签长度的行拥有相同的“进度条可用宽度”
     readonly property string _padChar: "\u00A0" // 不换行空格（不可见，占位用）
@@ -182,15 +187,38 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
-                    anchors.left: btLabel.right; anchors.right: btValue.left
+                    anchors.left: btLabel.right; anchors.right: btValueRow.left
                     anchors.leftMargin: centerPanel.leaderGapPx; anchors.rightMargin: centerPanel.leaderGapPx
                     text: Array(Math.max(0, Math.floor(width / Math.max(1, leaderDotMetrics.width))) + 1).join("·")
                     font.pixelSize: fontTiny; font.family: monoFont; color: zenMist
                     anchors.verticalCenter: parent.verticalCenter; clip: true
                 }
-                Text {
-                    id: btValue; anchors.right: parent.right; text: "archshiyi - " + btStatus; font.pixelSize: fontSecondary; font.family: monoFont; color: zenCloud
-                    anchors.verticalCenter: parent.verticalCenter
+                Row {
+                    id: btValueRow; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; spacing: 0
+                    // 设备名：点击打开 bluetui
+                    Text {
+                        text: "archshiyi"
+                        font.pixelSize: fontSecondary; font.family: monoFont; color: zenCloud
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: btGuiProc.running = true
+                        }
+                    }
+                    Text { text: " - "; font.pixelSize: fontSecondary; font.family: monoFont; color: zenMist }
+                    // 蓝牙状态：点击 toggle 电源
+                    Text {
+                        text: btStatus
+                        font.pixelSize: fontSecondary; font.family: monoFont
+                        color: btStatus === "ON" ? zenCloud : zenSmoke
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                let action = btStatus === "ON" ? "off" : "on"
+                                btToggleProc.command = ["bluetoothctl", "power", action]
+                                btToggleProc.running = true
+                            }
+                        }
+                    }
                 }
             }
         }

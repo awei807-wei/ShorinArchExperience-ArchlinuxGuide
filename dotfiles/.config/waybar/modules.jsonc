@@ -42,7 +42,7 @@
     "spacing": 7,
     // 自定义图标
     //"icons": {
-    //     "blueman": "/home/shorin/.config/waybar/logo/bluetooth.png",
+    //     "blueman": "/home/shiyi/.config/waybar/logo/bluetooth.png",
     //},
   },
   //工作区和窗口名字

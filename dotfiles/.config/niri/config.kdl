@@ -17,6 +17,11 @@ screenshot-path "~/Pictures/Screenshots/Niri-screenshots/%Y-%m-%d %H-%M-%S.png"
 
 // 环境变量
 environment {
+    GTK_IM_MODULE "fcitx"
+    QT_IM_MODULE "fcitx"
+    XMODIFIERS "@im=fcitx"
+    SDL_IM_MODULE "fcitx"
+    CLUTTER_IM_MODULE "fcitx"
     //LC_CTYPE "zh_CN.UTF-8" 会导致输入法出现漏字
     // 设置界面语言
     LC_MESSAGES "zh_CN.UTF-8"
@@ -307,6 +312,8 @@ layout {
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // 自动启动设置
+//启动FD-rdd
+spawn-at-startup "fd-rdd"
 // 询问管理员权限功能（身份验证）
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 // 桌面壁纸的守护进程
@@ -318,7 +325,7 @@ spawn-at-startup "waypaper" "--random"
 // 有聚焦窗口时桌面自动模糊的脚本
 spawn-at-startup "~/.config/scripts/niri_auto_blur_bg.sh"
 // 屏幕分享、录屏相关的环境设置
-spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri "
+spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=niri GTK_IM_MODULE QT_IM_MODULE XMODIFIERS "
 // GNOME tracker修复
 spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 // 通知程序
