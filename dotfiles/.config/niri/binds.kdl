@@ -44,8 +44,8 @@ binds {
     // 另一个打开nautilus的快捷键，主要是为了在同时安装thunar和nautilus的情况下打开naultilus
     Mod+Alt+E hotkey-overlay-title=null {spawn-sh "env XDG_SESSION_TYPE=wayland GDK_BACKEND=wayland GTK_USE_PORTAL=0 TRACKER_SPARQL_BACKEND=direct GSK_RENDERER=gl nautilus";}
     //Alt+Space { spawn "notify-send" "按键测试" "Vicinae 触发了"; }
-    Alt+Space hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
-    //Alt+Space hotkey-overlay-title="搜索面板" { spawn "fuzeel"; }
+    //Alt+Space hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
+    Alt+Space hotkey-overlay-title="搜索面板" { spawn-sh "vicinae toggle"; }
     // 锁屏
     Mod+Alt+L hotkey-overlay-title="锁屏 Lock screen" { spawn "swaylock"; } 
     Mod+P hotkey-overlay-title="选取屏幕颜色 Pick color " { spawn-sh "hyprpicker | wl-copy"; }
