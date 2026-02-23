@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "screen-capture",
+  "title": "Screen Capture",
+  "description": "Screen recording to GIF and long screenshot tools.",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "author": "local",
+  "contributors": [],
+  "pastContributors": [],
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "record",
+      "title": "Record GIF",
+      "description": "Toggle screen recording. First call starts recording a selected region, second call stops and converts to GIF.",
+      "mode": "no-view",
+      "keywords": ["gif", "record", "screen", "capture"]
+    },
+    {
+      "name": "longshot",
+      "title": "Long Screenshot",
+      "description": "Capture a scrolling long screenshot using wf-recorder and stitch.",
+      "mode": "no-view",
+      "keywords": ["longshot", "screenshot", "scroll", "stitch"]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "fps",
+      "title": "GIF FPS",
+      "description": "Frames per second for the output GIF file.",
+      "type": "textfield",
+      "required": false,
+      "default": "15",
+      "placeholder": "15"
+    },
+    {
+      "name": "width",
+      "title": "GIF Width",
+      "description": "Output GIF width in pixels. Height scales automatically.",
+      "type": "textfield",
+      "required": false,
+      "default": "640",
+      "placeholder": "640"
+    }
+  ],
+  "dependencies": {
+    "@vicinae/api": "*"
+  }
+}
