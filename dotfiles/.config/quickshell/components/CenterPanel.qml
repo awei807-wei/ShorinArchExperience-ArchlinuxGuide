@@ -30,6 +30,7 @@ Rectangle {
     property real fontSection // 分区标题字号
     property real fontTiny // 点线填充/分隔线字号
     property string mediaArtist // 媒体艺术家字符串
+    property string mediaArtUrl: "" // 媒体封面图 URL（MPRIS trackArtUrl；无时为空串）
     property bool mediaPlaying // 是否播放态（控制 play/pause 图标）
     property real mediaPosition // 当前播放位置（秒）
     property string mediaTitle // 媒体标题（为 "No Media" 时隐藏媒体区）
@@ -363,47 +364,85 @@ Rectangle {
         }
 
         // ===== 盒子3: NOW PLAYING =====
-        Column {
+        Item {
             x: panelPadding
             width: parent.width - panelPadding * 2
-            spacing: panelRowGap
+            // 盒子高度取内容和封面图的较大值，让封面图能完整显示
+            height: visible ? Math.max(mediaContentCol.height, mediaArtImage.height) : 0
             visible: mediaTitle !== "No Media" && mediaTitle !== ""
+            clip: true
 
-            Item {
-                width: parent.width; height: fontSection
-                Text { text: "// MEDIA_STREAM"; font.pixelSize: fontSection; font.letterSpacing: 3; font.family: monoFont; color: zenAsh; anchors.left: parent.left }
-                Text { text: "⌜"; font.pixelSize: fontSection; font.family: monoFont; color: zenMist; anchors.right: parent.right }
+            // 封面图（右对齐，固定正方形尺寸）
+            Image {
+                id: mediaArtImage
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: baseUnit * 4
+                height: baseUnit * 4
+                source: mediaArtUrl || ""
+                fillMode: Image.PreserveAspectCrop
+                visible: mediaArtUrl !== ""
+                opacity: 0.6
             }
 
-            Row {
-                width: parent.width; height: baseUnit * 1.8; spacing: panelGap * 4
-                Column {
-                    width: parent.width - baseUnit * 4; anchors.verticalCenter: parent.verticalCenter; spacing: 2
-                    Text { text: mediaTitle; font.pixelSize: fontSecondary * 1.1; font.family: monoFont; color: zenSnow; width: parent.width; elide: Text.ElideRight }
-                    Text {
-                        text: root.formatTime(mediaPosition) + " / " + root.formatTime(mprisPlayer?.length ?? 0) // 当前位置/总时长（MM:SS）
-                        font.pixelSize: fontTiny; font.family: monoFont; color: zenCloud
-                    }
-                    Text { text: mediaArtist; font.pixelSize: fontTiny; font.family: monoFont; color: zenSmoke }
+            // 封面图左侧渐变遮罩（从面板底色到透明，实现柔和过渡）
+            Rectangle {
+                anchors.right: mediaArtImage.right
+                anchors.verticalCenter: mediaArtImage.verticalCenter
+                height: mediaArtImage.height
+                width: mediaArtImage.width * 1.5
+                visible: mediaArtUrl !== ""
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: zenInk }
+                    GradientStop { position: 0.5; color: Qt.rgba(zenInk.r, zenInk.g, zenInk.b, 0.4) }
+                    GradientStop { position: 1.0; color: "transparent" }
                 }
+            }
+
+            // 前景内容层
+            Column {
+                id: mediaContentCol
+                width: parent.width
+                spacing: panelRowGap
+
+                Item {
+                    width: parent.width; height: fontSection
+                    Text { text: "// MEDIA_STREAM"; font.pixelSize: fontSection; font.letterSpacing: 3; font.family: monoFont; color: zenAsh; anchors.left: parent.left }
+                    Text { text: "⌜"; font.pixelSize: fontSection; font.family: monoFont; color: zenMist; anchors.right: parent.right }
+                }
+
                 Row {
-                    anchors.verticalCenter: parent.verticalCenter; spacing: panelGap * 2.5
-                    Repeater {
-                        model: ["prev", "play", "next"]
-                        Rectangle {
-                            width: baseUnit * 1.1; height: baseUnit * 1.1; color: "transparent"; radius: 2
-                            Text {
-                                anchors.centerIn: parent
-                                text: modelData === "prev" ? "⏮" : (modelData === "next" ? "⏭" : (mediaPlaying ? "⏸" : "▶"))
-                                font.pixelSize: fontSecondary; font.family: monoFont; color: zenSmoke
-                            }
-                            MouseArea {
-                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (mprisPlayer) {
-                                        if (modelData === "prev") mprisPlayer.previous()
-                                        else if (modelData === "next") mprisPlayer.next()
-                                        else mprisPlayer.togglePlaying()
+                    width: parent.width; height: baseUnit * 1.8; spacing: panelGap * 4
+                    Column {
+                        //音乐控件
+                        width: parent.width - baseUnit * 6; anchors.verticalCenter: parent.verticalCenter; spacing: 2
+                        Text { text: mediaTitle; font.pixelSize: fontSecondary * 1.1; font.family: monoFont; color: zenSnow; width: parent.width; elide: Text.ElideRight }
+                        Text {
+                            text: root.formatTime(mediaPosition) + " / " + root.formatTime(mprisPlayer?.length ?? 0)
+                            font.pixelSize: fontTiny; font.family: monoFont; color: zenCloud
+                        }
+                        Text { text: mediaArtist; font.pixelSize: fontTiny; font.family: monoFont; color: zenSmoke }
+                    }
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter; spacing: panelGap * 2.5
+                        Repeater {
+                            model: ["prev", "play", "next"]
+                            Rectangle {
+                                width: baseUnit * 1.1; height: baseUnit * 1.1; color: "transparent"; radius: 2
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: modelData === "prev" ? "⏮" : (modelData === "next" ? "⏭" : (mediaPlaying ? "⏸" : "▶"))
+                                    font.pixelSize: fontSecondary; font.family: monoFont; color: zenSmoke
+                                }
+                                MouseArea {
+                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (mprisPlayer) {
+                                            if (modelData === "prev") mprisPlayer.previous()
+                                            else if (modelData === "next") mprisPlayer.next()
+                                            else mprisPlayer.togglePlaying()
+                                        }
                                     }
                                 }
                             }

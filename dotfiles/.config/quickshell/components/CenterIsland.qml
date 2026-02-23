@@ -28,6 +28,10 @@ Rectangle {
     property color zenSnow: parent?.zenSnow ?? "#cacaca" // 文本高对比色（默认回退值）
     property color zenAccent: parent?.zenAccent ?? "#5a9a8a" // 强调色（音量条填充色等）
     property string weatherStr: "... °C" // 存储天气脚本输出
+    readonly property real leftContentPadding: unit * 1.2 // 左侧内容距左边框的距离
+    property string lastValidWeather: "" // 缓存上一次成功获取的天气值
+    property int weatherRetryCount: 0 // 当前重试计数（最多重试 3 次）
+    readonly property int weatherMaxRetries: 3 // 最大重试次数
 
     implicitWidth: unit * 12 // 增加宽度以容纳天气
     implicitHeight: parent?.height ?? unit * 2 // 默认高度：优先继承父高度，否则按 unit 给出
@@ -93,7 +97,31 @@ Rectangle {
                     try {
                         let obj = JSON.parse(trimmed)
                         if (obj.text) {
-                            centerIsland.weatherStr = obj.text
+                            // 判断是否为失败输出（包含 "--" 表示 weather.py 请求失败）
+                            if (obj.text.indexOf("--") !== -1) {
+                                // 获取失败：触发重试或回退缓存
+                                centerIsland.weatherRetryCount++
+                                console.log("[Weather] Fetch failed (attempt " + centerIsland.weatherRetryCount + "/" + centerIsland.weatherMaxRetries + ")")
+                                if (centerIsland.weatherRetryCount < centerIsland.weatherMaxRetries) {
+                                    // 未达最大重试次数：短延迟后重试
+                                    weatherRetryTimer.start()
+                                } else {
+                                    // 已达最大重试次数：使用缓存值或保持失败显示
+                                    if (centerIsland.lastValidWeather !== "") {
+                                        centerIsland.weatherStr = centerIsland.lastValidWeather
+                                        console.log("[Weather] 3 retries exhausted, using cached: " + centerIsland.lastValidWeather)
+                                    } else {
+                                        centerIsland.weatherStr = obj.text
+                                        console.log("[Weather] 3 retries exhausted, no cache available")
+                                    }
+                                    centerIsland.weatherRetryCount = 0 // 重置计数，等待下一个周期
+                                }
+                            } else {
+                                // 获取成功：更新显示和缓存
+                                centerIsland.weatherStr = obj.text
+                                centerIsland.lastValidWeather = obj.text // 缓存有效值
+                                centerIsland.weatherRetryCount = 0 // 重置重试计数
+                            }
                         }
                     } catch(e) {
                         // 解析失败时不更新 UI，保持上一次的有效值，避免闪烁
@@ -104,13 +132,27 @@ Rectangle {
         }
     }
 
+    // 天气重试定时器（5 秒后重试）
+    Timer {
+        id: weatherRetryTimer
+        interval: 5000 // 重试间隔 5 秒
+        repeat: false
+        onTriggered: {
+            console.log("[Weather] Retrying... (attempt " + (centerIsland.weatherRetryCount + 1) + ")")
+            weatherProc.running = true
+        }
+    }
+
     // 天气刷新定时器（每 15 分钟）
     Timer {
         interval: 900000
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: weatherProc.running = true
+        onTriggered: {
+            centerIsland.weatherRetryCount = 0 // 新周期重置重试计数
+            weatherProc.running = true
+        }
     }
 
     // 时间与天气分栏布局 - 网页级嵌套弹性盒子重构 (Nested Centering)
@@ -124,48 +166,41 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             
-            // 嵌套弹性盒子重构：左子 Div(时间/日期) + 右子 Div(周几) - 网页级居中修正版
-            RowLayout {
-                anchors.fill: parent
-                spacing: 0
+            // 左侧内容：时间/日期 + 周几，水平排列，左边距可调
+            Row {
+                anchors.left: parent.left
+                anchors.leftMargin: centerIsland.leftContentPadding
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: unit * 0.4
 
-                // 左子 Div (时间/日期)
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: -unit * 0.12
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: centerIsland.timeStr
-                            font.pixelSize: unit * 0.5
-                            font.family: "JetBrainsMono Nerd Font"
-                            font.bold: true
-                            color: zenSnow
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: centerIsland.dateStr
-                            font.pixelSize: unit * 0.38
-                            font.family: "JetBrainsMono Nerd Font"
-                            color: zenSmoke
-                        }
+                // 时间/日期列
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: -unit * 0.12
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: centerIsland.timeStr
+                        font.pixelSize: unit * 0.5
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.bold: true
+                        color: zenSnow
+                    }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: centerIsland.dateStr
+                        font.pixelSize: unit * 0.38
+                        font.family: "JetBrainsMono Nerd Font"
+                        color: zenSmoke
                     }
                 }
 
-                // 右子 Div (周几)
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Text {
-                        text: centerIsland.weekdayStr
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -unit * 0.02
-                        font.pixelSize: unit * 0.52
-                        font.family: "JetBrainsMono Nerd Font"
-                        color: zenCloud
-                    }
+                // 周几
+                Text {
+                    text: centerIsland.weekdayStr
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: unit * 0.52
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud
                 }
             }
         }

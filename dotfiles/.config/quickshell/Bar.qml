@@ -26,6 +26,7 @@ Rectangle {
     property color zenPure: "#f0f0f0" // 备用纯色（更亮的文本/图标）
     property color zenAccent: "#5a9a8a" // 强调色（进度条/高亮等）
     property var panelWindow: null // 顶栏所在 PanelWindow；用于托盘菜单锚点定位（RightIslands）
+    property int trayMaxVisible: 4 // 托盘最大可见图标数（由 shell 注入；超出则折叠为 +N 徽标）
     
     // 岛屿位置偏移参数
     property real leftIslandOffsetX: 0 // 左岛 X 偏移（由 shell 注入；用于整体微调位置）
@@ -38,7 +39,7 @@ Rectangle {
     // 暴露中岛引用给外部
     property alias centerIsland: centerIslandItem // 对外暴露 CenterIsland 实例（用于音量反馈/动画联动）
     color: "transparent" // Bar 自身不绘制底色（由各岛屿组件绘制）
-    
+
     RowLayout {
         anchors.fill: parent // 顶栏布局填充整个 Bar 区域
         anchors.leftMargin: 0 // 左侧不额外留白（由各岛屿自己处理 padding）
@@ -94,6 +95,7 @@ Rectangle {
             zenSnow: bar.zenSnow // 传入主题色：高对比文本
             zenAccent: bar.zenAccent // 传入主题色：强调色（频谱/进度条等）
             panelWindow: bar.panelWindow // 传入窗口引用（托盘右键菜单锚点需要）
+            trayMaxVisible: bar.trayMaxVisible // 传入托盘最大可见数（溢出折叠阈值）
             onToggleSystemPanel: bar.systemClicked() // 把系统岛点击信号上报给外部（shell）
         }
     }

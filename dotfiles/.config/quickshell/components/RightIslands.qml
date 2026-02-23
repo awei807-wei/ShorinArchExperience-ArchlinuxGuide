@@ -32,6 +32,30 @@ Row {
     property color zenSnow: parent?.zenSnow ?? "#cacaca" // 高对比文本色
     property color zenAccent: "#5a9a8a" // 强调色（频谱条等；默认为固定值，也可由外部覆盖）
     property var panelWindow: null // 顶栏所在 PanelWindow；用于托盘菜单锚点定位（必填）
+    property int trayMaxVisible: 4 // 托盘最大可见图标数（由 Bar 注入；超出则折叠为 +N 徽标）
+    property bool trayExpanded: false // 托盘是否处于展开态（显示全部图标）
+    // 溢出计算属性（注意：属性名不以下划线开头，避免 QML 信号处理器限制）
+    readonly property int trayCount: SystemTray.items.values ? SystemTray.items.values.length : (SystemTray.items.count ?? 0) // 当前托盘项总数（兼容 ObjectModel/ListModel）
+    readonly property int trayOverflow: Math.max(0, trayCount - trayMaxVisible) // 溢出数量（0 表示无溢出）
+    readonly property bool trayHasOverflow: trayOverflow > 0 // 是否存在溢出
+
+    // 调试：监控托盘状态变化
+    onTrayCountChanged: console.log("[Tray] count=" + trayCount + " maxVisible=" + trayMaxVisible + " overflow=" + trayOverflow + " hasOverflow=" + trayHasOverflow)
+
+    // 托盘展开态自动折叠计时器：3秒无操作后自动收起
+    Timer {
+        id: trayAutoCollapseTimer
+        interval: 3000 // 3秒后自动折叠
+        repeat: false
+        running: rightIslands.trayExpanded // 展开时启动计时
+        onTriggered: rightIslands.trayExpanded = false // 到时自动折叠
+    }
+    // 展开态变化时重置计时器
+    onTrayExpandedChanged: {
+        if (trayExpanded) {
+            trayAutoCollapseTimer.restart() // 展开时（重新）启动计时
+        }
+    }
 
     // Cava 频谱数据
     property string cavaData: "▁▁▁▁▁▁▁▁" // 频谱柱字符序列（每个字符代表一个高度等级）
@@ -210,26 +234,75 @@ Row {
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // 🗂️ 托盘岛（支持溢出折叠/展开）
+    // 行为：
+    //   图标数 ≤ trayMaxVisible → 全部显示
+    //   图标数 > trayMaxVisible → 前(max-1)个 + "+N" 计数徽标
+    //   点击 +N → 原地展开全部（向左溢出，不改变岛屿宽度）
+    //   再次点击 +N → 折叠回去
+    // 实现：
+    //   trayIsland 的 width 始终按折叠态计算（固定槽位数）
+    //   展开时 trayRow 通过 anchors.right 右对齐，多出的图标向左溢出
+    //   溢出部分由 trayOverflowBg 提供背景色块（避免透明穿透）
+    // ═══════════════════════════════════════════════════════
     Rectangle {
         id: trayIsland
-        width: Math.max(trayRow.implicitWidth + unit * 1.2, unit * 2.5) // 宽度至少能容纳托盘项；空态也保持最小宽度
+        // 宽度始终按折叠态计算：固定槽位数 × 单项宽度 + 间距 + 内边距
+        // 这样展开时不会改变 implicitWidth，不影响其他岛屿位置
+        width: {
+            let slots = Math.min(rightIslands.trayCount, rightIslands.trayMaxVisible) // 折叠态可见槽位数
+            if (slots === 0) return unit * 2.5 // 空态最小宽度
+            let itemW = unit * 1.2 // 单项宽度
+            let gap = unit * 0.4 // 项间距
+            return slots * itemW + (slots - 1) * gap + unit * 1.2 // 内容宽度 + 左右留白
+        }
         height: parent.height // 高度与顶栏一致
         color: zenInk // 背景色
         border.color: zenMist // 边框色
         border.width: 1 // 边框宽度
         radius: 2 // 圆角半径
+        clip: false // 关键！允许展开态的图标向左溢出边界
+
+        // 溢出背景色块：展开态时为向左溢出的图标提供背景（避免透明穿透与 systemIsland 重叠）
+        Rectangle {
+            id: trayOverflowBg
+            visible: rightIslands.trayExpanded && rightIslands.trayHasOverflow // 仅展开态 + 有溢出时显示
+            // 定位：从 trayRow 左边缘到 trayIsland 左边缘的区域
+            x: trayRow.x // 跟随 trayRow 的实际左边缘（可能为负值）
+            y: 0
+            width: Math.max(-trayRow.x, 0) // 溢出宽度 = trayRow 向左超出的距离
+            height: parent.height
+            color: zenInk // 与岛屿背景色一致
+            border.color: zenMist // 边框色
+            border.width: 1
+            radius: 2
+            // 淡入淡出动画
+            opacity: visible ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+        }
 
         Row {
             id: trayRow
-            anchors.centerIn: parent // 托盘项整体居中
+            // 右对齐：展开时多出的图标自然向左溢出 trayIsland 边界
+            anchors.right: parent.right
+            anchors.rightMargin: unit * 0.6 // 右侧留白
+            anchors.verticalCenter: parent.verticalCenter
             spacing: unit * 0.4 // 托盘项之间间距
 
             Repeater {
                 model: SystemTray.items // Quickshell 系统托盘项列表（响应式）
                 Item {
                     id: trayItemContainer
-                    width: unit * 1.2 // 单个托盘项容器宽度
+                    // 可见性控制：展开态显示全部；折叠态只显示前 (maxVisible-1) 个（给徽标留位）
+                    visible: rightIslands.trayExpanded || !rightIslands.trayHasOverflow || index < (rightIslands.trayMaxVisible - 1)
+                    width: visible ? unit * 1.2 : 0 // 隐藏时宽度归零（不占布局空间）
                     height: unit * 1.2 // 单个托盘项容器高度
+                    opacity: visible ? 1 : 0 // 隐藏时透明
+                    // 显隐动画
+                    Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+
                     Rectangle {
                         id: trayItemBg
                         anchors.fill: parent // 背景覆盖整个容器
@@ -254,8 +327,10 @@ Row {
                         onClicked: mouse => {
                             if (mouse.button === Qt.RightButton) {
                                 if (modelData.hasMenu) menuAnchor.open() // 右键：若托盘项提供菜单则打开
+                                // 右键不触发收起（保持展开态，方便操作菜单）
                             } else {
                                 modelData.activate() // 左键：执行托盘项默认激活行为（通常是打开窗口/切换状态）
+                                rightIslands.trayExpanded = false // 仅左键点击后收起展开态
                             }
                         }
                     }
@@ -267,6 +342,63 @@ Row {
                     }
                 }
             }
+
+            // 计数徽标：折叠态 + 有溢出时显示在最后一个槽位
+            Item {
+                id: trayBadge
+                visible: rightIslands.trayHasOverflow && !rightIslands.trayExpanded // 仅折叠态 + 有溢出时显示
+                width: visible ? unit * 1.2 : 0 // 与托盘项同宽
+                height: unit * 1.2
+                opacity: visible ? 1 : 0
+                Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+
+                Text {
+                    anchors.centerIn: parent
+                    // +N 文本：溢出数 = 总数 - (maxVisible - 1)，因为第 maxVisible 位被徽标占了
+                    text: "+" + (rightIslands.trayCount - rightIslands.trayMaxVisible + 1)
+                    font.pixelSize: unit * 0.4 // Cyber-Zen 纯文本风格
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud // 中等对比色（不抢眼但可读）
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onEntered: trayBadge.opacity = 0.8 // hover 反馈
+                    onExited: trayBadge.opacity = 1
+                    onClicked: rightIslands.trayExpanded = true // 点击展开全部
+                }
+            }
+
+            // 折叠按钮：展开态时显示，点击折叠回去
+            Item {
+                id: trayCollapseBtn
+                visible: rightIslands.trayExpanded && rightIslands.trayHasOverflow // 仅展开态 + 有溢出时显示
+                width: visible ? unit * 1.2 : 0
+                height: unit * 1.2
+                opacity: visible ? 1 : 0
+                Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "«" // 折叠指示符（向左收起）
+                    font.pixelSize: unit * 0.45
+                    font.family: "JetBrainsMono Nerd Font"
+                    color: zenCloud
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onEntered: trayCollapseBtn.opacity = 0.8
+                    onExited: trayCollapseBtn.opacity = 1
+                    onClicked: rightIslands.trayExpanded = false // 点击折叠
+                }
+            }
+
+            // 空态占位符
             Text {
                 visible: SystemTray.items.count === 0 // 空态：没有托盘项时显示占位符
                 text: "···" // 占位符文本（不抢眼）

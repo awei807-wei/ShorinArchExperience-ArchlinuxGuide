@@ -44,6 +44,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real islandPaddingH: baseUnit * 1.4     // 岛屿水平内边距
     readonly property real islandPaddingV: baseUnit * 0.4     // 岛屿垂直内边距
     readonly property real islandGap: baseUnit * 0.8          // 岛屿之间间距
+    readonly property int trayMaxVisible: 4                   // 托盘最大可见图标数（超出则折叠为 +N 徽标）
     readonly property real barMarginTop: baseUnit * 0.2       // 顶栏距屏幕顶部
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距（用于避免贴边）
     // 岛屿位置偏移（正值向右，负值向左）
@@ -138,10 +139,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     }
 
     // 在绑定块外部安全更新记忆，防止 Binding Loop
+    // 在绑定块外部安全更新记忆，防止 Binding Loop
     onMprisPlayerChanged: {
         if (mprisPlayer && mprisPlayer.playbackState === MprisPlaybackState.Playing) {
             if (mprisPlayer !== lastActivePlayer) {
-                configRoot.lastActivePlayer = mprisPlayer; // 仅在“正在播放”时更新记忆（避免暂停时抖动）
+                configRoot.lastActivePlayer = mprisPlayer; // 仅在"正在播放"时更新记忆（避免暂停时抖动）
             }
         }
     }
@@ -149,6 +151,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property string mediaTitle: mprisPlayer?.trackTitle ?? "No Media" // 当前曲目标题（无播放器/无曲目时回退）
     property string mediaArtist: mprisPlayer?.trackArtists?.join(", ") ?? "" // 当前曲目艺术家（数组拼接；无时回退空串）
     property bool mediaPlaying: mprisPlayer?.playbackState === MprisPlaybackState.Playing // 是否播放态（驱动 UI 图标/计时）
+    property string mediaArtUrl: mprisPlayer?.trackArtUrl ?? ""     // 当前曲目封面图 URL（MPRIS trackArtUrl；无时回退空串）
     property real mediaPosition: 0                                  // 当前播放位置（秒；由 Timer 同步）
     Timer {
         id: mediaSyncTimer
@@ -557,6 +560,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     centerIslandOffsetX: configRoot.centerIslandOffsetX // 位置偏移注入：中岛
                     rightIslandOffsetX: configRoot.rightIslandOffsetX // 位置偏移注入：右岛
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
+                    trayMaxVisible: configRoot.trayMaxVisible // 传入托盘最大可见数
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 CenterIsland 实例（用于音量反馈联动）
                     onCenterClicked: {
                         console.log("[shell] centerClicked, toggling panel") // 调试日志：记录点击
@@ -617,6 +621,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     fontSection: configRoot.fontSection
                     fontTiny: configRoot.fontTiny
                     mediaArtist: configRoot.mediaArtist
+                    mediaArtUrl: configRoot.mediaArtUrl
                     mediaPlaying: configRoot.mediaPlaying
                     mediaPosition: configRoot.mediaPosition
                     mediaTitle: configRoot.mediaTitle
