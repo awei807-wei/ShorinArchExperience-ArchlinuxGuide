@@ -1,14 +1,13 @@
 const React = require("react");
 const fs = require("node:fs");
 const path = require("node:path");
-const { 
-  List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form 
+const {
+  List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form
 } = require("@vicinae/api");
 
 const BOOKMARKS_PATH = path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks");
 const NOTES_PATH = path.join(process.env.HOME, ".local/share/vicinae/extensions/bookmark-master/notes.json");
 
-// 加载备注
 function loadNotes() {
   try {
     if (fs.existsSync(NOTES_PATH)) {
@@ -18,14 +17,12 @@ function loadNotes() {
   return {};
 }
 
-// 保存备注
 function saveNotes(notes) {
   try {
     fs.writeFileSync(NOTES_PATH, JSON.stringify(notes, null, 2));
   } catch (e) { showToast({ style: Toast.Style.Failure, title: "保存失败", message: e.message }); }
 }
 
-// 递归解析书签
 function parseBookmarks(node, folder = "", results = []) {
   if (node.type === "url") {
     results.push({
@@ -41,7 +38,6 @@ function parseBookmarks(node, folder = "", results = []) {
   return results;
 }
 
-// 编辑备注的表单组件
 function EditNoteForm({ bookmark, currentNote, onSave }) {
   const { pop } = useNavigation();
   return React.createElement(
@@ -70,7 +66,6 @@ function Command() {
   const [searchText, setSearchText] = React.useState("");
   const { push } = useNavigation();
 
-  // 初始化加载
   React.useEffect(() => {
     try {
       if (fs.existsSync(BOOKMARKS_PATH)) {
@@ -94,17 +89,34 @@ function Command() {
     showToast({ title: "备注已更新" });
   };
 
-  // 过滤逻辑
-  const filteredItems = items.filter(it => {
-    const note = notes[it.url] || "";
-    const search = searchText.toLowerCase();
-    return (
-      it.name.toLowerCase().includes(search) ||
-      it.url.toLowerCase().includes(search) ||
-      it.folder.toLowerCase().includes(search) ||
-      note.toLowerCase().includes(search)
-    );
-  });
+  const search = searchText.toLowerCase();
+  const filteredItems = items
+    .map(it => ({ ...it, note: notes[it.url] || "" }))
+    .filter(it => {
+      if (!search) return true;
+      return (
+        it.name.toLowerCase().includes(search) ||
+        it.url.toLowerCase().includes(search) ||
+        it.folder.toLowerCase().includes(search) ||
+        it.note.toLowerCase().includes(search)
+      );
+    })
+    .sort((a, b) => {
+      if (!search) return a.name.localeCompare(b.name);
+
+      const aNoteMatch = a.note.toLowerCase().includes(search);
+      const bNoteMatch = b.note.toLowerCase().includes(search);
+
+      // 优先级 1: 备注匹配优先
+      if (aNoteMatch && !bNoteMatch) return -1;
+      if (!aNoteMatch && bNoteMatch) return 1;
+
+      // 优先级 2: 字符集排序
+      if (aNoteMatch && bNoteMatch) {
+        return a.note.localeCompare(b.note);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   return React.createElement(
     List,
@@ -114,12 +126,11 @@ function Command() {
       throttle: true
     },
     filteredItems.map(it => {
-      const note = notes[it.url];
       return React.createElement(List.Item, {
         key: it.url + it.id,
         title: it.name,
         subtitle: it.url,
-        accessories: note ? [{ text: note, icon: Icon.Tag, tooltip: "自定义备注" }] : [],
+        accessories: it.note ? [{ text: it.note, icon: Icon.Tag, tooltip: "自定义备注" }] : [],
         actions: React.createElement(
           ActionPanel,
           null,
@@ -127,10 +138,10 @@ function Command() {
           React.createElement(Action, {
             title: "编辑备注",
             icon: Icon.Pencil,
-            shortcut: { modifiers: ["shift"], key: "enter" },
+            shortcut: { modifiers: ["cmd"], key: "e" },
             onAction: () => push(React.createElement(EditNoteForm, {
               bookmark: it,
-              currentNote: note,
+              currentNote: it.note,
               onSave: (val) => handleSaveNote(it.url, val)
             }))
           }),
