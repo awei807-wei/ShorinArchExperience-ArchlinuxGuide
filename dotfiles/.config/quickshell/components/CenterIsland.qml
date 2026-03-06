@@ -32,6 +32,7 @@ Rectangle {
     property string lastValidWeather: "" // 缓存上一次成功获取的天气值
     property int weatherRetryCount: 0 // 当前重试计数（最多重试 3 次）
     readonly property int weatherMaxRetries: 3 // 最大重试次数
+    property bool weatherReceivedOutput: false // 标记本轮是否真正收到过可解析天气输出
 
     implicitWidth: unit * 12 // 增加宽度以容纳天气
     implicitHeight: parent?.height ?? unit * 2 // 默认高度：优先继承父高度，否则按 unit 给出
@@ -50,6 +51,15 @@ Rectangle {
     property int volume: 0 // 当前音量百分比（0-100；由 shell 写入）
 
     signal togglePanel()
+
+    function startWeatherFetch(resetRetries) {
+        if (resetRetries === true)
+            centerIsland.weatherRetryCount = 0
+        if (weatherProc.running)
+            return
+        centerIsland.weatherReceivedOutput = false
+        weatherProc.running = true
+    }
 
     // 抖动动画
     function shake() {
@@ -88,7 +98,20 @@ Rectangle {
     // 天气获取进程
     Process {
         id: weatherProc
-        command: ["python", "/home/shiyi/.config/waybar/scripts/weather.py"]
+        command: ["/usr/bin/python", "-u", "/home/shiyi/.config/waybar/scripts/weather.py"]
+        onStarted: centerIsland.weatherReceivedOutput = false
+        onExited: {
+            if (!centerIsland.weatherReceivedOutput) {
+                centerIsland.weatherRetryCount++
+                console.log("[Weather] Process exited without readable output (" + centerIsland.weatherRetryCount + "/" + centerIsland.weatherMaxRetries + ")")
+                if (centerIsland.weatherRetryCount < centerIsland.weatherMaxRetries) {
+                    weatherRetryTimer.start()
+                } else {
+                    centerIsland.weatherStr = centerIsland.lastValidWeather !== "" ? centerIsland.lastValidWeather : "󰖐 --°C"
+                    centerIsland.weatherRetryCount = 0
+                }
+            }
+        }
         stdout: SplitParser {
             onRead: data => {
                 let trimmed = data.trim()
@@ -97,6 +120,7 @@ Rectangle {
                     try {
                         let obj = JSON.parse(trimmed)
                         if (obj.text) {
+                            centerIsland.weatherReceivedOutput = true
                             // 判断是否为失败输出（包含 "--" 表示 weather.py 请求失败）
                             if (obj.text.indexOf("--") !== -1) {
                                 // 获取失败：触发重试或回退缓存
@@ -139,8 +163,16 @@ Rectangle {
         repeat: false
         onTriggered: {
             console.log("[Weather] Retrying... (attempt " + (centerIsland.weatherRetryCount + 1) + ")")
-            weatherProc.running = true
+            centerIsland.startWeatherFetch(false)
         }
+    }
+
+    // 首次启动延迟拉取天气，避免 shell 刚起来时网络和脚本环境尚未稳定
+    Timer {
+        interval: 1500
+        running: true
+        repeat: false
+        onTriggered: centerIsland.startWeatherFetch(true)
     }
 
     // 天气刷新定时器（每 15 分钟）
@@ -148,10 +180,8 @@ Rectangle {
         interval: 900000
         running: true
         repeat: true
-        triggeredOnStart: true
         onTriggered: {
-            centerIsland.weatherRetryCount = 0 // 新周期重置重试计数
-            weatherProc.running = true
+            centerIsland.startWeatherFetch(true)
         }
     }
 
