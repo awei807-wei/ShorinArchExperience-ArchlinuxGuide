@@ -313,9 +313,9 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // 自动启动设置
 //启动FD-rdd
-spawn-at-startup "fd-rdd"
+spawn-sh-at-startup "fd-rdd --root \"$HOME\" --snapshot-path /tmp/index.db --snapshot-interval-secs 300 --batch-flush-min-events 200 --batch-flush-min-bytes 1048576 --auto-flush-overlay-paths 20000 --auto-flush-overlay-bytes 16777216 --trim-interval-secs 300 --trim-pd-threshold-mb 128"
 //启动应用面板
-spawn-at-startup "vicinae server"
+spawn-at-startup "vicinae" "server"
 // 询问管理员权限功能（身份验证）
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 // 桌面壁纸的守护进程
