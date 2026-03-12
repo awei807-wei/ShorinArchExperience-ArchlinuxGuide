@@ -3,7 +3,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form } = require("@vicinae/api");
 
-const BOOKMARKS_PATH = path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks");
+// 自动检测浏览器书签路径（优先级：Thorium > Edge > Chrome）
+const BROWSER_PATHS = [
+  path.join(process.env.HOME, ".config/thorium/Default/Bookmarks"),
+  path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks"),
+  path.join(process.env.HOME, ".config/google-chrome/Default/Bookmarks")
+];
+const BOOKMARKS_PATH = BROWSER_PATHS.find(p => fs.existsSync(p)) || BROWSER_PATHS[0];
 
 function parseBookmarks(node, folder = "", results = []) {
   if (node.type === "url") {
@@ -27,7 +33,7 @@ function parseBookmarks(node, folder = "", results = []) {
   return results;
 }
 
-// 修复后的写入逻辑：直接使用 Node.js 处理 JSON，彻底告别引号地狱
+// 修复后的写入逻辑：直接使用 Node.js 处理 JSON，彻底告别引号地狱，并支持多浏览器路径
 function saveNoteToEdge(url, newNote) {
   try {
     if (!fs.existsSync(BOOKMARKS_PATH)) return false;

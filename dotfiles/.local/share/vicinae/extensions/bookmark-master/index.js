@@ -2,9 +2,14 @@ const React = require("react");
 const fs = require("node:fs");
 const path = require("node:path");
 const { List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form } = require("@vicinae/api");
-const { execSync } = require("node:child_process");
 
-const BOOKMARKS_PATH = path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks");
+// 自动检测浏览器书签路径（优先级：Thorium > Edge > Chrome）
+const BROWSER_PATHS = [
+  path.join(process.env.HOME, ".config/thorium/Default/Bookmarks"),
+  path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks"),
+  path.join(process.env.HOME, ".config/google-chrome/Default/Bookmarks")
+];
+const BOOKMARKS_PATH = BROWSER_PATHS.find(p => fs.existsSync(p)) || BROWSER_PATHS[0];
 
 function parseBookmarks(node, folder = "", results = []) {
   if (node.type === "url") {
@@ -28,28 +33,39 @@ function parseBookmarks(node, folder = "", results = []) {
   return results;
 }
 
-// 使用 Python 脚本修改书签标题，实现“寄生”写入
+// 修复后的写入逻辑：直接使用 Node.js 处理 JSON，彻底告别引号地狱，并支持多浏览器路径
 function saveNoteToEdge(url, newNote) {
-  const pyScript = `
-import json, os, re
-path = os.path.expanduser("~/.config/microsoft-edge/Default/Bookmarks")
-with open(path, 'r') as f: data = json.load(f)
-def update(node):
-    if node.get('type') == 'url' and node.get('url') == '${url}':
-        clean = re.sub(r'\\s*\\[v:.*\\]$', '', node.get('name', ''))
-        node['name'] = f"{clean} [v:${newNote}]" if '${newNote}' else clean
-        return True
-    for c in node.get('children', []):
-        if update(c): return True
-    return False
-for r in data.get('roots', {}).values():
-    if isinstance(r, dict) and update(r): break
-with open(path, 'w') as f: json.dump(data, f, indent=2)
-`;
   try {
-    execSync(`python3 -c '${pyScript}'`);
-    return true;
+    if (!fs.existsSync(BOOKMARKS_PATH)) return false;
+    const data = JSON.parse(fs.readFileSync(BOOKMARKS_PATH, "utf8"));
+    
+    let found = false;
+    function updateNode(node) {
+      if (node.type === "url" && node.url === url) {
+        const cleanName = (node.name || "").replace(/\s*\[v:.*\]$/, "");
+        node.name = newNote ? `${cleanName} [v:${newNote}]` : cleanName;
+        found = true;
+        return true;
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (updateNode(child)) return true;
+        }
+      }
+      return false;
+    }
+
+    for (const root of Object.values(data.roots)) {
+      if (typeof root === "object" && updateNode(root)) break;
+    }
+
+    if (found) {
+      fs.writeFileSync(BOOKMARKS_PATH, JSON.stringify(data, null, 2), "utf8");
+      return true;
+    }
+    return false;
   } catch (e) {
+    console.error("写入书签失败:", e);
     return false;
   }
 }
@@ -103,7 +119,7 @@ function Command() {
       showToast({ title: "同步成功", message: "备注已存入书签标题" });
       loadData();
     } else {
-      showToast({ style: Toast.Style.Failure, title: "同步失败" });
+      showToast({ style: Toast.Style.Failure, title: "同步失败", message: "请检查书签文件是否被占用" });
     }
   };
 
