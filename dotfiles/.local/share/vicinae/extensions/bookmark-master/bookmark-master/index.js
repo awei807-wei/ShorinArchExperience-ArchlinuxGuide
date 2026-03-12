@@ -1,6 +1,7 @@
 const React = require("react");
 const fs = require("node:fs");
 const path = require("node:path");
+const { exec } = require("node:child_process");
 const { List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form } = require("@vicinae/api");
 
 // 自动检测浏览器书签路径（优先级：Thorium > Edge > Chrome）
@@ -33,7 +34,6 @@ function parseBookmarks(node, folder = "", results = []) {
   return results;
 }
 
-// 修复后的写入逻辑：直接使用 Node.js 处理 JSON，彻底告别引号地狱，并支持多浏览器路径
 function saveNoteToEdge(url, newNote) {
   try {
     if (!fs.existsSync(BOOKMARKS_PATH)) return false;
@@ -151,7 +151,11 @@ function Command() {
       actions: React.createElement(
         ActionPanel,
         null,
-        React.createElement(Action.OpenInBrowser, { url: it.url }),
+        React.createElement(Action, {
+          title: "在 Thorium 中打开",
+          icon: Icon.Globe,
+          onAction: () => exec(`thorium-browser "${it.url}"`)
+        }),
         React.createElement(Action, {
           title: "编辑备注",
           icon: Icon.Pencil,
