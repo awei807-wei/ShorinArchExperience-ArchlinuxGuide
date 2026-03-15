@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick.Effects
 import Quickshell.Services.Mpris
+
 ShellRoot {
     id: root
     
@@ -22,7 +23,8 @@ ShellRoot {
     property string username: ""
     property string networkName: ""
     property int batteryLevel: 0
-    
+    property string fallbackMedia: ""
+
     // 异步获取系统资产
     Process {
         id: wallpaperProc
@@ -62,24 +64,39 @@ ShellRoot {
             }
         }
     }
+
     Process {
         id: batteryProc
-        command: ["sh", "-c", "cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo 100"] // 有电池则读 BAT0/capacity，否则回退 100
+        command: ["sh", "-c", "cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo 100"]
         running: true
         stdout: SplitParser {
             onRead: function(data) { root.batteryLevel = parseInt(data.trim()) || 0 }
         }
     }
-    // 定时刷新（独立组件，通过 id 引用）
+
+    // 备选媒体获取（针对无名播放器）
+    Process {
+        id: mediaFallbackProc
+        command: ["playerctl", "metadata", "--format", "{{title}} - {{artist}}"]
+        running: true
+        stdout: SplitParser {
+            onRead: function(data) { root.fallbackMedia = data.trim() }
+        }
+    }
+
+    // 定时刷新
     Timer {
-        interval: 30000
+        interval: 5000
         running: true
         repeat: true
         onTriggered: {
             batteryProc.running = false
             batteryProc.running = true
+            mediaFallbackProc.running = false
+            mediaFallbackProc.running = true
         }
     }
+
     // 电源管理指令
     Process { id: powerOffProc; command: ["systemctl", "poweroff"] }
     Process { id: rebootProc; command: ["systemctl", "reboot"] }
@@ -118,7 +135,7 @@ ShellRoot {
                     color: root.tintColor
                 }
 
-                // --- 动态粒子系统 (增强版) ---
+                // --- 动态粒子系统 ---
                 Canvas {
                     id: particleCanvas
                     anchors.fill: parent
@@ -432,15 +449,16 @@ ShellRoot {
                 Row {
                     spacing: root.u * 0.5
                     Text { text: "🎵"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                    Text {
+                    Text { 
                         id: mediaText
-                        property var activeP: MprisController.activePlayer || (MprisController.players.values.length > 0 ? MprisController.players.values[0] : null)
                         text: {
-                            if (!activeP) return "未在播放"
-                            var title = activeP.trackTitle || ""
-                            var artist = activeP.trackArtist || ""
-                            if (!title && !artist) return "正在加载..."
-                            return artist ? (title + " - " + artist) : title
+                            var mprisP = MprisController.activePlayer || (MprisController.players.values.length > 0 ? MprisController.players.values[0] : null)
+                            if (mprisP) {
+                                var title = mprisP.trackTitle || ""
+                                var artist = mprisP.trackArtist || ""
+                                if (title || artist) return artist ? (title + " - " + artist) : title
+                            }
+                            return root.fallbackMedia || "未在播放"
                         }
                         color: root.textSecondary
                         font.family: "Source Han Sans CN"
