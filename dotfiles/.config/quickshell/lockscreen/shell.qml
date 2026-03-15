@@ -433,7 +433,15 @@ ShellRoot {
                     spacing: root.u * 0.5
                     Text { text: "🎵"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
                     Text {
-                        text: MprisController.activePlayer ? (MprisController.activePlayer.trackTitle + (MprisController.activePlayer.trackArtist ? " - " + MprisController.activePlayer.trackArtist : "")) : "未在播放"
+                        id: mediaText
+                        property var activeP: MprisController.activePlayer || (MprisController.players.values.length > 0 ? MprisController.players.values[0] : null)
+                        text: {
+                            if (!activeP) return "未在播放"
+                            var title = activeP.trackTitle || ""
+                            var artist = activeP.trackArtist || ""
+                            if (!title && !artist) return "正在加载..."
+                            return artist ? (title + " - " + artist) : title
+                        }
                         color: root.textSecondary
                         font.family: "Source Han Sans CN"
                         font.pixelSize: root.u * 0.9
