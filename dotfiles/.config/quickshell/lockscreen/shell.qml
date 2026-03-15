@@ -80,7 +80,14 @@ ShellRoot {
         command: ["playerctl", "metadata", "--format", "{{title}} - {{artist}}"]
         running: true
         stdout: SplitParser {
-            onRead: function(data) { root.fallbackMedia = data.trim() }
+            onRead: function(data) { 
+                var d = data.trim()
+                if (d && d !== " - ") {
+                    root.fallbackMedia = d
+                } else {
+                    root.fallbackMedia = ""
+                }
+            }
         }
     }
 
@@ -452,11 +459,10 @@ ShellRoot {
                     Text { 
                         id: mediaText
                         text: {
-                            var mprisP = MprisController.activePlayer || (MprisController.players.values.length > 0 ? MprisController.players.values[0] : null)
-                            if (mprisP) {
-                                var title = mprisP.trackTitle || ""
-                                var artist = mprisP.trackArtist || ""
-                                if (title || artist) return artist ? (title + " - " + artist) : title
+                            // 极简且稳健的取值逻辑
+                            var p = MprisController.activePlayer
+                            if (p && p.trackTitle) {
+                                return p.trackArtist ? (p.trackTitle + " - " + p.trackArtist) : p.trackTitle
                             }
                             return root.fallbackMedia || "未在播放"
                         }
