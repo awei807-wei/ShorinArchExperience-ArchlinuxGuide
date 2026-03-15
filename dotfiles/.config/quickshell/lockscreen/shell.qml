@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick.Effects
-import Quickshell.Services.Mpris
 
 ShellRoot {
     id: root
@@ -23,7 +22,6 @@ ShellRoot {
     property string username: ""
     property string networkName: ""
     property int batteryLevel: 0
-    property string fallbackMedia: ""
 
     // 异步获取系统资产
     Process {
@@ -74,23 +72,6 @@ ShellRoot {
         }
     }
 
-    // 备选媒体获取（针对无名播放器）
-    Process {
-        id: mediaFallbackProc
-        command: ["playerctl", "metadata", "--format", "{{title}} - {{artist}}"]
-        running: true
-        stdout: SplitParser {
-            onRead: function(data) { 
-                var d = data.trim()
-                if (d && d !== " - ") {
-                    root.fallbackMedia = d
-                } else {
-                    root.fallbackMedia = ""
-                }
-            }
-        }
-    }
-
     // 定时刷新
     Timer {
         interval: 5000
@@ -99,8 +80,6 @@ ShellRoot {
         onTriggered: {
             batteryProc.running = false
             batteryProc.running = true
-            mediaFallbackProc.running = false
-            mediaFallbackProc.running = true
         }
     }
 
@@ -279,16 +258,6 @@ ShellRoot {
                 Repeater {
                     model: [
                         { icon: "⏻", action: function() { powerOffProc.running = true } }
-                    ]
-                    delegate: Rectangle {
-                        width: root.u * 2.8
-                        height: root.u * 2.8
-                        radius: width / 2
-                        color: Qt.rgba(1, 1, 1, 0.05)
-                        border.color: Qt.rgba(1, 1, 1, 0.1)
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData.icon
                             color: root.textSecondary
                             font.pixelSize: root.u * 1.2
                         }
@@ -452,28 +421,6 @@ ShellRoot {
                     spacing: root.u * 0.5
                     Text { text: "🔒"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
                     Text { text: "已锁定"; color: root.textSecondary; font.family: "Source Han Sans CN"; font.pixelSize: root.u * 0.9; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                }
-                Row {
-                    spacing: root.u * 0.5
-                    Text { text: "🎵"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                    Text { 
-                        id: mediaText
-                        text: {
-                            // 极简且稳健的取值逻辑
-                            var p = MprisController.activePlayer
-                            if (p && p.trackTitle) {
-                                return p.trackArtist ? (p.trackTitle + " - " + p.trackArtist) : p.trackTitle
-                            }
-                            return root.fallbackMedia || "未在播放"
-                        }
-                        color: root.textSecondary
-                        font.family: "Source Han Sans CN"
-                        font.pixelSize: root.u * 0.9
-                        height: root.u * 1.5
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
-                        width: Math.min(implicitWidth, root.u * 15)
-                    }
                 }
             }
 
