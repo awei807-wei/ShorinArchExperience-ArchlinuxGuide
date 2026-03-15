@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick.Effects
+import Quickshell.Services.Mpris
 ShellRoot {
     id: root
     
@@ -431,7 +432,16 @@ ShellRoot {
                 Row {
                     spacing: root.u * 0.5
                     Text { text: "🎵"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                    Text { text: "未在播放"; color: root.textSecondary; font.family: "Source Han Sans CN"; font.pixelSize: root.u * 0.9; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
+                    Text {
+                        text: MprisController.activePlayer ? (MprisController.activePlayer.trackTitle + (MprisController.activePlayer.trackArtist ? " - " + MprisController.activePlayer.trackArtist : "")) : "未在播放"
+                        color: root.textSecondary
+                        font.family: "Source Han Sans CN"
+                        font.pixelSize: root.u * 0.9
+                        height: root.u * 1.5
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                        width: Math.min(implicitWidth, root.u * 15)
+                    }
                 }
             }
 
