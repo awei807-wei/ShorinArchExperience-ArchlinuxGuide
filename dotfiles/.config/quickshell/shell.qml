@@ -275,6 +275,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // Control Processes
     Process { id: volSetProc; command: ["echo"] } // 占位：设置音量时动态替换为 wpctl set-volume
     Process { id: briSetProc; command: ["echo"] } // 占位：设置亮度时动态替换为 brightnessctl set
+    Process {
+        id: idleBootstrapProc
+        running: true // 启动主壳时统一接管 swayidle，确保 30/40/60 策略与状态文件生效
+        command: ["sh", "-lc", "$HOME/.config/quickshell/scripts/idle-control.sh start >/dev/null 2>&1"]
+    }
     // 媒体控制已改用 MPRIS 原生方法
     // 音量/亮度设置函数（供子组件通过 root.setVolume/root.setBrightness 调用）
     // 解决 QML 名称遮蔽问题：子组件的同名属性会遮蔽 ShellRoot 的 id 引用

@@ -12,13 +12,24 @@ video/mp4=mpv.desktop
 video/x-matroska=mpv.desktop
 video/avi=mpv.desktop
 video/quicktime=mpv.desktop
-text/plain=vim.desktop
+text/plain=nvim.desktop
 application/vnd.microsoft.portable-executable=wine.desktop
+x-scheme-handler/baiduyunguanjia=baidunetdisk.desktop
+x-scheme-handler/clash=clash-verge.desktop;
+x-scheme-handler/clash-verge=clash-verge.desktop;
+text/markdown=nvim.desktop
+application/json=nvim.desktop
+text/csv=wps-office-prometheus.desktop
 
 [Added Associations]
 image/png=imv.desktop;
 video/webm=mpv.desktop;
 application/x-shellscript=vim.desktop;
 video/mp4=mpv.desktop;
-text/plain=vim.desktop;
+text/plain=vim.desktop;code-oss.desktop;nvim.desktop;
 application/vnd.microsoft.portable-executable=wine.desktop;
+x-scheme-handler/clash=clash-verge.desktop;
+x-scheme-handler/clash-verge=clash-verge.desktop;
+text/markdown=nvim.desktop;
+application/json=nvim.desktop;
+text/csv=wps-office-prometheus.desktop;

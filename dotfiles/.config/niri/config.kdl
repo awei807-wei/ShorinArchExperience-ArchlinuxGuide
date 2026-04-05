@@ -313,7 +313,7 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // 自动启动设置
 //启动FD-rdd
-spawn-sh-at-startup "fd-rdd --root \"$HOME\" --snapshot-path /tmp/index.db --snapshot-interval-secs 300 --batch-flush-min-events 200 --batch-flush-min-bytes 1048576 --auto-flush-overlay-paths 20000 --auto-flush-overlay-bytes 16777216 --trim-interval-secs 300 --trim-pd-threshold-mb 128"
+spawn-sh-at-startup "fd-rdd --root \"$HOME\" --include-hidden --snapshot-path /tmp/index.db --snapshot-interval-secs 300 --batch-flush-min-events 200 --batch-flush-min-bytes 1048576 --auto-flush-overlay-paths 20000 --auto-flush-overlay-bytes 16777216 --trim-interval-secs 300 --trim-pd-threshold-mb 128"
 //启动应用面板
 spawn-at-startup "vicinae" "server"
 // 询问管理员权限功能（身份验证）

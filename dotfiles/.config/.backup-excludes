@@ -1,0 +1,30 @@
+# Skip these paths even when the parent entry is allowlisted.
+# They are machine-local, generated, scratch, or otherwise poor GitHub backup candidates.
+
+quickshell
+user-dirs.dirs
+user-dirs.locale
+QtProject.conf
+clipse-gui/clipse-gui.log
+fcitx5/conf/cached_layouts
+fish/completions/
+fish/conf.d/
+fish/fish_variables
+fish/functions/
+gtk-3.0/bookmarks
+gtk-4.0/assets
+gtk-4.0/gtk-dark.css
+gtk-4.0/libadwaita-tweaks.css
+gtk-4.0/libadwaita.css
+kitty/*.bak
+waybar-niri-Win11Like/colors.css
+waybar/scripts/longshot-sh/venv/
+yazi/theme.toml-*
+**/.claude/
+**/__pycache__/
+**/*.bak-*
+**/*.bak
+**/*.backup
+**/*.log
+**/*.swp
+**/*~

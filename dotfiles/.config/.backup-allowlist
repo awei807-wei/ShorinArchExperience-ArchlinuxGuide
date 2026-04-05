@@ -1,0 +1,45 @@
+# Curated top-level entries to sync from ~/.config into this repository.
+# quickshell is intentionally omitted because ~/.config/quickshell is a symlink
+# back to dotfiles/.config/quickshell and should be managed in-repo directly.
+
+MangoHud
+Thunar
+ags
+btop
+cava
+clipse-gui
+fastfetch
+fcitx5
+fish
+fontconfig
+fuzzel
+ghostty
+gtk-3.0
+gtk-4.0
+kdeglobals
+kitty
+lsfg-vk
+mako
+mango
+matugen
+mimeapps.list
+mpv
+niri
+niriswitcher
+nwg-look
+qt5ct
+qt6ct
+satty
+scripts
+starship.toml
+swappy
+swaylock
+swaync
+ulauncher
+waybar
+waybar-niri-Win11Like
+waypaper
+wlogout
+wofi
+xfce4
+yazi

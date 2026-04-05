@@ -129,6 +129,12 @@ window-rule {
 //     default-floating-position x=0 y=0 relative-to="top-right"
 //     open-floating true
 // }
+// 强制 Thorium 启动时夺取焦点
+window-rule {
+    match app-id="thorium"
+    open-focused true
+}
+
 // Example: block out two password managers from screen capture.
 // (This example rule is commented out with a "/-" in front.)
 /-window-rule {
