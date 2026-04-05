@@ -47,7 +47,7 @@ binds {
     //Alt+Space hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
     Alt+Space hotkey-overlay-title="搜索面板" { spawn-sh "vicinae toggle"; }
     // 锁屏
-    Mod+Alt+L hotkey-overlay-title="锁屏 Lock screen" { spawn "swaylock"; } 
+    Mod+Alt+L hotkey-overlay-title="锁屏 Lock screen" { spawn-sh "/usr/bin/quickshell -p ~/.config/quickshell/lockscreen/shell.qml";} 
     Mod+P hotkey-overlay-title="选取屏幕颜色 Pick color " { spawn-sh "hyprpicker | wl-copy"; }
     Mod+Alt+V  hotkey-overlay-title="剪贴板 Clipboard" {spawn-sh "copyq toggle || clipse-gui || kitty --class clipse -o font_size=13 -o \"modify_font cell_height 90%\" -e clipse";}
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
