@@ -1,87 +1,64 @@
-<div align="center">
-  <img src="pictures/shorinarchlogo.png" alt="SHORiNのARCH Logo" width="500" />
-</div>
+# ShorinArch Dotfiles
 
----
+基于 Arch Linux + Niri 合成器的桌面环境配置文件集。
 
-本文是我使用Archlinux的实践经历，你可以沿着我走过的路上手arch，应该会轻松很多。
+> Forked from [SHORiN-KiWATA/ShorinArchExperience-ArchlinuxGuide](https://github.com/SHORiN-KiWATA/ShorinArchExperience-ArchlinuxGuide)
 
-使用btrfs文件系统，不涉及加密和安全启动。具体内容包括：系统的手动和脚本安装、win+linux双系统、N卡驱动和硬件编解码、GNOME和KDE Plasma桌面环境、Hyprland/Niri/Mangowc等wayland合成器、中文输入法、常用虚拟机程序（vmware、virtualbox、winapps、distrobox、qemu/kvm）、虚拟机安装windows、qemu/kvm虚拟机显卡直通、虚拟机调优和伪装、Linux玩游戏、系统性能调优等等，最后一步干净删除Linux系统。
+## 概览
 
-## [Wiki-文档本体在这里](https://github.com/SHORiN-KiWATA/ShorinArchExperience-ArchlinuxGuide/wiki)
+| 类别 | 内容 |
+|---|---|
+| **合成器** | Niri (滚动式 Wayland 合成器) |
+| **状态栏** | Waybar / Waybar Win11 风格 / Quickshell |
+| **锁屏** | Quickshell (QML 实现) |
+| **启动器** | Fuzzel / Wofi / Ulauncher |
+| **终端** | Kitty / Ghostty |
+| **主题配色** | Matugen (基于壁纸的 Material You 配色) |
+| **通知** | Mako / SwayNC |
+| **输入法** | Fcitx5 |
+| **Shell** | Fish |
+| **截图** | Grim + Slurp + Satty (含长截图工具链) |
+| **录屏** | wf-recorder |
+| **快照备份** | Snapper + btrfs |
 
-## [懒人必备：一键配置桌面环境](https://github.com/SHORiN-KiWATA/ShorinArchExperience-ArchlinuxGuide/wiki/%E4%B8%80%E9%94%AE%E9%85%8D%E7%BD%AE%E6%A1%8C%E9%9D%A2%E7%8E%AF%E5%A2%83)
+## 目录结构
 
-我的一键配置脚本做好啦，功能是用我的配置文件为刚刚安装好的archlinux系统一键安装桌面环境。我的桌面是什么样，你用完这个脚本就是什么样。
+```
+dotfiles/
+├── .config/
+│   ├── niri/              # Niri 合成器配置 (KDL 模块化)
+│   ├── waybar/            # Waybar 状态栏
+│   ├── waybar-niri-Win11Like/  # Win11 风格 Waybar
+│   ├── quickshell/        # QML 面板 / 锁屏
+│   ├── matugen/           # 配色方案与模板
+│   ├── scripts/           # 通用脚本 (快照、壁纸、配色切换等)
+│   ├── kitty/             # Kitty 终端
+│   ├── ghostty/           # Ghostty 终端
+│   ├── fish/              # Fish Shell
+│   ├── fcitx5/            # 中文输入法
+│   ├── fuzzel/            # Fuzzel 启动器
+│   ├── wofi/              # Wofi 启动器
+│   ├── mako/              # Mako 通知守护进程
+│   ├── swaync/            # SwayNC 通知中心
+│   ├── swaylock/          # 锁屏
+│   ├── wlogout/           # 注销菜单
+│   ├── btop/              # 系统监控
+│   ├── fastfetch/         # 系统信息
+│   ├── yazi/              # 终端文件管理器
+│   ├── mpv/               # 视频播放器
+│   ├── cava/              # 音频频谱
+│   ├── gtk-3.0/ gtk-4.0/ # GTK 主题
+│   ├── qt5ct/ qt6ct/      # Qt 主题
+│   ├── fontconfig/        # 字体配置
+│   └── ...
+│   └── wallpapers/        # 壁纸
+└── scripts -> .config/scripts/
+```
 
+## 截图
 
-## 视频
+![Niri + Win11 风格 Waybar](pictures/waybar-bottom-niri.png)
 
-这里有一些我制作的视频，可以当作电子榨菜，也欢迎关注我的bilibili频道。
+## 许可
 
-- 挑战Linux玩游戏
-
-
-    [「Linux游戏指南」关于Linux玩游戏的一切](https://www.bilibili.com/video/BV1zyttzPEmp/?share_source=copy_web)
-
-- 纯小白在禁止使用终端的情况下体验Linux
-
-    [「女友体验Linux」 全程禁用命令行，颠覆刻板印象，纯小白也能轻松上手！](https://www.bilibili.com/video/BV1YvenzUEFf/?share_source=copy_web)
-
-## 我折腾过的功能
-
--  我的KDE桌面
-
-    ![我的KDE桌面](pictures/KDE-preview.png)
-
-
--  Linux玩游戏
-
-    ![](pictures/Linux玩游戏.png)
-
-
--  小黄鸭补帧 VMware虚拟机网游单机版 wine兼容层运行旧游戏
-
-    ![](pictures/小黄鸭补帧、wine运行老游戏、vmware网游单机版.png)
-
-
-- 我的第一个waybar设计
-
-    ![](pictures/waybar-top.png)
-
-
-- 我为niri设计的类windows布局waybar
-
-    ![](pictures/waybar-bottom-niri.png)
-
-
-- 长截图脚本
-
-    [长截图脚本.webm](https://github.com/user-attachments/assets/c387354d-9926-4580-b69d-1f5694818a2e)
-
-    
-- Niri自动设置blur版overview壁纸
-
-    
-
-    https://github.com/user-attachments/assets/78688d4c-eacf-4899-b833-283a745dd35a
-
-
-
-- Niri自动切换blur壁纸
-  
-    [Niri自动blur背景.webm](https://github.com/user-attachments/assets/f875c7ce-e5c5-4866-a804-2f2e28214f4e)
-
-- matugen基于壁纸生成主题颜色
-
-    https://github.com/user-attachments/assets/85e75a2d-54ac-4aa9-8dad-c4f9145e2b02
-
-    ![](pictures/WM-images2.png)
-
-    ![](pictures/WM-iamges4.png)
-
-- fastfetch老婆生成器
-  
-    https://github.com/user-attachments/assets/6f2af77c-a4f2-46ea-b85f-e3329a80e5fc
-
-    
+[CC BY-SA 4.0](LICENSE)
