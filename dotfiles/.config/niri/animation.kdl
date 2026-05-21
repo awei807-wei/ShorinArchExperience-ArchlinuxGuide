@@ -6,5 +6,22 @@ animations {
     //off
 
     // Slow down all animations by this factor. Values below 1 speed them up instead.
-     slowdown 1.15 
-     }
+     slowdown 1.15
+    window-open {
+        spring damping-ratio=0.6 stiffness=1000 epsilon=0.0001
+    }
+    window-close {
+        spring damping-ratio=0.9 stiffness=1000 epsilon=0.0001
+    }
+    // 切换焦点时的弹跳感主要由这个控制
+    horizontal-view-movement {
+        spring damping-ratio=0.9 stiffness=800 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=0.9 stiffness=800 epsilon=0.0001
+    }
+    // 工作区切换动画（查看所有工作区、切换不同工作区时生效）
+    workspace-switch {
+        spring damping-ratio=0.9 stiffness=1000 epsilon=0.0001
+    }
+}

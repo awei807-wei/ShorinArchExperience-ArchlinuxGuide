@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # --- 核心设置 ---
-WALLPAPER_BACKEND="swww"
+WALLPAPER_BACKEND="awww"
 DAEMON_ARGS="-n overview"
 
 # --- ImageMagick 参数 ---

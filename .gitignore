@@ -1,0 +1,36 @@
+# Runtime/cache artifacts
+**/__pycache__/
+*.py[cod]
+*.log
+*.cache
+*.db
+*.db-shm
+*.db-wal
+**/venv/
+
+# Local absolute symlinks or generated user data
+**/*.bak
+**/*.bak*
+dotfiles/.local/share/vicinae/clipboard-data/
+dotfiles/.local/share/vicinae/clipboard.db
+dotfiles/.local/share/vicinae/file-indexer.db*
+dotfiles/.local/share/vicinae/vicinae.db
+dotfiles/.local/share/vicinae/favicon
+dotfiles/.local/share/vicinae/favicon-data/
+dotfiles/.local/share/vicinae/metadata.json
+dotfiles/.local/share/vicinae/script-metadata.json
+dotfiles/.local/share/vicinae/support/
+dotfiles/.local/share/vicinae/themes/
+dotfiles/.local/share/vicinae/extensions/extra
+
+# Input method generated state
+dotfiles/.local/share/fcitx5/pinyin/
+dotfiles/.local/share/fcitx5/rime.local.bak*/
+dotfiles/.local/share/fcitx5/rime/.git/
+dotfiles/.local/share/fcitx5/rime/build/
+dotfiles/.local/share/fcitx5/rime/sync/
+dotfiles/.local/share/fcitx5/rime/.temp.userdb/
+dotfiles/.local/share/fcitx5/rime/*.userdb
+dotfiles/.local/share/fcitx5/rime/*.userdb/
+dotfiles/.local/share/fcitx5/rime/*.userdb.txt
+dotfiles/.local/share/fcitx5/rime/rime.tools.*

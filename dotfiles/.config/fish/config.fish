@@ -146,4 +146,5 @@ function pacr --description "Fuzzy find and remove packages (UI matched with pac
         yay -Rns $packages
     end
 end
-set -x CODEX_API_KEY sk-ngrU6geB1NgJhTCU86d6biY5Y1PveI5c
+# Keep private API keys out of the public dotfiles repo.
+# Export CODEX_API_KEY from a private env file or secret manager before launching fish.

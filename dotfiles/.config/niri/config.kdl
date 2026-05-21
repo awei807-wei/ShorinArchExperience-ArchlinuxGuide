@@ -77,6 +77,7 @@ recent-windows {
 }
 // 这是include进来的颜色文件，主要设置了窗口边框
 include "colors.kdl"
+include "animation.kdl"
 
 input {
     keyboard {
@@ -313,15 +314,17 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 // 自动启动设置
 //启动FD-rdd
-spawn-sh-at-startup "fd-rdd --root \"$HOME\" --include-hidden --snapshot-path /tmp/index.db --snapshot-interval-secs 300 --batch-flush-min-events 200 --batch-flush-min-bytes 1048576 --auto-flush-overlay-paths 20000 --auto-flush-overlay-bytes 16777216 --trim-interval-secs 300 --trim-pd-threshold-mb 128"
-//启动应用面板
+spawn-sh-at-startup "fd-rdd --watch-mode tiered"
+// 开机自动锁屏（等待 Wayland 就绪后启动）
+spawn-at-startup "~/.config/quickshell/scripts/lockscreen-wait.sh"
 spawn-at-startup "vicinae" "server"
 // 询问管理员权限功能（身份验证）
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 // 桌面壁纸的守护进程
-spawn-at-startup "swww-daemon"
+spawn-at-startup "awww-daemon"
 // 总览界面背景壁纸的守护进程
-spawn-sh-at-startup "swww-daemon -n overview"
+spawn-sh-at-startup "awww-daemon -n overview"
+spawn-at-startup "~/.config/scripts/niri_set_overview_blur_dark_bg.sh"
 // 启动niri时ss随机更换一张壁纸
 spawn-at-startup "waypaper" "--random"
 // 有聚焦窗口时桌面自动模糊的脚本

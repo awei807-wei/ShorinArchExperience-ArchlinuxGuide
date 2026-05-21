@@ -3,13 +3,31 @@
 // https://yalter.github.io/niri/Configuration:-Window-Rules
 
 // 放进overview里的壁纸程序
-layer-rule{
-    match namespace="hyprpaper"
-    match namespace="wallpaper"
+
+
+layer-rule {
     match namespace="awww-daemon"
-    match namespace="swww-daemonoverview"
-     place-within-backdrop true
+    place-within-backdrop false
 }
+
+layer-rule {
+    match namespace="awww-daemonoverview"
+    place-within-backdrop true
+}
+
+
+
+layer-rule {
+    match namespace="awww-daemon"
+    place-within-backdrop false
+}
+
+layer-rule {
+    match namespace="awww-daemonoverview"
+    place-within-backdrop true
+}
+
+
 // 全局窗口规则
 window-rule {
     // 圆角

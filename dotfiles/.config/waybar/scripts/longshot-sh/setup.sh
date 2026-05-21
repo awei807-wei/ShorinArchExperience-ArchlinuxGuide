@@ -6,7 +6,7 @@ echo "🔧 初始化环境..."
 
 # 1. 检查系统工具
 # 涵盖了两个方案所需的所有工具
-REQUIRED_TOOLS=("wf-recorder" "grim" "slurp" "wl-copy" "magick" "python3")
+REQUIRED_TOOLS=("wf-recorder" "grim" "slurp" "wl-copy" "magick" "python3" "ydotool")
 MISSING_TOOLS=()
 
 for tool in "${REQUIRED_TOOLS[@]}"; do
@@ -38,5 +38,7 @@ chmod +x "$SCRIPT_DIR/longshot.sh"
 chmod +x "$SCRIPT_DIR/longshot-wf-recorder.sh"
 chmod +x "$SCRIPT_DIR/longshot-grim.sh"
 chmod +x "$SCRIPT_DIR/stitch.py"
+chmod +x "$SCRIPT_DIR/pagedown_longshot.py"
+[ -f "$SCRIPT_DIR/../old-longshot.sh" ] && chmod +x "$SCRIPT_DIR/../old-longshot.sh"
 
 echo "✅ 完成！请运行 ./longshot.sh"
