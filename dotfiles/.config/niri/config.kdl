@@ -334,7 +334,7 @@ spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLA
 // GNOME tracker修复
 spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 // 通知程序
-spawn-at-startup "mako"
+// spawn-at-startup "mako"
 // 任务栏
 //spawn-sh-at-startup "GDK_BACKEND=wayland eww daemon && eww open island"
 spawn-sh-at-startup "quickshell &"
@@ -366,7 +366,6 @@ hotkey-overlay {
 //
 // 隐藏窗口标题栏
 prefer-no-csd
-
 
 
 

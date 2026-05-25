@@ -8,8 +8,7 @@
 // - 通过 signal centerClicked/systemClicked 把“点击意图”上报给 shell.qml 统一处理（切换面板窗口可见性、触发数据刷新）。
 // - 通过 property alias centerIsland 把 CenterIsland 实例暴露给外部（shell.qml 用它做音量反馈联动）。
 
-import QtQuick // QML 基础类型（Rectangle/Item/Row 等）
-import QtQuick.Layouts // RowLayout / Layout.*：用于顶栏左右分布布局
+import QtQuick // QML 基础类型（Rectangle/Item/锚点布局等）
 import "components" // 引入本目录组件（LeftIsland/CenterIsland/RightIslands）
 Rectangle {
     id: bar
@@ -40,16 +39,15 @@ Rectangle {
     property alias centerIsland: centerIslandItem // 对外暴露 CenterIsland 实例（用于音量反馈/动画联动）
     color: "transparent" // Bar 自身不绘制底色（由各岛屿组件绘制）
 
-    RowLayout {
+    Item {
         anchors.fill: parent // 顶栏布局填充整个 Bar 区域
-        anchors.leftMargin: 0 // 左侧不额外留白（由各岛屿自己处理 padding）
-        anchors.rightMargin: 0 // 右侧不额外留白
-        spacing: unit * 0.8 // 左/中/右岛之间的基础间距（与 unit 联动）
-        
+
         LeftIsland {
-            Layout.alignment: Qt.AlignLeft | Qt.AlignVCenter // 靠左并垂直居中
-            Layout.fillHeight: true // 高度跟随 Bar 高度（形成“岛屿”外形）
-            Layout.leftMargin: bar.leftIslandOffsetX // 左岛整体 X 偏移
+            width: implicitWidth
+            height: parent.height // 高度跟随 Bar 高度（形成“岛屿”外形）
+            anchors.left: parent.left
+            anchors.leftMargin: bar.leftIslandOffsetX // 左岛整体 X 偏移
+            anchors.verticalCenter: parent.verticalCenter
             unit: bar.unit // 传入尺寸基准
             zenInk: bar.zenInk // 传入主题色：背景
             zenMist: bar.zenMist // 传入主题色：边框/分割线
@@ -57,14 +55,14 @@ Rectangle {
             zenCloud: bar.zenCloud // 传入主题色：中等文本
             zenSnow: bar.zenSnow // 传入主题色：高对比文本
         }
-        
-        Item { Layout.fillWidth: true } // 弹性占位：把 CenterIsland 推到中间
-        
+
         CenterIsland {
             id: centerIslandItem
-            Layout.alignment: Qt.AlignCenter | Qt.AlignVCenter // 居中并垂直居中
-            Layout.fillHeight: true // 高度跟随 Bar 高度
-            Layout.leftMargin: bar.centerIslandOffsetX // 中岛整体 X 偏移
+            width: implicitWidth
+            height: parent.height // 高度跟随 Bar 高度
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: bar.centerIslandOffsetX // 中岛整体 X 偏移
+            anchors.verticalCenter: parent.verticalCenter
             root: bar.root
             unit: bar.unit // 传入尺寸基准
             zenInk: bar.zenInk // 传入主题色：背景
@@ -77,14 +75,14 @@ Rectangle {
             zenAccent: bar.zenAccent // 传入主题色：强调色（音量条等）
             onTogglePanel: bar.centerClicked() // 把中岛点击信号上报给外部（shell）
         }
-        
-        Item { Layout.fillWidth: true } // 弹性占位：把 RightIslands 推到右侧
-        
+
         RightIslands {
             id: rightIslandsItem
-            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter // 靠右并垂直居中
-            Layout.fillHeight: true // 高度跟随 Bar 高度
-            Layout.rightMargin: -bar.rightIslandOffsetX // 右岛 X 偏移（这里用负号保持与其他岛一致的“正值向右”语义）
+            width: implicitWidth
+            height: parent.height // 高度跟随 Bar 高度
+            anchors.right: parent.right
+            anchors.rightMargin: -bar.rightIslandOffsetX // 右岛 X 偏移（这里用负号保持与其他岛一致的“正值向右”语义）
+            anchors.verticalCenter: parent.verticalCenter
             unit: bar.unit // 传入尺寸基准
             zenInk: bar.zenInk // 传入主题色：背景
             zenMist: bar.zenMist // 传入主题色：边框/分割线

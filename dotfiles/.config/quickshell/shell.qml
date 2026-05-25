@@ -19,6 +19,7 @@
 import Quickshell // ShellRoot/PanelWindow/Variants/screen 枚举等
 import Quickshell.Io // Process/SplitParser/FileView：命令执行、流式解析、文件监听
 import Quickshell.Services.Mpris // MPRIS：播放器列表与播放状态
+import Quickshell.Services.Notifications // Freedesktop 通知接收服务（后续用于接管 mako）
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
 import "components"
 
@@ -49,7 +50,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距（用于避免贴边）
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
-    readonly property real centerIslandOffsetX: baseUnit * 14    // 中岛 X 偏移（用于整体对齐/构图微调）
+    readonly property real centerIslandOffsetX: baseUnit * 0    // 中岛 X 偏移（用于整体对齐/构图微调）
     readonly property real rightIslandOffsetX:  baseUnit * 0    // 右岛X偏移
 
     // ═══════════════════════════════════════════════════════
@@ -74,6 +75,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real panelRowHeight: baseUnit * 0.9     // 面板行高（每一行数据/滑条的基准高度）
     readonly property real panelSectionGap: baseUnit * 1.2      // 面板分区间距（盒子之间的距离）
     readonly property real panelRowGap: baseUnit * 0.35         // 面板行间距（盒子内部相邻行的垂直间隔）
+    readonly property real notificationPopupWidth: baseUnit * 18 // 临时通知浮窗宽度
+    readonly property int notificationMaxVisible: 4              // 临时通知最多同时显示条数
 
     // ═══════════════════════════════════════════════════════
     // 🎚️ L4 · 滑块/进度条
@@ -116,6 +119,15 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property string btStatus: "OFF"                         // 蓝牙电源状态（ON/OFF；由 bluetoothctl 采集）
     property int volumePercent: 70                          // 音量百分比（0-100；由 wpctl 采集并截断）
     property int brightnessPercent: 50                      // 亮度百分比（0-100；由 brightnessctl 采集）
+    property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
+    property var lastNotification: null                     // 最近一条通知对象引用（tracked=true 后由 NotificationServer 保留）
+    property int lastNotificationId: 0                      // 最近一条通知 ID
+    property string lastNotificationApp: ""                 // 最近一条通知来源应用
+    property string lastNotificationSummary: ""             // 最近一条通知标题
+    property string lastNotificationBody: ""                // 最近一条通知正文
+    property string lastNotificationUrgency: ""             // 最近一条通知等级
+    property string lastNotificationImage: ""               // 最近一条通知图片路径/URL（如有）
+    property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
     property var lastActivePlayer: null                     // 上一次“正在播放”的播放器（用于在暂停时保持来源稳定）
     readonly property var mprisPlayer: {
@@ -203,6 +215,76 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         var len = Math.floor(w / cw) - 2 // 预留 '[' 与 ']' 两个字符
         if (len < 1) len = 1
         return getAsciiBar(pct, len)
+    }
+
+    function cleanNotificationText(value) {
+        // 输入：通知标题/正文等文本
+        // 输出：单行压缩后的文本，便于日志验证
+        // 副作用：无
+
+        return String(value || "").replace(/\s+/g, " ").trim()
+    }
+
+    function trackNotification(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：无返回值
+        // 副作用：将通知加入临时浮窗队列，并限制最大显示数量
+
+        let list = configRoot.activeNotifications.filter(item => item.id !== notification.id)
+        list.unshift(notification)
+        configRoot.activeNotifications = list.slice(0, configRoot.notificationMaxVisible)
+    }
+
+    function untrackNotification(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：无返回值
+        // 副作用：从临时浮窗队列移除通知
+
+        configRoot.activeNotifications = configRoot.activeNotifications.filter(item => item.id !== notification.id)
+    }
+
+    function notificationIsActive(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：该通知是否在当前可见队列中
+        // 副作用：无
+
+        return configRoot.activeNotifications.some(item => item.id === notification.id)
+    }
+
+    NotificationServer {
+        id: notificationServer
+        keepOnReload: false // 只验证新进入的通知，避免 reload 后重复处理旧通知
+        bodySupported: true // 告诉客户端可以传递正文
+        bodyMarkupSupported: false // 当前只做接收验证，先不声明支持富文本渲染
+        actionsSupported: false // 当前未做按钮 UI，先不声明支持交互动作
+        imageSupported: false // 当前未做图片展示，先不声明支持图片能力
+        inlineReplySupported: false // 当前未做行内回复
+
+        onNotification: notification => {
+            notification.tracked = true // 保留通知对象，后续 UI 可从 trackedNotifications 或 lastNotification 读取
+
+            configRoot.notificationCount += 1
+            configRoot.lastNotification = notification
+            configRoot.lastNotificationId = notification.id
+            configRoot.lastNotificationApp = configRoot.cleanNotificationText(notification.appName)
+            configRoot.lastNotificationSummary = configRoot.cleanNotificationText(notification.summary)
+            configRoot.lastNotificationBody = configRoot.cleanNotificationText(notification.body)
+            configRoot.lastNotificationUrgency = NotificationUrgency.toString(notification.urgency)
+            configRoot.lastNotificationImage = notification.image || ""
+            configRoot.trackNotification(notification)
+
+            console.log("[Notifications] received #" + configRoot.notificationCount
+                        + " id=" + notification.id
+                        + " app=\"" + configRoot.lastNotificationApp + "\""
+                        + " summary=\"" + configRoot.lastNotificationSummary + "\""
+                        + " urgency=" + configRoot.lastNotificationUrgency)
+
+            notification.closed.connect(function(reason) {
+                configRoot.untrackNotification(notification)
+                console.log("[Notifications] closed id=" + notification.id
+                            + " reason=" + NotificationCloseReason.toString(reason))
+            })
+        }
     }
 
     property string gpuInfo: "loading..."                    // GPU 信息（由 lspci 采集）
@@ -581,6 +663,191 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             }
         }
     }
+
+    // ===== TEMP NOTIFICATION POPUPS =====
+    Variants {
+        model: Quickshell.screens
+        delegate: Component {
+            PanelWindow {
+                id: notificationWindow
+                required property var modelData
+                screen: modelData
+                visible: configRoot.activeNotifications.length > 0
+                exclusiveZone: -1
+                anchors { top: true; right: true }
+                margins.top: configRoot.barMarginTop + configRoot.islandHeight + configRoot.baseUnit * 0.5
+                margins.right: configRoot.barMarginSide + configRoot.baseUnit * 0.4
+                implicitWidth: configRoot.notificationPopupWidth
+                implicitHeight: notificationColumn.implicitHeight
+                color: "transparent"
+
+                Column {
+                    id: notificationColumn
+                    width: parent.width
+                    spacing: configRoot.baseUnit * 0.35
+
+                    Repeater {
+                        model: notificationServer.trackedNotifications
+
+                        Rectangle {
+                            id: notificationCard
+                            property var notice: modelData
+                            property bool active: configRoot.notificationIsActive(notificationCard.notice)
+                            property bool opened: false
+                            property bool closing: false
+                            property string closeReason: "expire"
+                            property real slideOffset: notificationCard.width
+
+                            function playOpenOnce() {
+                                if (!notificationCard.active || notificationCard.opened) return
+                                notificationCard.opened = true
+                                notificationSurface.x = notificationCard.width
+                                notificationSurface.opacity = 0
+                                openAnimation.start()
+                            }
+
+                            function closeWithAnimation(reason) {
+                                if (notificationCard.closing) return
+                                notificationCard.closeReason = reason
+                                notificationCard.closing = true
+                                openAnimation.stop()
+                                notificationSurface.x = 0
+                                notificationSurface.opacity = 1
+                                closeAnimation.start()
+                            }
+
+                            width: notificationColumn.width
+                            height: (notificationCard.active || notificationCard.closing) ? Math.max(configRoot.baseUnit * 3.4, notificationContent.implicitHeight + configRoot.baseUnit * 1.1) : 0
+                            visible: notificationCard.active || notificationCard.closing
+                            color: "transparent"
+                            clip: true
+
+                            Component.onCompleted: notificationCard.playOpenOnce()
+                            onActiveChanged: notificationCard.playOpenOnce()
+
+                            ParallelAnimation {
+                                id: openAnimation
+                                NumberAnimation {
+                                    target: notificationSurface
+                                    property: "x"
+                                    from: notificationCard.width
+                                    to: 0
+                                    duration: 580
+                                    easing.type: Easing.OutCubic
+                                }
+                                NumberAnimation {
+                                    target: notificationSurface
+                                    property: "opacity"
+                                    from: 0
+                                    to: 1
+                                    duration: 480
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
+
+                            ParallelAnimation {
+                                id: closeAnimation
+                                NumberAnimation {
+                                    target: notificationSurface
+                                    property: "x"
+                                    from: 0
+                                    to: notificationCard.width
+                                    duration: 420
+                                    easing.type: Easing.InOutCubic
+                                }
+                                NumberAnimation {
+                                    target: notificationSurface
+                                    property: "opacity"
+                                    from: 1
+                                    to: 0
+                                    duration: 320
+                                    easing.type: Easing.InQuad
+                                }
+                                onFinished: {
+                                    if (notificationCard.closeReason === "dismiss") {
+                                        notificationCard.notice.dismiss()
+                                    } else {
+                                        notificationCard.notice.expire()
+                                    }
+                                }
+                            }
+
+                            Timer {
+                                interval: 6000
+                                running: notificationCard.active && notificationCard.notice.urgency !== NotificationUrgency.Critical && !notificationCard.closing
+                                repeat: false
+                                onTriggered: notificationCard.closeWithAnimation("expire")
+                            }
+
+                            Rectangle {
+                                id: notificationSurface
+                                x: notificationCard.width
+                                width: notificationCard.width
+                                height: notificationCard.height
+                                color: cardMouse.containsMouse ? configRoot.zenStone : configRoot.zenInk
+                                border.color: notificationCard.notice.urgency === NotificationUrgency.Critical ? "#b85c5c" : configRoot.zenMist
+                                border.width: 1
+                                radius: 2
+
+                                Column {
+                                    id: notificationContent
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.leftMargin: configRoot.baseUnit * 0.65
+                                    anchors.rightMargin: configRoot.baseUnit * 0.65
+                                    spacing: configRoot.baseUnit * 0.18
+
+                                    Text {
+                                        width: parent.width
+                                        text: configRoot.cleanNotificationText(notificationCard.notice.appName || "Notification")
+                                        textFormat: Text.PlainText
+                                        elide: Text.ElideRight
+                                        font.pixelSize: configRoot.baseUnit * 0.42
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        color: configRoot.zenCloud
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        text: configRoot.cleanNotificationText(notificationCard.notice.summary || "")
+                                        textFormat: Text.PlainText
+                                        elide: Text.ElideRight
+                                        font.pixelSize: configRoot.baseUnit * 0.58
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.bold: true
+                                        color: configRoot.zenSnow
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        visible: text.length > 0
+                                        text: configRoot.cleanNotificationText(notificationCard.notice.body || "")
+                                        textFormat: Text.PlainText
+                                        elide: Text.ElideRight
+                                        maximumLineCount: 2
+                                        wrapMode: Text.Wrap
+                                        font.pixelSize: configRoot.baseUnit * 0.46
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        color: configRoot.zenSmoke
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: cardMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: notificationCard.closeWithAnimation("dismiss")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // ===== CENTER PANEL WINDOW =====
     Variants {
         model: Quickshell.screens
