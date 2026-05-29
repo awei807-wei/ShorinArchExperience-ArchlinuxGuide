@@ -96,7 +96,7 @@ def ui_text():
         return {
             "title": "Longshot",
             "capturing": "长截图进行中",
-            "capturing_body": "请手动滚动，停止 1 秒后自动拼接...",
+            "capturing_body": "请手动滚动，停止一小会儿后自动拼接...",
             "stitching": "正在拼接...",
             "saved": "长截图完成",
             "saved_body": "已保存并复制到剪贴板",
@@ -105,7 +105,7 @@ def ui_text():
     return {
         "title": "Longshot",
         "capturing": "Long screenshot in progress",
-        "capturing_body": "Scroll manually. Stitching starts after 1 second idle...",
+        "capturing_body": "Scroll manually. Stitching starts after a short idle...",
         "stitching": "Stitching...",
         "saved": "Long screenshot complete",
         "saved_body": "Saved and copied to clipboard",
@@ -315,8 +315,8 @@ def is_duplicate_frame(prev, curr, ignore_top, ignore_bottom, ignore_x, threshol
     return float(np.mean(diff)) <= threshold
 
 
-def shift_overlap_score(prev, curr, shift, args, with_correlation):
-    h, w = prev.shape[:2]
+def shift_overlap_score_gray(prev_gray, curr_gray, shift, args, with_correlation):
+    h, w = prev_gray.shape[:2]
     if shift <= args.min_scroll or shift >= h - args.min_overlap:
         return -1.0
 
@@ -332,9 +332,6 @@ def shift_overlap_score(prev, curr, shift, args, with_correlation):
         end = h - shift
     if x2 <= x1 or end <= start:
         return -1.0
-
-    prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-    curr_gray = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
 
     prev_overlap = prev_gray[shift + start : shift + end, x1:x2]
     curr_overlap = curr_gray[start:end, x1:x2]
@@ -359,6 +356,12 @@ def shift_overlap_score(prev, curr, shift, args, with_correlation):
             corr = 0.0
 
     return max(0.0, min(1.0, corr * 0.6 + diff_score * 0.4))
+
+
+def shift_overlap_score(prev, curr, shift, args, with_correlation):
+    prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+    curr_gray = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
+    return shift_overlap_score_gray(prev_gray, curr_gray, shift, args, with_correlation)
 
 
 def moving_average(values, radius):
@@ -451,6 +454,9 @@ def refine_shift_by_overlap(prev, curr, initial_shift, args):
     if max_shift <= min_shift:
         return None
 
+    prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+    curr_gray = cv2.cvtColor(curr, cv2.COLOR_BGR2GRAY)
+
     ranges = []
     expected = int(round(h * args.expected_shift_ratio))
     add_range(
@@ -481,7 +487,7 @@ def refine_shift_by_overlap(prev, curr, initial_shift, args):
             if shift in seen:
                 continue
             seen.add(shift)
-            score = shift_overlap_score(prev, curr, shift, args, False)
+            score = shift_overlap_score_gray(prev_gray, curr_gray, shift, args, False)
             if score >= 0:
                 coarse.append((score, shift))
 
@@ -494,7 +500,7 @@ def refine_shift_by_overlap(prev, curr, initial_shift, args):
             max(min_shift, center - args.refine_step),
             min(max_shift, center + args.refine_step) + 1,
         ):
-            score = shift_overlap_score(prev, curr, shift, args, True)
+            score = shift_overlap_score_gray(prev_gray, curr_gray, shift, args, True)
             if score >= 0:
                 refined.append((score, shift))
 
@@ -710,8 +716,9 @@ def capture_initial_frame(temp_dir, geometry):
 
 def run_manual_capture(args, temp_dir, geometry, prev, result, frame_paths):
     frame_index = 1
-    last_scroll_at = time.monotonic()
+    last_activity_at = time.monotonic()
     last_report_at = 0.0
+    last_seen = prev
 
     while frame_index <= args.max_pages:
         time.sleep(args.manual_poll)
@@ -720,18 +727,23 @@ def run_manual_capture(args, temp_dir, geometry, prev, result, frame_paths):
         curr = load_image(current_path)
         frame_paths.append(current_path)
 
-        if is_duplicate_frame(
-            prev,
+        frame_unchanged = is_duplicate_frame(
+            last_seen,
             curr,
             args.ignore_top,
             args.ignore_bottom,
             args.ignore_x,
             args.duplicate_threshold,
-        ):
-            if time.monotonic() - last_scroll_at >= args.manual_idle_timeout:
+        )
+        now = time.monotonic()
+        if frame_unchanged:
+            if now - last_activity_at >= args.manual_idle_timeout:
                 print(f"Stop: no scroll for {args.manual_idle_timeout:.1f}s.")
                 break
             continue
+
+        last_activity_at = now
+        last_seen = curr
 
         match = detect_and_match(prev, curr, args)
         if match is None:
@@ -751,12 +763,11 @@ def run_manual_capture(args, temp_dir, geometry, prev, result, frame_paths):
             print("Stop: manual scroll moved too far; overlap is too small for safe stitching.")
             break
         if not accepted:
-            if time.monotonic() - last_scroll_at >= args.manual_idle_timeout:
+            if time.monotonic() - last_activity_at >= args.manual_idle_timeout:
                 print(f"Stop: no scroll for {args.manual_idle_timeout:.1f}s.")
                 break
             continue
 
-        last_scroll_at = time.monotonic()
         print(
             f"Frame {frame_index}: mode=manual shift={match['shift']}px seam={seam}px "
             f"seam_score={seam_score:.2f} "
@@ -874,16 +885,18 @@ def stitch_with_pagedown(args):
         temp_dir = Path(temp_dir_name)
         geometry = args.geometry or select_geometry()
         print("Selected geometry: " + geometry)
-        print(f"Starting in {args.start_delay:.1f}s. Keep the target window focused.")
+        prev, result, frame_paths = capture_initial_frame(temp_dir, geometry)
+        print("Initial frame captured.")
         notification_id = notify(
             text["capturing"],
             text["capturing_body"],
             0,
             print_id=True,
         )
-        time.sleep(args.start_delay)
+        if args.control_mode == "auto" and args.start_delay > 0:
+            print(f"Starting auto scroll in {args.start_delay:.1f}s. Keep the target window focused.")
+            time.sleep(args.start_delay)
 
-        prev, result, frame_paths = capture_initial_frame(temp_dir, geometry)
         if args.control_mode == "manual":
             result, frame_paths = run_manual_capture(
                 args,
@@ -922,10 +935,10 @@ def build_parser():
     parser.add_argument("--max-pages", type=int, default=30)
     parser.add_argument("--max-failures", type=int, default=2)
     parser.add_argument("--start-delay", type=float, default=1.2)
-    parser.add_argument("--settle", type=float, default=0.45)
+    parser.add_argument("--settle", type=float, default=0.35)
     parser.add_argument("--control-mode", choices=("manual", "auto"), default="manual")
-    parser.add_argument("--manual-idle-timeout", type=float, default=1.0)
-    parser.add_argument("--manual-poll", type=float, default=0.15)
+    parser.add_argument("--manual-idle-timeout", type=float, default=1.2)
+    parser.add_argument("--manual-poll", type=float, default=0.2)
     parser.add_argument(
         "--scroll-mode",
         choices=("auto", "wheel", "pagedown", "space", "down", "custom"),
@@ -936,7 +949,7 @@ def build_parser():
     parser.add_argument("--wheel-steps", type=int, default=8)
     parser.add_argument("--wheel-delay", type=float, default=0.015)
     parser.add_argument("--method", choices=("auto", "sift", "orb"), default="auto")
-    parser.add_argument("--features", type=int, default=5000)
+    parser.add_argument("--features", type=int, default=2500)
     parser.add_argument("--min-matches", type=int, default=14)
     parser.add_argument("--min-inliers", type=int, default=10)
     parser.add_argument("--ransac-threshold", type=float, default=4.0)
@@ -947,9 +960,9 @@ def build_parser():
     parser.add_argument("--expected-shift-ratio", type=float, default=0.78)
     parser.add_argument("--expected-shift-window", type=int, default=180)
     parser.add_argument("--refine-window", type=int, default=96)
-    parser.add_argument("--refine-step", type=int, default=4)
-    parser.add_argument("--refine-stride", type=int, default=3)
-    parser.add_argument("--refine-top", type=int, default=5)
+    parser.add_argument("--refine-step", type=int, default=6)
+    parser.add_argument("--refine-stride", type=int, default=4)
+    parser.add_argument("--refine-top", type=int, default=3)
     parser.add_argument("--min-refine-score", type=float, default=0.58)
     parser.add_argument("--no-wide-refine", dest="wide_refine", action="store_false")
     parser.set_defaults(wide_refine=True)
