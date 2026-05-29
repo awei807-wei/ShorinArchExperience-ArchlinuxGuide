@@ -251,6 +251,21 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         return configRoot.activeNotifications.some(item => item.id === notification.id)
     }
 
+    function focusNotificationSource(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：无返回值
+        // 副作用：尝试让 niri 聚焦通知来源应用的窗口；无匹配窗口时静默忽略
+
+        notificationFocusProc.command = [
+            "bash",
+            "/home/shiyi/.config/quickshell/scripts/focus-notification-source.sh",
+            notification.desktopEntry || "",
+            notification.appName || "",
+            notification.summary || ""
+        ]
+        notificationFocusProc.running = true
+    }
+
     NotificationServer {
         id: notificationServer
         keepOnReload: false // 只验证新进入的通知，避免 reload 后重复处理旧通知
@@ -362,6 +377,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         running: true // 启动主壳时统一接管 swayidle，确保 30/40/60 策略与状态文件生效
         command: ["sh", "-lc", "$HOME/.config/quickshell/scripts/idle-control.sh start >/dev/null 2>&1"]
     }
+    Process { id: notificationFocusProc; command: ["echo"] } // 通知点击时动态替换为聚焦来源窗口脚本
     // 媒体控制已改用 MPRIS 原生方法
     // 音量/亮度设置函数（供子组件通过 root.setVolume/root.setBrightness 调用）
     // 解决 QML 名称遮蔽问题：子组件的同名属性会遮蔽 ShellRoot 的 id 引用
@@ -838,7 +854,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: notificationCard.closeWithAnimation("dismiss")
+                                    onClicked: {
+                                        configRoot.focusNotificationSource(notificationCard.notice)
+                                        notificationCard.closeWithAnimation("dismiss")
+                                    }
                                 }
                             }
                         }
