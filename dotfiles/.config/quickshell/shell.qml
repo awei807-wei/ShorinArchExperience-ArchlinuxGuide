@@ -21,6 +21,7 @@ import Quickshell.Io // Process/SplitParser/FileView：命令执行、流式解�
 import Quickshell.Services.Mpris // MPRIS：播放器列表与播放状态
 import Quickshell.Services.Notifications // Freedesktop 通知接收服务（后续用于接管 mako）
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
+import QtMultimedia // QML 原生音频播放（通知音效，无需外部二进制依赖）
 import "components"
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
@@ -266,6 +267,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         notificationFocusProc.running = true
     }
 
+    // 🔔 通知音效（QML 原生 SoundEffect，无需外部二进制依赖）
+    SoundEffect {
+        id: notificationSound
+        source: Qt.resolvedUrl("file:///home/shiyi/.config/quickshell/music.wav")
+        volume: 0.7 // 音量 0.0~1.0
+    }
+
     NotificationServer {
         id: notificationServer
         keepOnReload: false // 只验证新进入的通知，避免 reload 后重复处理旧通知
@@ -293,6 +301,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         + " app=\"" + configRoot.lastNotificationApp + "\""
                         + " summary=\"" + configRoot.lastNotificationSummary + "\""
                         + " urgency=" + configRoot.lastNotificationUrgency)
+
+            notificationSound.play() // 播放通知音效（QML 原生，无外部依赖）
 
             notification.closed.connect(function(reason) {
                 configRoot.untrackNotification(notification)
