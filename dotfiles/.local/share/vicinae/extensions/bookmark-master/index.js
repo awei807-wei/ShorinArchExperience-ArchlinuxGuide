@@ -1,7 +1,7 @@
 const React = require("react");
 const fs = require("node:fs");
 const path = require("node:path");
-const { exec } = require("node:child_process");
+const { execFile } = require("node:child_process");
 const { List, ActionPanel, Action, Icon, showToast, Toast, useNavigation, Form } = require("@vicinae/api");
 
 const BROWSER_PATHS = [
@@ -88,7 +88,38 @@ function Command() {
         filteredItems.map(it => React.createElement(List.Item, {
             key: it.url + it.id, title: it.name, subtitle: it.url, accessories: it.note ? [{ text: it.note, icon: Icon.Tag }] : [],
             actions: React.createElement(ActionPanel, null,
-                React.createElement(Action, { title: "在 Thorium 中打开", icon: Icon.Globe, onAction: () => exec(`thorium-browser "${it.url}"`) }),
+                React.createElement(Action, {
+                    title: "在 Thorium 中打开",
+                    icon: Icon.Globe,
+                    onAction: () => {
+                        execFile("thorium-browser", [it.url], (error) => {
+                            if (error) {
+                                showToast({
+                                    style: Toast.Style.Failure,
+                                    title: "无法启动 Thorium",
+                                    message: error.message,
+                                });
+                            }
+                        });
+                        setTimeout(() => {
+                            execFile("niri", ["msg", "-j", "windows"], (error, stdout) => {
+                                if (error) {
+                                    console.error("读取 niri 窗口列表失败:", error);
+                                    return;
+                                }
+                                try {
+                                    const windows = JSON.parse(stdout);
+                                    const browserWin = windows.find(w => w.app_id && w.app_id.toLowerCase() === "thorium-browser");
+                                    if (browserWin) {
+                                        execFile("niri", ["msg", "action", "focus-window", "--id", String(browserWin.id)]);
+                                    }
+                                } catch (error) {
+                                    console.error("解析 niri 窗口列表失败:", error);
+                                }
+                            });
+                        }, 150);
+                    },
+                }),
                 React.createElement(Action, { title: "编辑备注", icon: Icon.Pencil, onAction: () => push(React.createElement(EditNoteForm, { bookmark: it, onSave: (val) => handleSaveNote(it.url, val) })) })
             )
         }))

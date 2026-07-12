@@ -13,6 +13,12 @@ dotfiles/.config/quickshell/.helloagents/sessions/
 # Local absolute symlinks or generated user data
 **/*.bak
 **/*.bak*
+
+# Machine-local state and generated application icons
+dotfiles/.config/fcitx5/conf/cached_layouts
+dotfiles/.config/fish/fish_variables
+dotfiles/.config/gtk-3.0/bookmarks
+dotfiles/.local/share/icons/hicolor/**/apps/*.png
 dotfiles/.local/share/vicinae/clipboard-data/
 dotfiles/.local/share/vicinae/clipboard.db
 dotfiles/.local/share/vicinae/file-indexer.db*
