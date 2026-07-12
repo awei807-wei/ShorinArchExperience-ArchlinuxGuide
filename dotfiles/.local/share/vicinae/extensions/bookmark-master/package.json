@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
   "name": "bookmark-master",
   "title": "Bookmark Master",
-  "description": "Search Edge bookmarks with custom notes and quick open.",
+  "description": "Search Chromium-based browser bookmarks with synced custom notes and quick open.",
   "categories": ["Productivity"],
   "license": "MIT",
   "author": "Piko",
@@ -10,9 +10,9 @@
     {
       "name": "index",
       "title": "Search Bookmarks",
-      "description": "Search and open Edge bookmarks with custom notes.",
+      "description": "Search and open the latest browser bookmarks with custom notes.",
       "mode": "view",
-      "keywords": ["bookmark", "edge", "url", "note"]
+      "keywords": ["bookmark", "browser", "thorium", "edge", "chrome", "url", "note"]
     }
   ],
   "dependencies": {

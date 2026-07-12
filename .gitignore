@@ -30,6 +30,7 @@ dotfiles/.local/share/vicinae/script-metadata.json
 dotfiles/.local/share/vicinae/support/
 dotfiles/.local/share/vicinae/themes/
 dotfiles/.local/share/vicinae/extensions/extra
+dotfiles/.local/share/vicinae/extensions/bookmark-master/notes.json.tmp
 
 # Input method generated state
 dotfiles/.local/share/fcitx5/pinyin/

@@ -9,7 +9,11 @@ const BROWSER_PATHS = [
     path.join(process.env.HOME, ".config/microsoft-edge/Default/Bookmarks"),
     path.join(process.env.HOME, ".config/google-chrome/Default/Bookmarks")
 ];
-const BOOKMARKS_PATH = BROWSER_PATHS.find(p => fs.existsSync(p)) || BROWSER_PATHS[0];
+const NOTES_PATH = path.join(__dirname, "notes.json");
+
+function getBookmarksPath() {
+    return BROWSER_PATHS.find(candidate => fs.existsSync(candidate));
+}
 
 function parseBookmarks(node, folder = "", results = []) {
     if (node.type === "url") {
@@ -25,10 +29,45 @@ function parseBookmarks(node, folder = "", results = []) {
     return results;
 }
 
-function saveNoteToEdge(url, newNote) {
+function readBookmarks(bookmarksPath) {
+    const data = JSON.parse(fs.readFileSync(bookmarksPath, "utf8"));
+    const items = [];
+    Object.values(data.roots || {}).forEach(root => {
+        if (root && typeof root === "object") parseBookmarks(root, "", items);
+    });
+    return items;
+}
+
+function buildNotesSnapshot(items) {
+    const notes = {};
+    [...items]
+        .sort((a, b) => a.url.localeCompare(b.url) || String(a.id).localeCompare(String(b.id)))
+        .forEach(item => {
+            if (item.note) notes[item.url] = item.note;
+        });
+    return notes;
+}
+
+function syncNotesSnapshot(items) {
+    const nextContent = `${JSON.stringify(buildNotesSnapshot(items), null, 2)}\n`;
+    const currentContent = fs.existsSync(NOTES_PATH) ? fs.readFileSync(NOTES_PATH, "utf8") : "";
+    if (currentContent === nextContent) return false;
+
+    const temporaryPath = `${NOTES_PATH}.tmp`;
     try {
-        if (!fs.existsSync(BOOKMARKS_PATH)) return false;
-        const data = JSON.parse(fs.readFileSync(BOOKMARKS_PATH, "utf8"));
+        fs.writeFileSync(temporaryPath, nextContent, "utf8");
+        fs.renameSync(temporaryPath, NOTES_PATH);
+    } finally {
+        if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    }
+    return true;
+}
+
+function saveNoteToBrowser(url, newNote) {
+    try {
+        const bookmarksPath = getBookmarksPath();
+        if (!bookmarksPath) return false;
+        const data = JSON.parse(fs.readFileSync(bookmarksPath, "utf8"));
         let found = false;
         function updateNode(node) {
             if (node.type === "url" && node.url === url) {
@@ -44,11 +83,14 @@ function saveNoteToEdge(url, newNote) {
         }
         for (const root of Object.values(data.roots)) { if (typeof root === "object" && updateNode(root)) break; }
         if (found) {
-            fs.writeFileSync(BOOKMARKS_PATH, JSON.stringify(data, null, 2), "utf8");
+            fs.writeFileSync(bookmarksPath, JSON.stringify(data, null, 2), "utf8");
             return true;
         }
         return false;
-    } catch (e) { return false; }
+    } catch (error) {
+        console.error("更新浏览器书签备注失败:", error);
+        return false;
+    }
 }
 
 function EditNoteForm({ bookmark, onSave }) {
@@ -61,20 +103,48 @@ function EditNoteForm({ bookmark, onSave }) {
 function Command() {
     const [items, setItems] = React.useState([]);
     const [searchText, setSearchText] = React.useState("");
+    const bookmarksVersion = React.useRef("");
     const { push } = useNavigation();
-    const loadData = () => {
+
+    const refreshBookmarks = React.useCallback(({ force = false, reportErrors = true } = {}) => {
+        const bookmarksPath = getBookmarksPath();
+        if (!bookmarksPath) {
+            const error = new Error("未找到 Thorium、Edge 或 Chrome 的书签文件");
+            console.error(error.message);
+            if (reportErrors) showToast({ style: Toast.Style.Failure, title: "加载书签失败", message: error.message });
+            return;
+        }
+
         try {
-            if (fs.existsSync(BOOKMARKS_PATH)) {
-                const data = JSON.parse(fs.readFileSync(BOOKMARKS_PATH, "utf8"));
-                let allItems = [];
-                Object.values(data.roots).forEach(root => { if (typeof root === "object") parseBookmarks(root, "", allItems); });
-                setItems(allItems);
+            const fileStat = fs.statSync(bookmarksPath);
+            const nextVersion = `${bookmarksPath}:${fileStat.mtimeMs}:${fileStat.size}`;
+            if (!force && bookmarksVersion.current === nextVersion) return;
+
+            const latestItems = readBookmarks(bookmarksPath);
+            setItems(latestItems);
+            bookmarksVersion.current = nextVersion;
+
+            try {
+                syncNotesSnapshot(latestItems);
+            } catch (error) {
+                console.error("更新 notes.json 失败:", error);
+                if (reportErrors) showToast({ style: Toast.Style.Failure, title: "备注镜像更新失败", message: error.message });
             }
-        } catch (e) { showToast({ style: Toast.Style.Failure, title: "加载失败" }); }
-    };
-    React.useEffect(() => { loadData(); }, []);
+        } catch (error) {
+            console.error("加载浏览器书签失败:", error);
+            if (reportErrors) showToast({ style: Toast.Style.Failure, title: "加载书签失败", message: error.message });
+        }
+    }, []);
+
+    React.useEffect(() => { refreshBookmarks({ force: true }); }, [refreshBookmarks]);
+
+    const handleSearchTextChange = React.useCallback((value) => {
+        setSearchText(value);
+        refreshBookmarks({ reportErrors: false });
+    }, [refreshBookmarks]);
+
     const handleSaveNote = (url, newNote) => {
-        if (saveNoteToEdge(url, newNote)) { showToast({ title: "同步成功" }); loadData(); }
+        if (saveNoteToBrowser(url, newNote)) { showToast({ title: "同步成功" }); refreshBookmarks({ force: true }); }
         else { showToast({ style: Toast.Style.Failure, title: "同步失败" }); }
     };
     const search = searchText.toLowerCase();
@@ -84,7 +154,7 @@ function Command() {
             const aMatch = a.note.toLowerCase().includes(search), bMatch = b.note.toLowerCase().includes(search);
             return aMatch === bMatch ? a.name.localeCompare(b.name) : (aMatch ? -1 : 1);
         });
-    return React.createElement(List, { onSearchTextChange: setSearchText, searchBarPlaceholder: "搜索书签或备注...", throttle: true },
+    return React.createElement(List, { onSearchTextChange: handleSearchTextChange, searchBarPlaceholder: "搜索书签或备注...", throttle: true },
         filteredItems.map(it => React.createElement(List.Item, {
             key: it.url + it.id, title: it.name, subtitle: it.url, accessories: it.note ? [{ text: it.note, icon: Icon.Tag }] : [],
             actions: React.createElement(ActionPanel, null,
