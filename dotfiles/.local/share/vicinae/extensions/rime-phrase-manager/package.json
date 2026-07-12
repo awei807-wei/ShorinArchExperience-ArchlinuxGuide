@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/vicinaehq/vicinae/refs/heads/main/extra/schemas/extension.json",
+  "name": "rime-phrase-manager",
+  "title": "Rime Phrase Manager",
+  "description": "Quickly add or update Flypy custom phrases and redeploy Rime.",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "author": "awei807-wei",
+  "commands": [
+    {
+      "name": "index",
+      "title": "添加 Rime 双拼短语",
+      "description": "快速写入 custom_phrase_double.txt 并重新部署 Rime。",
+      "mode": "view",
+      "keywords": ["rime", "phrase", "flypy", "双拼", "小鹤", "词库"]
+    }
+  ],
+  "dependencies": {
+    "@vicinae/api": "*"
+  },
+  "scripts": {
+    "test": "node test.js"
+  }
+}
