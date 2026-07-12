@@ -98,6 +98,7 @@ def ui_text():
             "capturing": "长截图进行中",
             "capturing_body": "请手动滚动，停止一小会儿后自动拼接...",
             "stitching": "正在拼接...",
+            "compressing": "正在拼接并压缩...",
             "saved": "长截图完成",
             "saved_body": "已保存并复制到剪贴板",
         }
@@ -107,6 +108,7 @@ def ui_text():
         "capturing": "Long screenshot in progress",
         "capturing_body": "Scroll manually. Stitching starts after a short idle...",
         "stitching": "Stitching...",
+        "compressing": "Stitching and compressing...",
         "saved": "Long screenshot complete",
         "saved_body": "Saved and copied to clipboard",
     }
@@ -666,6 +668,67 @@ def copy_to_clipboard(path):
         subprocess.run(["wl-copy"], stdin=image_file, check=False)
 
 
+def pngquant_quality(value):
+    try:
+        minimum, maximum = (int(part) for part in value.split("-", 1))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("quality must use MIN-MAX, for example 70-90") from exc
+
+    if not 0 <= minimum <= maximum <= 100:
+        raise argparse.ArgumentTypeError("quality values must satisfy 0 <= MIN <= MAX <= 100")
+    return f"{minimum}-{maximum}"
+
+
+def compress_png(output_path, args):
+    if not args.compress:
+        return output_path
+    if not command_exists("pngquant"):
+        print("Compression skipped: pngquant is not installed.", file=sys.stderr)
+        return output_path
+
+    compressed_path = output_path.with_name(
+        f"{output_path.stem}_small{output_path.suffix}"
+    )
+    result = subprocess.run(
+        [
+            "pngquant",
+            f"--quality={args.compress_quality}",
+            "--speed",
+            str(args.compress_speed),
+            "--strip",
+            "--force",
+            "--output",
+            str(compressed_path),
+            "--",
+            str(output_path),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0 or not compressed_path.exists():
+        compressed_path.unlink(missing_ok=True)
+        detail = result.stderr.strip() or result.stdout.strip() or "unknown pngquant error"
+        print(f"Compression failed; keeping original image: {detail}", file=sys.stderr)
+        return output_path
+
+    original_size = output_path.stat().st_size
+    compressed_size = compressed_path.stat().st_size
+    if compressed_size <= 0 or compressed_size >= original_size:
+        compressed_path.unlink(missing_ok=True)
+        print("Compression skipped: the compressed image was not smaller.", file=sys.stderr)
+        return output_path
+
+    reduction = (1.0 - compressed_size / original_size) * 100.0
+    print(
+        f"Compressed: {compressed_path} "
+        f"({original_size / 1048576:.1f} MiB -> {compressed_size / 1048576:.1f} MiB, "
+        f"{reduction:.1f}% smaller)"
+    )
+    return compressed_path
+
+
 def stitch_match(result, prev, curr, match, args):
     status = match["status"]
     shift = match["shift"]
@@ -677,15 +740,18 @@ def stitch_match(result, prev, curr, match, args):
 
 
 def finish_output(result, output_path, frame_paths, notification_id, text, args):
+    processing_message = text["compressing"] if args.compress else text["stitching"]
     notification_id = notify(
         text["title"],
-        text["stitching"],
+        processing_message,
         0,
         replace_id=notification_id,
         print_id=notification_id is not None,
     )
-    cv2.imwrite(str(output_path), result, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-    copy_to_clipboard(output_path)
+    if not cv2.imwrite(str(output_path), result, [cv2.IMWRITE_PNG_COMPRESSION, 0]):
+        raise RuntimeError(f"Failed to save image: {output_path}")
+    final_output_path = compress_png(output_path, args)
+    copy_to_clipboard(final_output_path)
 
     if args.keep_frames:
         keep_dir = output_path.with_suffix("")
@@ -697,14 +763,16 @@ def finish_output(result, output_path, frame_paths, notification_id, text, args)
 
     notify(
         text["saved"],
-        f"{text['saved_body']}: {output_path.name}",
+        f"{text['saved_body']}: {final_output_path.name}",
         4000,
-        output_path,
+        final_output_path,
         replace_id=notification_id,
     )
     if args.preview:
-        open_image(output_path)
+        open_image(final_output_path)
     print("Saved: " + str(output_path))
+    if final_output_path != output_path:
+        print("Compressed output: " + str(final_output_path))
 
 
 def capture_initial_frame(temp_dir, geometry):
@@ -977,6 +1045,27 @@ def build_parser():
     parser.add_argument("--ignore-bottom", type=float, default=0.06)
     parser.add_argument("--ignore-x", type=float, default=0.08)
     parser.add_argument("--duplicate-threshold", type=float, default=1.5)
+    parser.add_argument(
+        "--no-compress",
+        dest="compress",
+        action="store_false",
+        help="skip pngquant compression",
+    )
+    parser.set_defaults(compress=True)
+    parser.add_argument(
+        "--compress-quality",
+        type=pngquant_quality,
+        default="70-90",
+        metavar="MIN-MAX",
+        help="pngquant quality range (default: 70-90)",
+    )
+    parser.add_argument(
+        "--compress-speed",
+        type=int,
+        choices=range(1, 12),
+        default=3,
+        help="pngquant speed from 1 (slowest) to 11 (fastest), default: 3",
+    )
     parser.add_argument("--no-preview", dest="preview", action="store_false")
     parser.set_defaults(preview=True)
     parser.add_argument("--keep-frames", action="store_true")

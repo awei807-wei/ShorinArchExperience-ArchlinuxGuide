@@ -6,7 +6,7 @@ echo "🔧 初始化环境..."
 
 # 1. 检查系统工具
 # 涵盖了两个方案所需的所有工具
-REQUIRED_TOOLS=("wf-recorder" "grim" "slurp" "wl-copy" "magick" "python3" "ydotool")
+REQUIRED_TOOLS=("wf-recorder" "grim" "slurp" "wl-copy" "magick" "pngquant" "python3" "ydotool")
 MISSING_TOOLS=()
 
 for tool in "${REQUIRED_TOOLS[@]}"; do
@@ -18,8 +18,8 @@ done
 if [ ${#MISSING_TOOLS[@]} -ne 0 ]; then
     echo "⚠️  警告: 缺少以下系统工具，请使用包管理器安装："
     echo "   ${MISSING_TOOLS[*]}"
-    echo "   (例如 Arch: sudo pacman -S wf-recorder grim slurp wl-clipboard imagemagick python)"
-    echo "   (例如 Debian/Ubuntu: sudo apt install wf-recorder grim slurp wl-clipboard imagemagick python3-venv)"
+    echo "   (例如 Arch: sudo pacman -S wf-recorder grim slurp wl-clipboard imagemagick pngquant python)"
+    echo "   (例如 Debian/Ubuntu: sudo apt install wf-recorder grim slurp wl-clipboard imagemagick pngquant python3-venv)"
 fi
 
 # 2. Python 虚拟环境

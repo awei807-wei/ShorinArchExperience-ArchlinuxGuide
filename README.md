@@ -17,7 +17,7 @@
 | **通知** | Mako / SwayNC |
 | **输入法** | Fcitx5 |
 | **Shell** | Fish |
-| **截图** | Grim + Slurp + Satty (含长截图工具链) |
+| **截图** | Grim + Slurp + Satty + pngquant（含长截图与自动压缩工具链） |
 | **录屏** | wf-recorder |
 | **快照备份** | Snapper + btrfs |
 
