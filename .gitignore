@@ -8,6 +8,7 @@
 *.db-wal
 **/venv/
 dotfiles/.config/quickshell/.snow/
+dotfiles/.config/quickshell/.helloagents/sessions/
 
 # Local absolute symlinks or generated user data
 **/*.bak

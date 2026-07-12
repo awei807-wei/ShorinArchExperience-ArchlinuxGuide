@@ -1,0 +1,50 @@
+{
+  "updatedAt": "2026-07-12T06:16:20.363Z",
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "通知生命周期：浮窗过期与被队列淘汰时均释放 Notification 对象",
+    "磁盘一致性：原子写入、0600 权限、双上限、损坏恢复和并发追加",
+    "托盘与通知独立计数：+N 仅表示隐藏应用，徽标仅表示磁盘历史总数",
+    "单卡片面板：滚轮切换、完整复制、清空磁盘与视觉状态闭环"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/archive/2026-07/202607121411_tray-notification-history/plan.md",
+      ".helloagents/DESIGN.md",
+      "hello-ui"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "该功能同时改变顶栏托盘折叠状态与向下展开窗口几何，需要验证关键状态和跨窗口对齐。",
+      "screens": [
+        "主屏顶栏右岛",
+        "托盘与通知展开面板"
+      ],
+      "states": [
+        "无溢出且无历史",
+        "仅托盘溢出",
+        "仅历史通知",
+        "托盘溢出与历史并存",
+        "复制反馈",
+        "清空后状态",
+        "加载或存储错误"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "",
+    "focus": [],
+    "preferredSources": []
+  }
+}

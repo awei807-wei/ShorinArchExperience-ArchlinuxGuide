@@ -24,8 +24,11 @@ Rectangle {
     property color zenSnow: "#cacaca" // 文本高对比色
     property color zenPure: "#f0f0f0" // 备用纯色（更亮的文本/图标）
     property color zenAccent: "#5a9a8a" // 强调色（进度条/高亮等）
+    property color zenDanger: "#9a5555" // 通知徽标与清理操作色
     property var panelWindow: null // 顶栏所在 PanelWindow；用于托盘菜单锚点定位（RightIslands）
-    property int trayMaxVisible: 4 // 托盘最大可见图标数（由 shell 注入；超出则折叠为 +N 徽标）
+    property int trayDirectIconLimit: 3 // 折叠态直接显示的应用图标上限
+    property int notificationHistoryCount: 0 // 磁盘历史总数，与托盘应用数独立
+    property bool trayPanelExpanded: false // 托盘横向展开与历史面板的统一状态
     
     // 岛屿位置偏移参数
     property real leftIslandOffsetX: 0 // 左岛 X 偏移（由 shell 注入；用于整体微调位置）
@@ -34,6 +37,9 @@ Rectangle {
     
     signal centerClicked() // 用户点击中岛时发出（由 shell 处理：切换中心面板）
     signal systemClicked() // 用户点击系统岛时发出（由 shell 处理：切换系统面板）
+    signal trayPanelToggleRequested(real panelWidth) // 复合入口点击请求
+    signal trayPanelResizeRequested(real panelWidth) // 展开中托盘数量变化后的宽度同步
+    signal trayPanelCloseRequested() // 托盘项或折叠按钮请求关闭
 
     // 暴露中岛引用给外部
     property alias centerIsland: centerIslandItem // 对外暴露 CenterIsland 实例（用于音量反馈/动画联动）
@@ -92,9 +98,15 @@ Rectangle {
             zenCloud: bar.zenCloud // 传入主题色：中等文本
             zenSnow: bar.zenSnow // 传入主题色：高对比文本
             zenAccent: bar.zenAccent // 传入主题色：强调色（频谱/进度条等）
+            zenDanger: bar.zenDanger // 传入主题色：通知徽标与清理动作
             panelWindow: bar.panelWindow // 传入窗口引用（托盘右键菜单锚点需要）
-            trayMaxVisible: bar.trayMaxVisible // 传入托盘最大可见数（溢出折叠阈值）
+            trayDirectIconLimit: bar.trayDirectIconLimit
+            notificationHistoryCount: bar.notificationHistoryCount
+            trayPanelExpanded: bar.trayPanelExpanded
             onToggleSystemPanel: bar.systemClicked() // 把系统岛点击信号上报给外部（shell）
+            onToggleTrayPanel: panelWidth => bar.trayPanelToggleRequested(panelWidth)
+            onResizeTrayPanel: panelWidth => bar.trayPanelResizeRequested(panelWidth)
+            onCloseTrayPanel: bar.trayPanelCloseRequested()
         }
     }
 }

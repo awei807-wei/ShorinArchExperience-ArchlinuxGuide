@@ -46,7 +46,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real islandPaddingH: baseUnit * 1.4     // 岛屿水平内边距
     readonly property real islandPaddingV: baseUnit * 0.4     // 岛屿垂直内边距
     readonly property real islandGap: baseUnit * 0.8          // 岛屿之间间距
-    readonly property int trayMaxVisible: 4                   // 托盘最大可见图标数（超出则折叠为 +N 徽标）
+    readonly property int trayDirectIconLimit: 3              // 折叠态直接显示的托盘应用图标上限
     readonly property real barMarginTop: baseUnit * 0.2       // 顶栏距屏幕顶部
     readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距（用于避免贴边）
     // 岛屿位置偏移（正值向右，负值向左）
@@ -104,6 +104,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property color zenSnow: "#d0d0d0"               // 高对比文本：主要内容
     readonly property color zenPure: "#ffffff"               // 备用亮色：需要更亮的强调文本/图标
     property color zenAccent: "#5a9a8a"                      // 强调色：进度条/关键状态（支持动态热更新）
+    readonly property color zenDanger: "#9a5555"             // 通知数字与清理动作的低饱和危险色
 
     // ═══════════════════════════════════════════════════════
     // 📊 系统状态数据
@@ -112,6 +113,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property bool centerPanelVisible: false                 // 中心面板是否可见（用于 window.visible 绑定）
     property bool centerPanelClosing: false                 // 中心面板“关闭动画期间”的占位可见（避免点击后立刻消失造成事件/动画问题）
     property bool systemPanelClosing: false                 // 系统面板“关闭动画期间”的占位可见
+    property bool trayPanelVisible: false                  // 托盘横向展开与通知历史面板统一开关
+    property real trayPanelWidth: notificationPopupWidth   // 顶部展开条与下方通知面板共享宽度
+    property bool colorParseErrorLogged: false             // 动态配色解析错误只记录一次
     // 提供给子组件的显式引用（避免组件内出现 undefined / 自引用绑定）
     property alias centerPanelCloseTimer: centerPanelCloseTimer
     property alias systemPanelCloseTimer: systemPanelCloseTimer
@@ -121,13 +125,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property int volumePercent: 70                          // 音量百分比（0-100；由 wpctl 采集并截断）
     property int brightnessPercent: 50                      // 亮度百分比（0-100；由 brightnessctl 采集）
     property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
-    property var lastNotification: null                     // 最近一条通知对象引用（tracked=true 后由 NotificationServer 保留）
-    property int lastNotificationId: 0                      // 最近一条通知 ID
-    property string lastNotificationApp: ""                 // 最近一条通知来源应用
-    property string lastNotificationSummary: ""             // 最近一条通知标题
-    property string lastNotificationBody: ""                // 最近一条通知正文
-    property string lastNotificationUrgency: ""             // 最近一条通知等级
-    property string lastNotificationImage: ""               // 最近一条通知图片路径/URL（如有）
     property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
     property var lastActivePlayer: null                     // 上一次“正在播放”的播放器（用于在暂停时保持来源稳定）
@@ -229,11 +226,23 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     function trackNotification(notification) {
         // 输入：Quickshell Notification 对象
         // 输出：无返回值
-        // 副作用：将通知加入临时浮窗队列，并限制最大显示数量
+        // 副作用：将通知加入临时浮窗队列；被替换或挤出的对象立即 expire
 
+        const replaced = configRoot.activeNotifications.filter(
+            item => item !== notification && item.id === notification.id
+        )
         let list = configRoot.activeNotifications.filter(item => item.id !== notification.id)
         list.unshift(notification)
-        configRoot.activeNotifications = list.slice(0, configRoot.notificationMaxVisible)
+        const visible = list.slice(0, configRoot.notificationMaxVisible)
+        const dropped = replaced.concat(list.slice(configRoot.notificationMaxVisible))
+        configRoot.activeNotifications = visible
+        dropped.forEach(item => {
+            try {
+                item.expire()
+            } catch (error) {
+                console.warn("[Notifications] failed to expire dropped notification: " + error)
+            }
+        })
     }
 
     function untrackNotification(notification) {
@@ -274,6 +283,18 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         volume: 0.7 // 音量 0.0~1.0
     }
 
+    NotificationHistoryStore {
+        id: notificationHistoryStore
+        onHistoryCountChanged: {
+            if (historyCount === 0 && configRoot.trayPanelVisible)
+                configRoot.trayPanelVisible = false
+        }
+        onHistoryCleared: configRoot.trayPanelVisible = false
+        onOperationFailed: (operation, message) => console.warn(
+            "[NotificationHistory] " + operation + " failed: " + message
+        )
+    }
+
     NotificationServer {
         id: notificationServer
         keepOnReload: false // 只验证新进入的通知，避免 reload 后重复处理旧通知
@@ -284,23 +305,30 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         inlineReplySupported: false // 当前未做行内回复
 
         onNotification: notification => {
-            notification.tracked = true // 保留通知对象，后续 UI 可从 trackedNotifications 或 lastNotification 读取
+            // Notification QObject 只服务于临时浮窗；历史记录先压平为纯 JSON 快照。
+            const appName = configRoot.cleanNotificationText(notification.appName)
+            const summary = configRoot.cleanNotificationText(notification.summary)
+            const urgency = NotificationUrgency.toString(notification.urgency)
+            notificationHistoryStore.appendSnapshot({
+                "id": notification.id,
+                "appName": notification.appName || "",
+                "desktopEntry": notification.desktopEntry || "",
+                "summary": notification.summary || "",
+                "body": notification.body || "",
+                "urgency": urgency,
+                "timestamp": Date.now()
+            })
+
+            notification.tracked = true
 
             configRoot.notificationCount += 1
-            configRoot.lastNotification = notification
-            configRoot.lastNotificationId = notification.id
-            configRoot.lastNotificationApp = configRoot.cleanNotificationText(notification.appName)
-            configRoot.lastNotificationSummary = configRoot.cleanNotificationText(notification.summary)
-            configRoot.lastNotificationBody = configRoot.cleanNotificationText(notification.body)
-            configRoot.lastNotificationUrgency = NotificationUrgency.toString(notification.urgency)
-            configRoot.lastNotificationImage = notification.image || ""
             configRoot.trackNotification(notification)
 
             console.log("[Notifications] received #" + configRoot.notificationCount
                         + " id=" + notification.id
-                        + " app=\"" + configRoot.lastNotificationApp + "\""
-                        + " summary=\"" + configRoot.lastNotificationSummary + "\""
-                        + " urgency=" + configRoot.lastNotificationUrgency)
+                        + " app=\"" + appName + "\""
+                        + " summary=\"" + summary + "\""
+                        + " urgency=" + urgency)
 
             notificationSound.play() // 播放通知音效（QML 原生，无外部依赖）
 
@@ -506,7 +534,12 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             if (!data.colors || !data.colors.primary) return;
             configRoot.zenAccent = data.colors.primary;
             console.log("[shell] Dynamic accent applied: " + data.colors.primary);
-        } catch (e) {}
+        } catch (error) {
+            if (!configRoot.colorParseErrorLogged) {
+                configRoot.colorParseErrorLogged = true
+                console.warn("[shell] invalid dynamic color payload: " + error)
+            }
+        }
     }
     
     Timer {
@@ -668,26 +701,65 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     zenSnow: configRoot.zenSnow // 主题色注入：高对比文本
                     zenPure: configRoot.zenPure // 主题色注入：备用亮色
                     zenAccent: configRoot.zenAccent // 主题色注入：强调色
+                    zenDanger: configRoot.zenDanger // 主题色注入：通知徽标与清理动作
                     unit: configRoot.baseUnit // 尺寸基准注入
                     leftIslandOffsetX: configRoot.leftIslandOffsetX // 位置偏移注入：左岛
                     centerIslandOffsetX: configRoot.centerIslandOffsetX // 位置偏移注入：中岛
                     rightIslandOffsetX: configRoot.rightIslandOffsetX // 位置偏移注入：右岛
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
-                    trayMaxVisible: configRoot.trayMaxVisible // 传入托盘最大可见数
+                    trayDirectIconLimit: configRoot.trayDirectIconLimit
+                    notificationHistoryCount: notificationHistoryStore.historyCount
+                    trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 CenterIsland 实例（用于音量反馈联动）
                     onCenterClicked: {
                         console.log("[shell] centerClicked, toggling panel") // 调试日志：记录点击
+                        configRoot.trayPanelVisible = false
                         configRoot.centerPanelVisible = !configRoot.centerPanelVisible // 切换中心面板可见性
                         if (configRoot.centerPanelVisible) configRoot.refreshPanelData() // 打开时立刻刷新数据（避免陈旧）
                     }
                     onSystemClicked: {
                         console.log("[shell] systemClicked, toggling system panel") // 调试日志：记录点击
+                        configRoot.trayPanelVisible = false
                         configRoot.systemPanelVisible = !configRoot.systemPanelVisible // 切换系统面板可见性
                         if (configRoot.systemPanelVisible) configRoot.refreshSystemData() // 打开时立刻刷新数据
                     }
+                    onTrayPanelToggleRequested: panelWidth => {
+                        const opening = !configRoot.trayPanelVisible
+                        configRoot.trayPanelWidth = Math.max(
+                            configRoot.notificationPopupWidth,
+                            panelWidth
+                        )
+                        configRoot.centerPanelVisible = false
+                        configRoot.systemPanelVisible = false
+                        configRoot.trayPanelVisible = opening
+                    }
+                    onTrayPanelResizeRequested: panelWidth => {
+                        if (configRoot.trayPanelVisible) {
+                            configRoot.trayPanelWidth = Math.max(
+                                configRoot.notificationPopupWidth,
+                                panelWidth
+                            )
+                        }
+                    }
+                    onTrayPanelCloseRequested: configRoot.trayPanelVisible = false
                 }
             }
         }
+    }
+
+    NotificationHistoryPanelHost {
+        root: configRoot
+        store: notificationHistoryStore
+        open: configRoot.trayPanelVisible
+        panelWidth: configRoot.trayPanelWidth
+        // 托盘右边依次是岛间距与电源岛，面板据此和展开托盘的右边缘对齐。
+        rightMargin: Math.max(
+            0,
+            configRoot.barMarginSide
+                - configRoot.rightIslandOffsetX
+                + configRoot.baseUnit * 2.4
+        )
+        onCloseRequested: configRoot.trayPanelVisible = false
     }
 
     // ===== TEMP NOTIFICATION POPUPS =====
