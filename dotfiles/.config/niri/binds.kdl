@@ -46,10 +46,12 @@ binds {
     //Alt+Space { spawn "notify-send" "按键测试" "Vicinae 触发了"; }
     //Alt+Space hotkey-overlay-title="程序菜单 Applauncher" { spawn "fuzzel"; }
     Alt+Space hotkey-overlay-title="搜索面板" { spawn-sh "vicinae toggle"; }
+    // Niri 绑定必须以 XKB 键名结尾；用左 Alt 键实现按下 Mod+Alt 调用 FocusShift。
+    Mod+Alt_L repeat=false hotkey-overlay-title="窗口切换 FocusShift" { spawn "focus-shift"; }
     // 锁屏
     Mod+Alt+L hotkey-overlay-title="锁屏 Lock screen" { spawn-sh "/usr/bin/quickshell -p ~/.config/quickshell/lockscreen/shell.qml";} 
     Mod+P hotkey-overlay-title="选取屏幕颜色 Pick color " { spawn-sh "hyprpicker | wl-copy"; }
-    Mod+Alt+V  hotkey-overlay-title="剪贴板 Clipboard" {spawn-sh "copyq toggle || clipse-gui || kitty --class clipse -o font_size=13 -o \"modify_font cell_height 90%\" -e clipse";}
+    Mod+Alt+V hotkey-overlay-title="剪贴板 Clipboard" { spawn "niri-clip" "toggle"; }
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
     // For example, this is a standard bind to toggle the screen reader (orca).

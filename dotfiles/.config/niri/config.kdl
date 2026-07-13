@@ -332,8 +332,8 @@ spawn-at-startup "~/.config/scripts/niri_set_overview_blur_dark_bg.sh"
 spawn-at-startup "waypaper" "--random"
 // 有聚焦窗口时桌面自动模糊的脚本
 spawn-at-startup "~/.config/scripts/niri_auto_blur_bg.sh"
-// 屏幕分享、录屏相关的环境设置（同时注入systemd用户会话环境）
-spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE"
+// 屏幕分享、录屏和 niri-clip 相关的环境设置（同时注入 systemd 用户会话环境）
+spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && systemctl --user restart niri-clip.service"
 // GNOME tracker修复
 spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 // 通知程序
@@ -343,8 +343,7 @@ spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 spawn-sh-at-startup "quickshell &"
 // 输入法（显式注入WAYLAND_DISPLAY，禁用XDG autostart后由niri完全控制启动时机）
 spawn-sh-at-startup "WAYLAND_DISPLAY=wayland-1 fcitx5 -d --replace"
-// 剪贴板守护进程
-spawn-sh-at-startup "clipse --listen" 
+// 剪贴板守护进程由 niri-clip 的 systemd 用户服务提供
 // 闲置时自动熄屏锁屏休眠的脚本
 spawn-at-startup "~/.config/niri/scripts/swayidle.sh"
 // 大写锁定键的osd显示
@@ -369,6 +368,5 @@ hotkey-overlay {
 //
 // 隐藏窗口标题栏
 prefer-no-csd
-
 
 
