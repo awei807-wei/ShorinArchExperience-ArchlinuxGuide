@@ -21,6 +21,8 @@
 | **录屏** | wf-recorder |
 | **快照备份** | Snapper + btrfs |
 
+`dotfiles/.config/starship.toml` 是 Starship 的唯一配置源；Matugen 只负责其他桌面配色，不会生成或覆盖该文件。
+
 ## 目录结构
 
 ```
