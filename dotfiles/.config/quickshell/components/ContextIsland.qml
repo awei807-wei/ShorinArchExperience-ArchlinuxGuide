@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 
 Rectangle {
@@ -24,29 +25,29 @@ Rectangle {
     readonly property string mode: contextModeOverride !== "" ? contextModeOverride : (contextState ? contextState.contextMode : "fallback")
     readonly property string screenName: screen && screen.name ? screen.name : ""
 
-    implicitWidth: ultraCompact ? 172 : (compact ? 184 : 200)
-    implicitHeight: 38
+    implicitWidth: ultraCompact ? Config.BarTuning.contextUltraWidth : (compact ? Config.BarTuning.contextCompactWidth : Config.BarTuning.contextWidth)
+    implicitHeight: Config.BarTuning.islandHeight
     color: surfaceColor
     border.color: borderColor
-    border.width: 1
-    radius: 3
+    border.width: Config.BarTuning.islandBorderWidth
+    radius: Config.BarTuning.islandRadius
     clip: true
 
     Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 1
+        height: Config.BarTuning.islandTopHighlightHeight
         color: contextIsland.highlightColor
     }
 
     Rectangle {
-        x: contextIsland.compact ? 9 : 12
+        x: contextIsland.compact ? Config.BarTuning.contextAccentCompactX : Config.BarTuning.contextAccentX
         y: contextIsland.border.width
-        width: contextIsland.compact ? 16 : 20
-        height: 1
+        width: contextIsland.compact ? Config.BarTuning.contextAccentCompactWidth : Config.BarTuning.contextAccentWidth
+        height: Config.BarTuning.islandTopHighlightHeight
         color: contextIsland.accentColor
-        opacity: 0.9
+        opacity: Config.BarTuning.contextAccentOpacity
         z: 3
     }
 

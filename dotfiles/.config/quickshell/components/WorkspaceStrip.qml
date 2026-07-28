@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "../config" as Config
 
 Item {
     id: workspaceStrip
@@ -22,10 +23,15 @@ Item {
     property color emptyColor: "#3c4143"
     property string monoFont: "JetBrains Mono"
 
-    readonly property int horizontalPadding: compact ? 7 : 9
-    readonly property int contentGap: compact ? 5 : 6
-    readonly property int metaWidth: compact ? 42 : 46
-    readonly property int workspaceGap: compact ? 2 : 3
+    readonly property int horizontalPadding: compact
+        ? Config.BarTuning.contextCompactHorizontalPadding
+        : Config.BarTuning.contextHorizontalPadding
+    readonly property int contentGap: compact
+        ? Config.BarTuning.contextCompactContentGap : Config.BarTuning.contextContentGap
+    readonly property int metaWidth: compact
+        ? Config.BarTuning.contextCompactMetaWidth : Config.BarTuning.contextMetaWidth
+    readonly property int workspaceGap: compact
+        ? Config.BarTuning.workspaceCompactGap : Config.BarTuning.workspaceGap
 
     signal workspaceRequested(int workspace)
 
@@ -50,7 +56,7 @@ Item {
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
-                spacing: 1
+                spacing: Config.BarTuning.contextMetaSpacing
 
                 Text {
                     width: parent.width
@@ -58,7 +64,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textDim
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 7
+                    font.pixelSize: Config.BarTuning.contextLabelFontSize
                     font.letterSpacing: 0.7
                 }
 
@@ -68,7 +74,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textColor
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 9
+                    font.pixelSize: Config.BarTuning.contextValueFontSize
                     font.letterSpacing: 0.2
                 }
 
@@ -78,7 +84,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textSoft
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 7
+                    font.pixelSize: Config.BarTuning.contextStatusFontSize
                     font.letterSpacing: 0.25
                 }
             }
@@ -86,7 +92,7 @@ Item {
 
         Rectangle {
             width: 1
-            height: 18
+            height: Config.BarTuning.contextDividerHeight
             anchors.verticalCenter: parent.verticalCenter
             color: workspaceStrip.lineColor
         }
@@ -127,14 +133,14 @@ Item {
 
                         Text {
                             anchors.top: parent.top
-                            anchors.topMargin: 6
+                            anchors.topMargin: Config.BarTuning.workspaceNumberTop
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: workspaceStrip.pad2(workspaceButton.workspaceNumber)
                             color: workspaceButton.active ? workspaceStrip.textColor
                                 : (workspaceButton.hovered || workspaceButton.occupied
                                     ? workspaceStrip.textSoft : workspaceStrip.textDim)
                             font.family: workspaceStrip.monoFont
-                            font.pixelSize: 7
+                            font.pixelSize: Config.BarTuning.workspaceNumberFontSize
                             font.letterSpacing: 0
 
                             Behavior on color {
@@ -145,13 +151,17 @@ Item {
 
                         Rectangle {
                             anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 3
+                            anchors.bottomMargin: Config.BarTuning.workspaceIndicatorBottom
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: Math.min(workspaceButton.width,
                                 workspaceButton.active
-                                    ? (workspaceStrip.compact ? 20 : 22)
-                                    : (workspaceStrip.compact ? 12 : 14))
-                            height: 3
+                                    ? (workspaceStrip.compact
+                                        ? Config.BarTuning.workspaceCompactActiveWidth
+                                        : Config.BarTuning.workspaceActiveWidth)
+                                    : (workspaceStrip.compact
+                                        ? Config.BarTuning.workspaceCompactInactiveWidth
+                                        : Config.BarTuning.workspaceInactiveWidth))
+                            height: Config.BarTuning.workspaceIndicatorHeight
                             color: workspaceButton.active ? workspaceStrip.accentColor
                                 : (workspaceButton.occupied
                                     ? workspaceStrip.occupiedColor : workspaceStrip.emptyColor)
@@ -169,10 +179,10 @@ Item {
                         Rectangle {
                             visible: workspaceButton.activeFocus
                             anchors.top: parent.top
-                            anchors.topMargin: 3
+                            anchors.topMargin: Config.BarTuning.workspaceFocusTop
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: Math.min(8, workspaceButton.width)
-                            height: 1
+                            width: Math.min(Config.BarTuning.workspaceFocusWidth, workspaceButton.width)
+                            height: Config.BarTuning.islandTopHighlightHeight
                             color: workspaceStrip.textDim
                         }
 

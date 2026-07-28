@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "../config" as Config
 
 Item {
     id: spectrum
@@ -10,19 +11,21 @@ Item {
     property bool reducedMotion: false
     property color barColor: "#767f84"
     property color topLineColor: Qt.rgba(180 / 255, 194 / 255, 202 / 255, 0.08)
-    readonly property int barCount: 32
-    readonly property int barGap: 2
+    readonly property int barCount: Config.BarTuning.spectrumBarCount
+    readonly property int barGap: Config.BarTuning.spectrumBarGap
 
-    opacity: active ? 0.16 : 0.06
+    opacity: active
+        ? Config.BarTuning.spectrumActiveOpacity : Config.BarTuning.spectrumInactiveOpacity
 
     function barHeight(index) {
         if (reducedMotion)
-            return 6 + ((index * 5) % 7)
+            return Config.BarTuning.spectrumMinBarHeight + ((index * 5) % 7)
 
         const characters = "▁▂▃▄▅▆▇█"
         const value = bars.length > 0 ? bars[index % bars.length] : "▁"
         const level = Math.max(0, characters.indexOf(value))
-        return 6 + Math.round(level * 16 / 7)
+        return Config.BarTuning.spectrumMinBarHeight
+            + Math.round(level * Config.BarTuning.spectrumBarHeightRange / 7)
     }
 
     Row {
@@ -46,7 +49,9 @@ Item {
                     anchors.bottom: parent.bottom
                     height: spectrum.barHeight(spectrumBar.index)
                     color: spectrum.barColor
-                    opacity: spectrum.active ? 0.34 : 0.20
+                    opacity: spectrum.active
+                        ? Config.BarTuning.spectrumActiveBarOpacity
+                        : Config.BarTuning.spectrumInactiveBarOpacity
 
                     Rectangle {
                         anchors.top: parent.top

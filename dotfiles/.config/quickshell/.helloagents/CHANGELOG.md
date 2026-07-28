@@ -9,6 +9,7 @@
 ### 变更
 - **[Bar]**: 将旧 Left/Center/Right 视图树重构为 Context/Clock/System 三个语义区域，并固定为 38px Swiss industrial 视觉。
 - **[Bar]**: 收紧 Context/Clock/Metrics/Tray 宽度，放大 Workspace、时间与指标文字，降低频谱对比并将 Tray/Power 间距缩至 4px。
+- **[Bar]**: 新增 `config/BarTuning.qml` 像素微调入口，集中管理三岛位置、尺寸、字号、间距、响应式阈值与频谱/Tray 视觉权重；布局测试同步读取该配置。
 - **[Tray]**: 将托盘与 Power 收敛为低权重工业控件，同时保留溢出菜单和通知历史入口。
 - **[设计]**: 更新稳定设计契约，统一石墨黑灰阶、冰蓝强调、3px 小圆角与响应式退让顺序。
 

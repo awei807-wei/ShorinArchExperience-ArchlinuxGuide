@@ -3,11 +3,12 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
+import "../config" as Config
 
 Rectangle {
     id: trayIsland
 
-    property real unit: 8
+    property real unit: Config.BarTuning.trayUnit
     property color zenInk: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
     property color zenMist: Qt.rgba(1, 1, 1, 0.085)
     property color zenStone: Qt.rgba(1, 1, 1, 0.025)
@@ -38,27 +39,28 @@ Rectangle {
     readonly property bool hasCompositeEntry: hiddenTrayCount > 0 || notificationCount > 0
     readonly property int collapsedSlots: Math.min(trayCount, directIconLimit)
         + (hasCompositeEntry ? 1 : 0)
-    readonly property real itemWidth: 18
-    readonly property real iconSize: 16
-    readonly property real itemGap: 4
-    readonly property real horizontalPadding: 20
+    readonly property real itemWidth: Config.BarTuning.trayItemWidth
+    readonly property real iconSize: Config.BarTuning.trayIconSize
+    readonly property real itemGap: Config.BarTuning.trayItemGap
+    readonly property real horizontalPadding: Config.BarTuning.trayHorizontalPadding
     readonly property real expandedContentWidth: (trayCount + 1) * itemWidth
         + Math.max(0, trayCount) * itemGap + horizontalPadding
-    readonly property real expandedWidth: Math.max(unit * 18, expandedContentWidth)
+    readonly property real expandedWidth: Math.max(
+        unit * Config.BarTuning.trayExpandedMinUnits, expandedContentWidth)
 
     signal toggleRequested(real panelWidth)
     signal closeRequested()
 
-    implicitWidth: collapsedSlots === 0 ? 20
+    implicitWidth: collapsedSlots === 0 ? Config.BarTuning.trayEmptyWidth
         : collapsedSlots * itemWidth
             + Math.max(0, collapsedSlots - 1) * itemGap
             + horizontalPadding
-    implicitHeight: 38
+    implicitHeight: Config.BarTuning.islandHeight
     width: preferredWidth > 0 ? preferredWidth : implicitWidth
     color: zenInk
     border.color: zenMist
-    border.width: 1
-    radius: 3
+    border.width: Config.BarTuning.islandBorderWidth
+    radius: Config.BarTuning.islandRadius
     clip: false
 
     onHasCompositeEntryChanged: {
@@ -70,7 +72,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 1
+        height: Config.BarTuning.islandTopHighlightHeight
         color: trayIsland.highlightColor
         z: 4
     }
@@ -84,15 +86,15 @@ Rectangle {
         height: parent.height
         color: trayIsland.zenInk
         border.color: trayIsland.zenMist
-        border.width: 1
-        radius: 3
+        border.width: Config.BarTuning.islandBorderWidth
+        radius: Config.BarTuning.islandRadius
         opacity: visible ? 1 : 0
 
         Rectangle {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            height: 1
+            height: Config.BarTuning.islandTopHighlightHeight
             color: trayIsland.highlightColor
         }
 
@@ -257,7 +259,7 @@ Rectangle {
                 anchors.centerIn: parent
                 text: "+" + trayIsland.hiddenTrayCount
                 textFormat: Text.PlainText
-                font.pixelSize: 6
+                font.pixelSize: Config.BarTuning.trayCompositeFontSize
                 font.family: trayIsland.monoFont
                 color: trayIsland.zenCloud
             }
@@ -292,9 +294,9 @@ Rectangle {
                 visible: trayIsland.notificationCount > 0
                 anchors.top: parent.top
                 anchors.right: parent.right
-                anchors.topMargin: -4
-                anchors.rightMargin: -5
-                height: 10
+                anchors.topMargin: Config.BarTuning.trayBadgeTopOffset
+                anchors.rightMargin: Config.BarTuning.trayBadgeRightOffset
+                height: Config.BarTuning.trayBadgeHeight
                 width: Math.max(height, notificationBadgeText.implicitWidth + 5)
                 radius: height / 2
                 color: trayIsland.zenDanger
@@ -306,7 +308,7 @@ Rectangle {
                     anchors.centerIn: parent
                     text: trayIsland.notificationCount > 99 ? "99+" : String(trayIsland.notificationCount)
                     textFormat: Text.PlainText
-                    font.pixelSize: 5
+                    font.pixelSize: Config.BarTuning.trayBadgeFontSize
                     font.weight: Font.DemiBold
                     font.family: trayIsland.monoFont
                     color: trayIsland.zenSnow
@@ -347,7 +349,7 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: "«"
-                font.pixelSize: 8
+                font.pixelSize: Config.BarTuning.trayCollapseFontSize
                 font.family: trayIsland.monoFont
                 color: collapseButton.hovered ? trayIsland.zenSnow : trayIsland.zenCloud
             }
@@ -368,7 +370,7 @@ Rectangle {
                 && !trayIsland.expanded
             anchors.verticalCenter: parent.verticalCenter
             text: "···"
-            font.pixelSize: 6
+            font.pixelSize: Config.BarTuning.trayEmptyFontSize
             font.family: trayIsland.monoFont
             color: trayIsland.zenAsh
         }

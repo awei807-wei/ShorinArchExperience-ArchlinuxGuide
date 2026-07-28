@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 
 Rectangle {
@@ -26,9 +27,9 @@ Rectangle {
     readonly property bool hovered: hoverArea.containsMouse
     readonly property bool ultraCompact: responsiveLevel >= 4
     readonly property bool compact: responsiveLevel >= 3
-    readonly property int timeColumnWidth: ultraCompact ? 64 : (compact ? 72 : 84)
-    readonly property int dateColumnWidth: ultraCompact ? 82 : (compact ? 94 : 102)
-    readonly property int weatherColumnWidth: 64
+    readonly property int timeColumnWidth: ultraCompact ? Config.BarTuning.clockUltraTimeColumnWidth : (compact ? Config.BarTuning.clockCompactTimeColumnWidth : Config.BarTuning.clockTimeColumnWidth)
+    readonly property int dateColumnWidth: ultraCompact ? Config.BarTuning.clockUltraDateColumnWidth : (compact ? Config.BarTuning.clockCompactDateColumnWidth : Config.BarTuning.clockDateColumnWidth)
+    readonly property int weatherColumnWidth: Config.BarTuning.clockWeatherColumnWidth
 
     signal togglePanel()
 
@@ -47,12 +48,12 @@ Rectangle {
         weekdayText = weekdays[now.getDay()] + " · " + months[now.getMonth()];
     }
 
-    implicitWidth: showWeather ? 280 : (ultraCompact ? 160 : (compact ? 176 : 212))
-    implicitHeight: 38
+    implicitWidth: showWeather ? Config.BarTuning.clockWidthWithWeather : (ultraCompact ? Config.BarTuning.clockUltraWidth : (compact ? Config.BarTuning.clockCompactWidth : Config.BarTuning.clockWidth))
+    implicitHeight: Config.BarTuning.islandHeight
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
-    border.width: 1
-    radius: 3
+    border.width: Config.BarTuning.islandBorderWidth
+    radius: Config.BarTuning.islandRadius
     clip: true
     Accessible.role: Accessible.Button
     Accessible.name: "Clock and system controls"
@@ -95,7 +96,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 1
+        height: Config.BarTuning.islandTopHighlightHeight
         color: clockIsland.highlightColor
     }
 
@@ -114,16 +115,16 @@ Rectangle {
                 text: clockIsland.timeText
                 color: clockIsland.textColor
                 font.family: clockIsland.monoFont
-                font.pixelSize: 18
+                font.pixelSize: Config.BarTuning.clockTimeFontSize
                 font.weight: Font.DemiBold
-                font.letterSpacing: -0.65
+                font.letterSpacing: Config.BarTuning.clockTimeLetterSpacing
             }
 
         }
 
         Rectangle {
             width: 1
-            height: 18
+            height: Config.BarTuning.clockDividerHeight
             anchors.verticalCenter: parent.verticalCenter
             color: clockIsland.lineColor
         }
@@ -134,10 +135,10 @@ Rectangle {
 
             Column {
                 anchors.left: parent.left
-                anchors.leftMargin: clockIsland.compact ? 8 : 11
+                anchors.leftMargin: clockIsland.compact ? Config.BarTuning.clockCompactDateInset : Config.BarTuning.clockDateInset
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - (clockIsland.compact ? 8 : 11)
-                spacing: 4
+                width: parent.width - anchors.leftMargin
+                spacing: Config.BarTuning.clockMetaSpacing
 
                 Text {
                     width: parent.width
@@ -145,7 +146,7 @@ Rectangle {
                     elide: Text.ElideRight
                     color: clockIsland.textSoft
                     font.family: clockIsland.monoFont
-                    font.pixelSize: 7
+                    font.pixelSize: Config.BarTuning.clockDateFontSize
                     font.letterSpacing: 0.385
                 }
 
@@ -155,7 +156,7 @@ Rectangle {
                     elide: Text.ElideRight
                     color: clockIsland.showVolume ? clockIsland.accentColor : clockIsland.textDim
                     font.family: clockIsland.monoFont
-                    font.pixelSize: 6
+                    font.pixelSize: Config.BarTuning.clockWeekdayFontSize
                     font.letterSpacing: clockIsland.showVolume ? 0.5 : 0.75
 
                     Behavior on color {
@@ -176,7 +177,7 @@ Rectangle {
         Rectangle {
             visible: clockIsland.showWeather
             width: visible ? 1 : 0
-            height: 18
+            height: Config.BarTuning.clockDividerHeight
             anchors.verticalCenter: parent.verticalCenter
             color: clockIsland.lineColor
         }
@@ -192,7 +193,7 @@ Rectangle {
                 text: clockIsland.weatherText
                 color: clockIsland.textSoft
                 font.family: clockIsland.monoFont
-                font.pixelSize: 7
+                font.pixelSize: Config.BarTuning.clockWeatherFontSize
                 horizontalAlignment: Text.AlignRight
                 elide: Text.ElideRight
                 width: parent.width - 4

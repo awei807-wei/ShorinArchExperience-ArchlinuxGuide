@@ -16,6 +16,11 @@ Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级�
 - 字体：JetBrains Mono 承担时间、数字、标签与状态值；中文由系统 CJK 字体回退。字号不随屏幕宽度整体缩放。
 - 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，宽屏 Metrics 标签和值使用 `7px`，日期、星期与天气保持 `7px` 以下的次级层级。
 
+## 像素微调入口
+Bar 的位置、宽度、高度、字号、内部间距、工作区短线、频谱透明度、Tray 图标槽位和 Power 图标尺寸统一由 `config/BarTuning.qml` 管理。该文件按“整体位置 → 响应式阈值 → Context → Clock → Metrics/频谱 → Tray/Power”分区，并为每个参数标注实际控制位置；手动调整时不应再修改组件内部常量。
+
+布局测试直接读取同一配置，因此正常的像素微调无需同步改写测试期望。响应式阈值必须保持从大到小排列，Tray 图标尺寸不得超过槽位尺寸，所有支持宽度仍需满足三岛最小安全间距。
+
 ## 布局策略
 Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、Clock 相对屏幕真实居中、System 右对齐。宽屏基准为 Context `200px`、Clock `280px`、Metrics `288px`、Tray `104px`、Power `38px`；Metrics 与工具组间距 `8px`，Tray 与 Power 间距 `4px`。响应式只做稳定宽度预算和内容退让，不缩放 38px 高度：
 
@@ -51,7 +56,7 @@ Context 与 Metrics 顶部保留一条位于边框内侧的 1px 冰蓝校准标�
 状态不能只靠颜色：工作区同时使用文字与短线长度，指标同时显示标签和值。工作区、托盘和主入口支持键盘聚焦与 Enter/Space；焦点指示采用短校准线，避免覆盖整个紧凑控件。文字与表面对比必须在实际缩放下可读。
 
 ## 内容语气
-使用短促、可验证的系统语言，例如 `NIRI RANGE`、`WS 03`、`NET 1.8M`、`HISTORY`、`COPIED`、`EMPTY`。不使用营销文案、拟人提示或无信息量状态。
+使用短促、可验证的系统语言，例如 `RANGE`、`WS 03`、`NET 1.8M`、`HISTORY`、`COPIED`、`EMPTY`。不使用营销文案、拟人提示或无信息量状态。
 
 ## 禁止事项
 禁止紫白渐变、大圆角胶囊、发光边框、RGB、玻璃拟态、3D 按钮、emoji 图标、白底卡片堆叠、可见调试网格、频谱前景化、通知与托盘计数混算、自动清空真实历史。
@@ -60,4 +65,4 @@ Context 与 Metrics 顶部保留一条位于边框内侧的 1px 冰蓝校准标�
 Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；Weather、Tray 直接图标和分段仪表必须严格按优先级退让。
 
 ## 实现备注
-Bar 稳定 token 位于 `Bar.qml`，不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。
+Bar 的几何与排版 token 位于 `config/BarTuning.qml`，稳定颜色 token 位于 `Bar.qml`，均不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/980/979/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。

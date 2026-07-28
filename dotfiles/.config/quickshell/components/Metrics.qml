@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "../config" as Config
 
 Rectangle {
     id: metrics
@@ -27,9 +28,11 @@ Rectangle {
     property string monoFont: "JetBrains Mono"
 
     readonly property bool hovered: pointerArea.containsMouse
-    readonly property bool compactLayout: width < 270
-    readonly property int outerPadding: compactLayout ? 6 : 8
-    readonly property int metricFontSize: width < 180 ? 6 : 7
+    readonly property bool compactLayout: width < Config.BarTuning.metricsCompactLayoutThreshold
+    readonly property int outerPadding: compactLayout
+        ? Config.BarTuning.metricsCompactOuterPadding : Config.BarTuning.metricsOuterPadding
+    readonly property int metricFontSize: width < Config.BarTuning.metricsSmallFontThreshold
+        ? Config.BarTuning.metricsSmallFontSize : Config.BarTuning.metricsFontSize
     readonly property var metricData: [
         { "label": "NET", "value": networkValue, "level": networkLevel, "accent": true },
         { "label": "MEM", "value": formatPercent(memoryPercent), "level": percentLevel(memoryPercent), "accent": false },
@@ -39,12 +42,12 @@ Rectangle {
 
     signal clicked()
 
-    implicitWidth: 288
-    implicitHeight: 38
+    implicitWidth: Config.BarTuning.metricsWidth
+    implicitHeight: Config.BarTuning.islandHeight
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
-    border.width: 1
-    radius: 3
+    border.width: Config.BarTuning.islandBorderWidth
+    radius: Config.BarTuning.islandRadius
     clip: true
 
     function formatPercent(value) {
@@ -52,7 +55,8 @@ Rectangle {
     }
 
     function percentLevel(value) {
-        return Math.max(0, Math.min(8, Math.ceil(value / 12.5)))
+        return Math.max(0, Math.min(Config.BarTuning.metricsSegmentCount,
+            Math.ceil(value / (100 / Config.BarTuning.metricsSegmentCount))))
     }
 
     Behavior on color {
@@ -64,26 +68,26 @@ Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: 1
+        height: Config.BarTuning.islandTopHighlightHeight
         color: metrics.highlightColor
     }
 
     Rectangle {
-        x: 12
+        x: Config.BarTuning.metricsAccentX
         y: metrics.border.width
-        width: 20
-        height: 1
+        width: Config.BarTuning.metricsAccentWidth
+        height: Config.BarTuning.islandTopHighlightHeight
         color: metrics.accentColor
-        opacity: 0.9
+        opacity: Config.BarTuning.metricsAccentOpacity
         z: 4
     }
 
     Spectrum {
         anchors.fill: parent
-        anchors.topMargin: 7
+        anchors.topMargin: Config.BarTuning.spectrumTopInset
         anchors.leftMargin: metrics.outerPadding
         anchors.rightMargin: metrics.outerPadding
-        anchors.bottomMargin: 4
+        anchors.bottomMargin: Config.BarTuning.spectrumBottomInset
         bars: metrics.spectrumBars
         active: metrics.spectrumActive
         reducedMotion: metrics.reducedMotion
@@ -106,8 +110,12 @@ Rectangle {
                 required property int index
                 required property var modelData
                 readonly property int horizontalPadding: metrics.compactLayout
-                    ? (metrics.showSegments ? 4 : 3)
-                    : (metrics.showSegments ? 6 : 5)
+                    ? (metrics.showSegments
+                        ? Config.BarTuning.metricsCompactCellPadding
+                        : Config.BarTuning.metricsCompactCellPaddingWithoutSegments)
+                    : (metrics.showSegments
+                        ? Config.BarTuning.metricsCellPadding
+                        : Config.BarTuning.metricsCellPaddingWithoutSegments)
 
                 width: metricRow.width / 4
                 height: metricRow.height
@@ -115,9 +123,9 @@ Rectangle {
                 Rectangle {
                     visible: metricCell.index > 0
                     x: 0
-                    y: 10
+                    y: Config.BarTuning.metricsDividerY
                     width: 1
-                    height: 17
+                    height: Config.BarTuning.metricsDividerHeight
                     color: metrics.lineSoft
                 }
 
@@ -128,10 +136,14 @@ Rectangle {
 
                     Text {
                         anchors.left: parent.left
-                        width: parent.width * 0.38
+                        width: parent.width * Config.BarTuning.metricsLabelWidthRatio
                         y: metrics.showSegments
-                            ? (metrics.compactLayout ? 9 : 8)
-                            : (metrics.compactLayout ? 15 : 14)
+                            ? (metrics.compactLayout
+                                ? Config.BarTuning.metricsCompactTextY
+                                : Config.BarTuning.metricsTextY)
+                            : (metrics.compactLayout
+                                ? Config.BarTuning.metricsCompactTextYWithoutSegments
+                                : Config.BarTuning.metricsTextYWithoutSegments)
                         text: metricCell.modelData.label
                         elide: Text.ElideRight
                         color: metrics.textDim
@@ -142,10 +154,14 @@ Rectangle {
 
                     Text {
                         anchors.right: parent.right
-                        width: parent.width * 0.57
+                        width: parent.width * Config.BarTuning.metricsValueWidthRatio
                         y: metrics.showSegments
-                            ? (metrics.compactLayout ? 9 : 8)
-                            : (metrics.compactLayout ? 15 : 14)
+                            ? (metrics.compactLayout
+                                ? Config.BarTuning.metricsCompactTextY
+                                : Config.BarTuning.metricsTextY)
+                            : (metrics.compactLayout
+                                ? Config.BarTuning.metricsCompactTextYWithoutSegments
+                                : Config.BarTuning.metricsTextYWithoutSegments)
                         text: metricCell.modelData.value
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignRight
@@ -161,18 +177,21 @@ Rectangle {
 
                         visible: metrics.showSegments
                         x: 0
-                        y: 26
+                        y: Config.BarTuning.metricsSegmentY
                         width: parent.width
-                        height: 2
-                        spacing: 2
+                        height: Config.BarTuning.metricsSegmentHeight
+                        spacing: Config.BarTuning.metricsSegmentGap
 
                         Repeater {
-                            model: 8
+                            model: Config.BarTuning.metricsSegmentCount
 
                             Rectangle {
                                 required property int index
-                                width: (segmentRow.width - 14) / 8
-                                height: 2
+                                width: (segmentRow.width
+                                    - (Config.BarTuning.metricsSegmentCount - 1)
+                                        * Config.BarTuning.metricsSegmentGap)
+                                    / Config.BarTuning.metricsSegmentCount
+                                height: Config.BarTuning.metricsSegmentHeight
                                 color: index < metricCell.modelData.level
                                     ? (metricCell.modelData.accent ? metrics.accentColor : metrics.segmentOn)
                                     : metrics.segmentOff

@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 
 Row {
@@ -26,22 +27,22 @@ Row {
     readonly property bool reducedMotion: metricsState ? metricsState.reducedMotion : false
     readonly property bool showTray: responsiveLevel < 3
     readonly property bool showSegments: responsiveLevel < 3
-    readonly property int metricsWidth: responsiveLevel <= 2 ? 288 : (responsiveLevel === 3 ? 220 : 176)
+    readonly property int metricsWidth: responsiveLevel <= 2 ? Config.BarTuning.metricsWidth : (responsiveLevel === 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsUltraWidth)
     readonly property int trayIconLimit: responsiveLevel <= 1 ? requestedTrayIconLimit : 0
-    property int utilityGap: 4
+    readonly property int utilityGap: Config.BarTuning.trayPowerGap
 
     signal toggleSystemPanel()
     signal toggleTrayPanel(real panelWidth)
     signal resizeTrayPanel(real panelWidth)
     signal closeTrayPanel()
 
-    spacing: 8
+    spacing: Config.BarTuning.metricsUtilityGap
 
     Metrics {
         id: metricsItem
 
         width: systemIsland.metricsWidth
-        height: 38
+        height: Config.BarTuning.islandHeight
         networkValue: systemIsland.metricsState ? systemIsland.metricsState.networkRateText : "--"
         networkLevel: systemIsland.metricsState ? systemIsland.metricsState.networkLevel : 0
         memoryPercent: systemIsland.metricsState ? systemIsland.metricsState.memPercent : 0
@@ -68,7 +69,7 @@ Row {
     Row {
         id: utilityCluster
 
-        height: 38
+        height: Config.BarTuning.islandHeight
         spacing: systemIsland.utilityGap
 
         TrayIsland {
@@ -76,9 +77,9 @@ Row {
 
             visible: systemIsland.showTray
             width: visible ? (preferredWidth > 0 ? preferredWidth : implicitWidth) : 0
-            height: 38
-            unit: 8
-            preferredWidth: systemIsland.responsiveLevel <= 1 ? 104 : 0
+            height: Config.BarTuning.islandHeight
+            unit: Config.BarTuning.trayUnit
+            preferredWidth: systemIsland.responsiveLevel <= 1 ? Config.BarTuning.trayPreferredWidth : 0
             zenInk: systemIsland.utilitySurface
             zenMist: systemIsland.borderColor
             zenStone: systemIsland.hoverSurface
@@ -107,8 +108,8 @@ Row {
         Power {
             id: powerItem
 
-            width: 38
-            height: 38
+            width: Config.BarTuning.powerIslandWidth
+            height: Config.BarTuning.islandHeight
             reducedMotion: systemIsland.reducedMotion
             surfaceColor: systemIsland.utilitySurface
             hoverColor: Qt.rgba(1, 1, 1, 0.035)

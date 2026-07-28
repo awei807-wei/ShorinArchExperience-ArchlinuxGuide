@@ -23,6 +23,7 @@ import Quickshell.Services.Notifications // Freedesktop 通知接收服务（后
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
 import QtMultimedia // QML 原生音频播放（通知音效，无需外部二进制依赖）
 import "components"
+import "config" as Config
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
     id: configRoot
@@ -39,21 +40,17 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real baseUnit: Math.round(ppi / k) // 全局尺寸基准（所有间距/字号等都以它为基础）
 
     // ═══════════════════════════════════════════════════════
-    // 🏝️ L1 · 顶栏几何（独立于面板缩放，保持精密仪表的固定逻辑尺寸）
+    // 🏝️ L1 · 顶栏几何
+    // 所有 Bar 位置、宽度、字号与内部间距统一在 config/BarTuning.qml 手动调整。
     // ═══════════════════════════════════════════════════════
-    readonly property real islandHeight: 38                   // 岛面固定 38px，避免随 PPI 缩放越界
-    readonly property real islandRadius: 3                    // 小圆角，避免胶囊与卡片感
-    readonly property real islandPaddingH: 11                 // 以 8px 网格做光学校准
-    readonly property real islandPaddingV: 4
-    readonly property real islandGap: 8
-    readonly property real trayPowerGap: 4
+    readonly property real islandHeight: Config.BarTuning.islandHeight
+    readonly property real trayPowerGap: Config.BarTuning.trayPowerGap
     readonly property int trayDirectIconLimit: 3              // 折叠态直接显示的托盘应用图标上限
-    readonly property real barMarginTop: 4                    // 岛面 y=4，总垂直占位 42px
-    readonly property real barMarginSide: 4                   // 左右半网格留白
-    // 岛屿位置偏移（正值向右，负值向左）
-    readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
-    readonly property real centerIslandOffsetX: baseUnit * 0    // 中岛 X 偏移（用于整体对齐/构图微调）
-    readonly property real rightIslandOffsetX:  baseUnit * 0    // 右岛X偏移
+    readonly property real barMarginTop: Config.BarTuning.barMarginTop
+    readonly property real barMarginSide: Config.BarTuning.barMarginSide
+    readonly property real leftIslandOffsetX: Config.BarTuning.leftIslandOffsetX
+    readonly property real centerIslandOffsetX: Config.BarTuning.centerIslandOffsetX
+    readonly property real rightIslandOffsetX: Config.BarTuning.rightIslandOffsetX
 
     // ═══════════════════════════════════════════════════════
     // 🔤 L2 · 字体与图标
@@ -704,12 +701,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     zenAccent: configRoot.zenAccent // 主题色注入：强调色
                     zenDanger: configRoot.zenDanger // 主题色注入：通知徽标与清理动作
                     unit: configRoot.baseUnit // 尺寸基准注入
-                    leftIslandOffsetX: configRoot.leftIslandOffsetX // 位置偏移注入：左岛
-                    centerIslandOffsetX: configRoot.centerIslandOffsetX // 位置偏移注入：中岛
-                    rightIslandOffsetX: configRoot.rightIslandOffsetX // 位置偏移注入：右岛
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
-                    trayPowerGap: configRoot.trayPowerGap
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）

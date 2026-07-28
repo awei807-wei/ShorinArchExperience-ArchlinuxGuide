@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 
 ContextContent {
@@ -5,12 +6,12 @@ ContextContent {
 
     Row {
         anchors.fill: parent
-        anchors.leftMargin: fallbackContext.compact ? 8 : 11
-        anchors.rightMargin: fallbackContext.compact ? 8 : 11
-        spacing: fallbackContext.compact ? 8 : 10
+        anchors.leftMargin: fallbackContext.compact ? Config.BarTuning.desktopContextCompactPadding : Config.BarTuning.desktopContextPadding
+        anchors.rightMargin: anchors.leftMargin
+        spacing: fallbackContext.compact ? Config.BarTuning.desktopContextCompactGap : Config.BarTuning.desktopContextGap
 
         Item {
-            width: fallbackContext.compact ? 68 : 78
+            width: fallbackContext.compact ? Config.BarTuning.desktopContextCompactMetaWidth : Config.BarTuning.desktopContextMetaWidth
             height: parent.height
 
             Column {
@@ -24,7 +25,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: fallbackContext.textDim
                     font.family: fallbackContext.monoFont
-                    font.pixelSize: 6
+                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
                     font.letterSpacing: 0.9
                 }
 
@@ -34,7 +35,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: fallbackContext.textColor
                     font.family: fallbackContext.monoFont
-                    font.pixelSize: 8
+                    font.pixelSize: Config.BarTuning.desktopPrimaryFontSize
                     font.letterSpacing: 0.32
                 }
 
@@ -44,7 +45,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: fallbackContext.textSoft
                     font.family: fallbackContext.monoFont
-                    font.pixelSize: 6
+                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
                     font.letterSpacing: 0.36
                 }
 
@@ -54,13 +55,13 @@ ContextContent {
 
         Rectangle {
             width: 1
-            height: 18
+            height: Config.BarTuning.contextDividerHeight
             anchors.verticalCenter: parent.verticalCenter
             color: fallbackContext.lineColor
         }
 
         Item {
-            width: parent.width - (fallbackContext.compact ? 68 : 78) - 1 - parent.spacing * 2
+            width: parent.width - (fallbackContext.compact ? Config.BarTuning.desktopContextCompactMetaWidth : Config.BarTuning.desktopContextMetaWidth) - Config.BarTuning.islandBorderWidth - parent.spacing * 2
             height: parent.height
 
             Column {
@@ -74,7 +75,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: fallbackContext.textDim
                     font.family: fallbackContext.monoFont
-                    font.pixelSize: 6
+                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
                     font.letterSpacing: 0.72
                 }
 
@@ -84,7 +85,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: fallbackContext.textSoft
                     font.family: fallbackContext.monoFont
-                    font.pixelSize: 7
+                    font.pixelSize: Config.BarTuning.desktopContextFontSize
                     font.letterSpacing: 0.2
                 }
 

@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "components"
+import "config" as Config
 
 ShellRoot {
     id: testRoot
@@ -47,8 +48,8 @@ ShellRoot {
         expectEqual(tray.directIconLimit, 3, "direct icon limit");
         expectEqual(tray.hiddenTrayCount, 1, "4 apps -> +1");
         expectEqual(tray.collapsedSlots, 4, "4 apps collapsed slots");
-        expectEqual(tray.implicitWidth, 104, "4 slots compact width");
-        expectEqual(tray.iconSize, 16, "tray icons remain 1x");
+        expectEqual(tray.implicitWidth, Config.BarTuning.trayPreferredWidth, "4 slots configured width");
+        expectEqual(tray.iconSize, Config.BarTuning.trayIconSize, "tray icons use configured size");
         setState(6, 0);
         expectEqual(tray.hiddenTrayCount, 3, "6 apps -> +3");
         expectEqual(tray.collapsedSlots, 4, "6 apps collapsed slots");
@@ -64,13 +65,13 @@ ShellRoot {
         expectEqual(tray.hiddenTrayCount, 3, "clear keeps application overflow");
         expect(tray.hasCompositeEntry, "clear keeps +3 entry");
         setState(1, 1);
-        expectEqual(tray.expandedWidth, tray.unit * 18, "shared minimum width");
+        expectEqual(tray.expandedWidth, Config.BarTuning.trayExpandedMinWidth, "shared minimum width");
         setState(20, 1);
-        expect(tray.expandedWidth > tray.unit * 18, "wide tray grows beyond minimum");
+        expect(tray.expandedWidth > Config.BarTuning.trayExpandedMinWidth, "wide tray grows beyond minimum");
         tray.directIconLimit = 0;
         setState(6, 1);
         expectEqual(tray.collapsedSlots, 1, "collapsed tray keeps one composite slot");
-        expectEqual(tray.implicitWidth, 38, "collapsed tray compact width");
+        expectEqual(tray.implicitWidth, Config.BarTuning.trayCompositeWidth, "collapsed tray configured width");
         if (failureCount === 0) {
             console.log("[TrayStateCheck] PASS");
             Qt.exit(0);
@@ -83,7 +84,7 @@ ShellRoot {
     TrayIsland {
         id: tray
 
-        height: 40
+        height: Config.BarTuning.islandHeight
         trayItems: []
     }
 

@@ -1,6 +1,7 @@
 import "."
 import QtQuick
 import Quickshell
+import "config" as Config
 
 ShellRoot {
     id: testRoot
@@ -28,61 +29,88 @@ ShellRoot {
         expect(target.clockRight + target.islandGap <= target.systemLeft, label + " clock/system overlap");
     }
 
+    function expectedLayoutMode(targetWidth) {
+        if (targetWidth >= Config.BarTuning.weatherVisibleMinWidth)
+            return 0;
+
+        if (targetWidth >= Config.BarTuning.fullTrayMinWidth)
+            return 1;
+
+        if (targetWidth >= Config.BarTuning.traySurfaceMinWidth)
+            return 2;
+
+        if (targetWidth >= Config.BarTuning.compactMinWidth)
+            return 3;
+
+        return 4;
+    }
+
+    function expectedContextWidth(mode) {
+        return mode >= 4 ? Config.BarTuning.contextUltraWidth : (mode >= 3 ? Config.BarTuning.contextCompactWidth : Config.BarTuning.contextWidth);
+    }
+
+    function expectedClockWidth(mode) {
+        if (mode === 0)
+            return Config.BarTuning.clockWidthWithWeather;
+
+        if (mode >= 4)
+            return Config.BarTuning.clockUltraWidth;
+
+        if (mode >= 3)
+            return Config.BarTuning.clockCompactWidth;
+
+        return Config.BarTuning.clockWidth;
+    }
+
+    function expectedMetricsWidth(mode) {
+        return mode >= 4 ? Config.BarTuning.metricsUltraWidth : (mode >= 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsWidth);
+    }
+
+    function expectedSystemWidth(mode) {
+        if (mode <= 1)
+            return Config.BarTuning.systemWideWidth;
+
+        if (mode === 2)
+            return Config.BarTuning.systemCollapsedTrayWidth;
+
+        if (mode === 3)
+            return Config.BarTuning.systemCompactWidth;
+
+        return Config.BarTuning.systemUltraWidth;
+    }
+
+    function checkBar(target, label) {
+        const mode = expectedLayoutMode(target.width);
+        expectEqual(target.layoutMode, mode, label + " layout mode");
+        expectEqual(target.islandHeight, Config.BarTuning.islandHeight, label + " island height");
+        expectEqual(target.showWeather, mode === 0, label + " weather state");
+        expectEqual(target.actualTrayIconLimit, mode <= 1 ? target.trayDirectIconLimit : 0, label + " direct tray icon limit");
+        expectEqual(target.trayVisible, mode < 3, label + " tray visibility");
+        expectEqual(target.metricDetailsVisible, mode < 3, label + " metric detail visibility");
+        expectEqual(target.contextWidth, expectedContextWidth(mode), label + " context width");
+        expectEqual(target.clockWidth, expectedClockWidth(mode), label + " clock width");
+        expectEqual(target.metricsWidth, expectedMetricsWidth(mode), label + " metrics width");
+        expectEqual(target.systemWidth, expectedSystemWidth(mode), label + " system width");
+        expectEqual(target.systemSpacing, Config.BarTuning.metricsUtilityGap, label + " metrics/utility gap");
+        expectEqual(target.utilitySpacing, Config.BarTuning.trayPowerGap, label + " tray/power gap");
+        expectNoOverlap(target, label);
+    }
+
     function runChecks() {
-        expectEqual(wide.layoutMode, 0, "2048 layout mode");
-        expectEqual(wide.islandHeight, 38, "fixed island height");
-        expectEqual(wide.showWeather, true, "2048 weather visible");
-        expectEqual(wide.actualTrayIconLimit, 3, "2048 tray icons");
-        expectEqual(wide.metricDetailsVisible, true, "2048 metric detail");
-        expectEqual(wide.contextWidth, 200, "2048 context width");
-        expectEqual(wide.clockWidth, 280, "2048 clock width");
-        expectEqual(wide.metricsWidth, 288, "2048 metrics width");
-        expectEqual(wide.systemWidth, 442, "2048 system width");
-        expectEqual(wide.systemSpacing, 8, "2048 metrics/utility gap");
-        expectEqual(wide.utilitySpacing, 4, "2048 tray/power gap");
-        expectNoOverlap(wide, "2048");
-        expectEqual(standard.layoutMode, 1, "1280 layout mode");
-        expectEqual(standard.showWeather, false, "1280 weather hidden");
-        expectEqual(standard.actualTrayIconLimit, 3, "1280 tray retained after weather removal");
-        expectEqual(standard.metricDetailsVisible, true, "1280 metric detail retained");
-        expectEqual(standard.contextWidth, 200, "1280 context width");
-        expectEqual(standard.clockWidth, 212, "1280 clock width");
-        expectEqual(standard.metricsWidth, 288, "1280 metrics width");
-        expectEqual(standard.systemWidth, 442, "1280 system width");
-        expectNoOverlap(standard, "1280");
-        expectEqual(compact.layoutMode, 2, "1024 layout mode");
-        expectEqual(compact.showWeather, false, "1024 weather hidden");
-        expectEqual(compact.actualTrayIconLimit, 0, "1024 direct tray icons hidden");
-        expectEqual(compact.trayVisible, true, "1024 tray overflow entry retained");
-        expectEqual(compact.metricDetailsVisible, true, "1024 metric detail retained");
-        expectEqual(compact.contextWidth, 200, "1024 context width");
-        expectEqual(compact.clockWidth, 212, "1024 clock width");
-        expectEqual(compact.metricsWidth, 288, "1024 metrics width");
-        expectEqual(compact.systemWidth, 376, "1024 system width");
-        expectNoOverlap(compact, "1024");
-        expectEqual(narrow.layoutMode, 3, "800 layout mode");
-        expectEqual(narrow.showWeather, false, "800 weather hidden");
-        expectEqual(narrow.trayVisible, false, "800 tray surface hidden");
-        expectEqual(narrow.metricDetailsVisible, false, "800 secondary metric detail hidden");
-        expectEqual(narrow.contextWidth, 184, "800 context width");
-        expectEqual(narrow.clockWidth, 176, "800 clock width");
-        expectEqual(narrow.metricsWidth, 220, "800 metrics width");
-        expectEqual(narrow.systemWidth, 266, "800 system width");
-        expectNoOverlap(narrow, "800");
-        expectEqual(ultra.layoutMode, 4, "660 layout mode");
-        expectEqual(ultra.showWeather, false, "660 weather hidden");
-        expectEqual(ultra.trayVisible, false, "660 tray surface hidden");
-        expectEqual(ultra.metricDetailsVisible, false, "660 metric detail hidden");
-        expectEqual(ultra.contextWidth, 172, "660 context width");
-        expectEqual(ultra.clockWidth, 160, "660 clock width");
-        expectEqual(ultra.metricsWidth, 176, "660 metrics width");
-        expectEqual(ultra.systemWidth, 222, "660 system width");
-        expectNoOverlap(ultra, "660");
-        expectEqual(modeTwoEdge.layoutMode, 2, "980 layout mode");
-        expectEqual(modeTwoEdge.clockRight + modeTwoEdge.islandGap, modeTwoEdge.systemLeft, "980 exact clock/system boundary");
-        expectNoOverlap(modeTwoEdge, "980");
-        expectEqual(modeThreeEdge.layoutMode, 3, "979 layout mode");
-        expectNoOverlap(modeThreeEdge, "979");
+        expect(Config.BarTuning.weatherVisibleMinWidth > Config.BarTuning.fullTrayMinWidth, "weather threshold must exceed full-tray threshold");
+        expect(Config.BarTuning.fullTrayMinWidth > Config.BarTuning.traySurfaceMinWidth, "full-tray threshold must exceed tray-surface threshold");
+        expect(Config.BarTuning.traySurfaceMinWidth > Config.BarTuning.compactMinWidth, "tray-surface threshold must exceed compact threshold");
+        expect(Config.BarTuning.compactMinWidth > Config.BarTuning.minimumSupportedWidth, "compact threshold must exceed minimum supported width");
+        expect(Config.BarTuning.trayIconSize <= Config.BarTuning.trayItemWidth, "tray icon must fit inside its slot");
+        checkBar(wide, "2048");
+        checkBar(standard, "1280");
+        checkBar(compact, "1024");
+        checkBar(narrow, "800");
+        checkBar(ultra, "minimum");
+        checkBar(modeTwoEdge, "tray threshold");
+        checkBar(modeThreeEdge, "below tray threshold");
+        expectEqual(modeTwoEdge.layoutMode, 2, "configured tray threshold mode");
+        expectEqual(modeThreeEdge.layoutMode, 3, "configured below-tray mode");
         if (failureCount === 0) {
             console.log("[BarLayoutCheck] PASS");
             Qt.exit(0);
@@ -94,13 +122,13 @@ ShellRoot {
 
     Item {
         width: 2048
-        height: 310
+        height: (Config.BarTuning.islandHeight + 4) * 7
 
         Bar {
             id: wide
 
             width: 2048
-            height: 38
+            height: Config.BarTuning.islandHeight
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -109,8 +137,8 @@ ShellRoot {
             id: standard
 
             width: 1280
-            height: 38
-            y: 42
+            height: Config.BarTuning.islandHeight
+            y: Config.BarTuning.islandHeight + 4
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -119,8 +147,8 @@ ShellRoot {
             id: compact
 
             width: 1024
-            height: 38
-            y: 84
+            height: Config.BarTuning.islandHeight
+            y: (Config.BarTuning.islandHeight + 4) * 2
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -129,8 +157,8 @@ ShellRoot {
             id: narrow
 
             width: 800
-            height: 38
-            y: 126
+            height: Config.BarTuning.islandHeight
+            y: (Config.BarTuning.islandHeight + 4) * 3
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -138,9 +166,9 @@ ShellRoot {
         Bar {
             id: ultra
 
-            width: 660
-            height: 38
-            y: 168
+            width: Config.BarTuning.minimumSupportedWidth
+            height: Config.BarTuning.islandHeight
+            y: (Config.BarTuning.islandHeight + 4) * 4
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -148,9 +176,9 @@ ShellRoot {
         Bar {
             id: modeTwoEdge
 
-            width: 980
-            height: 38
-            y: 210
+            width: Config.BarTuning.traySurfaceMinWidth
+            height: Config.BarTuning.islandHeight
+            y: (Config.BarTuning.islandHeight + 4) * 5
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -158,9 +186,9 @@ ShellRoot {
         Bar {
             id: modeThreeEdge
 
-            width: 979
-            height: 38
-            y: 252
+            width: Config.BarTuning.traySurfaceMinWidth - 1
+            height: Config.BarTuning.islandHeight
+            y: (Config.BarTuning.islandHeight + 4) * 6
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }

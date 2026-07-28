@@ -1,6 +1,7 @@
 import "." as Core
 import QtQuick
 import "components"
+import "config" as Config
 
 Rectangle {
     id: bar
@@ -20,16 +21,16 @@ Rectangle {
     property color zenDanger: "#9a5555"
     property var panelWindow: null
     property int trayDirectIconLimit: 3
-    property int trayPowerGap: 4
     property int notificationHistoryCount: 0
     property bool trayPanelExpanded: false
-    property real leftIslandOffsetX: 0
-    property real centerIslandOffsetX: 0
-    property real rightIslandOffsetX: 0
-    readonly property int islandHeight: 38
-    readonly property int islandGap: 8
-    readonly property int minimumSupportedWidth: 660
-    readonly property int layoutMode: width >= 1344 ? 0 : (width >= 1273 ? 1 : (width >= 980 ? 2 : (width >= 760 ? 3 : 4)))
+    readonly property int trayPowerGap: Config.BarTuning.trayPowerGap
+    readonly property int leftIslandOffsetX: Config.BarTuning.leftIslandOffsetX
+    readonly property int centerIslandOffsetX: Config.BarTuning.centerIslandOffsetX
+    readonly property int rightIslandOffsetX: Config.BarTuning.rightIslandOffsetX
+    readonly property int islandHeight: Config.BarTuning.islandHeight
+    readonly property int islandGap: Config.BarTuning.islandGap
+    readonly property int minimumSupportedWidth: Config.BarTuning.minimumSupportedWidth
+    readonly property int layoutMode: width >= Config.BarTuning.weatherVisibleMinWidth ? 0 : (width >= Config.BarTuning.fullTrayMinWidth ? 1 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4)))
     readonly property bool showWeather: layoutMode === 0
     readonly property int responsiveTrayIconLimit: layoutMode <= 1 ? trayDirectIconLimit : 0
     readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
@@ -139,7 +140,6 @@ Rectangle {
         requestedTrayIconLimit: bar.responsiveTrayIconLimit
         notificationHistoryCount: bar.notificationHistoryCount
         trayPanelExpanded: bar.trayPanelExpanded
-        utilityGap: bar.trayPowerGap
         metricsSurface: bar.secondarySurface
         utilitySurface: bar.utilitySurface
         hoverSurface: bar.hoverSurface
