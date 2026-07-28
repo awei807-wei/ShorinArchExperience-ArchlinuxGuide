@@ -44,7 +44,7 @@ Rectangle {
 
     Rectangle {
         x: contextIsland.compact ? 9 : 12
-        y: 0
+        y: contextIsland.border.width
         width: contextIsland.compact ? 16 : 20
         height: 1
         color: contextIsland.accentColor

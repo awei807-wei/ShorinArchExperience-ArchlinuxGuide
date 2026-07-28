@@ -67,7 +67,7 @@ Rectangle {
 
     Rectangle {
         x: 12
-        y: 0
+        y: metrics.border.width
         width: 20
         height: 1
         color: metrics.accentColor

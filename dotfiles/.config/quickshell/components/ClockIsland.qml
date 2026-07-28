@@ -90,6 +90,7 @@ Rectangle {
 
     Rectangle {
         anchors.top: parent.top
+        anchors.topMargin: clockIsland.border.width
         anchors.horizontalCenter: parent.horizontalCenter
         width: clockIsland.showVolume ? Math.max(24, Math.round(clockIsland.volume * 0.42)) : 24
         height: 1
