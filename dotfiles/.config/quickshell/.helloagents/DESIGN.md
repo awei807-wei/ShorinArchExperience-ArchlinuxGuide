@@ -7,21 +7,22 @@
 Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级与专业工作站的精密感。整体克制、低噪、技术化，但不使用赛博朋克、游戏 HUD、macOS 胶囊或网页卡片语言。通知与详情面板沿用同一黑白灰基础，并保留必要的危险语义色。
 
 ## 设计 token
-- 几何：岛面固定 `38px`，顶部与左右外边距 `4px`，顶级间距 `8px`，圆角 `3px`，边框 `1px`。
+- 几何：岛面固定 `38px`，顶部与左右外边距 `4px`，顶级间距 `8px`，Tray/Power 工具组间距 `4px`，圆角 `3px`，边框 `1px`。
 - 主表面：`rgba(10,12,13,.94)`；次级与工具表面保持 `86%–88%` 不透明度。
 - 边框与高光：白色 `8.5%` 边框、白色 `4.5%` 顶部内高光；不使用外发光或 hover 抬升。
 - 文本：主文字 `#E7E9EA`、次文字 `#A7ABAD`、弱文字 `#6D7376`。
 - 唯一常规强调色：低饱和冰蓝 `#8FB3C5`；固定用于 Bar 校准标记、当前工作区与 NET 主仪表，不随 Matugen 改色。
 - 仪表：开启段 `#747B7F`、关闭段 `#3C4143`；危险/通知徽标继续使用统一低饱和暗红。
 - 字体：JetBrains Mono 承担时间、数字、标签与状态值；中文由系统 CJK 字体回退。字号不随屏幕宽度整体缩放。
+- 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，宽屏 Metrics 标签和值使用 `7px`，日期、星期与天气保持 `7px` 以下的次级层级。
 
 ## 布局策略
-Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、Clock 相对屏幕真实居中、System 右对齐。宽屏基准为 Context `238px`、Clock `300px`、Metrics `338px`、Tray `118px`、Power `38px`。响应式只做稳定宽度预算和内容退让，不缩放 38px 高度：
+Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、Clock 相对屏幕真实居中、System 右对齐。宽屏基准为 Context `200px`、Clock `280px`、Metrics `288px`、Tray `104px`、Power `38px`；Metrics 与工具组间距 `8px`，Tray 与 Power 间距 `4px`。响应式只做稳定宽度预算和内容退让，不缩放 38px 高度：
 
 1. `<1344px` 隐藏 Weather。
 2. `<1273px` 隐藏 Tray 直接图标，保留复合入口。
-3. `<980px` 进一步压缩 Metrics 宽度。
-4. `<760px` 隐藏 Tray 表面和分段仪表，仅保留四项主指标值。
+3. `<980px` 隐藏 Tray 表面与分段仪表，并压缩 Context、Clock 和 Metrics。
+4. `<760px` 进入超紧凑宽度预算，继续保留四项主指标值。
 
 Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 
@@ -41,7 +42,7 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 - 禁用与危险：存储操作期间阻止重复清理；破坏性操作使用独立危险语义反馈。
 
 ## 记忆点
-每个主要仪表表面顶部保留一条 1px 冰蓝校准标记，标记必须位于 1px 边框内侧，不得覆盖或越出岛面轮廓；System 的 32 段频谱像高端音频设备的低对比状态纹理，而不是独立视觉焦点。
+Context 与 Metrics 顶部保留一条位于边框内侧的 1px 冰蓝校准标记；Clock 不使用主题色横条，由放大的时间建立视觉中心。System 的 32 段频谱仅保留约 5% 的有效对比，像高端音频设备的背景纹理，而不是独立视觉焦点。
 
 ## 动效策略
 交互反馈限定为 `120–180ms` 的颜色、宽度和轻量展开过渡；禁止持续脉冲、发光、缩放和漂浮。`QUICKSHELL_REDUCE_MOTION=1` 时停止频谱更新并关闭 Bar 的 Behavior。
@@ -59,4 +60,4 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；Weather、Tray 直接图标和分段仪表必须严格按优先级退让。
 
 ## 实现备注
-Bar 稳定 token 位于 `Bar.qml`，不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/800 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。
+Bar 稳定 token 位于 `Bar.qml`，不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。

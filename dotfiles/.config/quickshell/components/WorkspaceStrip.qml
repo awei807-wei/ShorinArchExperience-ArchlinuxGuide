@@ -22,10 +22,10 @@ Item {
     property color emptyColor: "#3c4143"
     property string monoFont: "JetBrains Mono"
 
-    readonly property int horizontalPadding: compact ? 8 : 11
-    readonly property int contentGap: compact ? 7 : 10
-    readonly property int metaWidth: compact ? 52 : 58
-    readonly property int workspaceGap: compact ? 3 : 5
+    readonly property int horizontalPadding: compact ? 7 : 9
+    readonly property int contentGap: compact ? 5 : 6
+    readonly property int metaWidth: compact ? 42 : 46
+    readonly property int workspaceGap: compact ? 2 : 3
 
     signal workspaceRequested(int workspace)
 
@@ -49,30 +49,37 @@ Item {
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 3
+                width: parent.width
+                spacing: 1
 
                 Text {
+                    width: parent.width
                     text: workspaceStrip.labelText
+                    elide: Text.ElideRight
                     color: workspaceStrip.textDim
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 6
-                    font.letterSpacing: 0.9
+                    font.pixelSize: 7
+                    font.letterSpacing: 0.7
                 }
 
                 Text {
+                    width: parent.width
                     text: workspaceStrip.valueText
+                    elide: Text.ElideRight
                     color: workspaceStrip.textColor
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 8
-                    font.letterSpacing: 0.32
+                    font.pixelSize: 9
+                    font.letterSpacing: 0.2
                 }
 
                 Text {
+                    width: parent.width
                     text: workspaceStrip.subText
+                    elide: Text.ElideRight
                     color: workspaceStrip.textSoft
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: 6
-                    font.letterSpacing: 0.36
+                    font.pixelSize: 7
+                    font.letterSpacing: 0.25
                 }
             }
         }
@@ -86,8 +93,11 @@ Item {
 
         Item {
             id: workspaceArea
-            width: parent.width - workspaceStrip.metaWidth - 1
-                - workspaceStrip.contentGap * 2
+            readonly property real buttonWidth: Math.max(0,
+                (width - workspaceStrip.workspaceGap * 4) / 5)
+
+            width: Math.max(0, parent.width - workspaceStrip.metaWidth - 1
+                - workspaceStrip.contentGap * 2)
             height: parent.height
 
             Row {
@@ -106,7 +116,7 @@ Item {
                         readonly property bool occupied: workspaceStrip.isOccupied(workspaceNumber)
                         readonly property bool hovered: pointerArea.containsMouse
 
-                        width: (workspaceArea.width - workspaceStrip.workspaceGap * 4) / 5
+                        width: workspaceArea.buttonWidth
                         height: parent.height
                         activeFocusOnTab: true
                         Accessible.role: Accessible.Button
@@ -117,14 +127,14 @@ Item {
 
                         Text {
                             anchors.top: parent.top
-                            anchors.topMargin: 7
+                            anchors.topMargin: 6
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: workspaceStrip.pad2(workspaceButton.workspaceNumber)
                             color: workspaceButton.active ? workspaceStrip.textColor
                                 : (workspaceButton.hovered || workspaceButton.occupied
                                     ? workspaceStrip.textSoft : workspaceStrip.textDim)
                             font.family: workspaceStrip.monoFont
-                            font.pixelSize: 6
+                            font.pixelSize: 7
                             font.letterSpacing: 0
 
                             Behavior on color {
@@ -135,10 +145,13 @@ Item {
 
                         Rectangle {
                             anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.bottomMargin: 3
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: workspaceButton.active ? 22 : 12
-                            height: 2
+                            width: Math.min(workspaceButton.width,
+                                workspaceButton.active
+                                    ? (workspaceStrip.compact ? 20 : 22)
+                                    : (workspaceStrip.compact ? 12 : 14))
+                            height: 3
                             color: workspaceButton.active ? workspaceStrip.accentColor
                                 : (workspaceButton.occupied
                                     ? workspaceStrip.occupiedColor : workspaceStrip.emptyColor)
@@ -158,7 +171,7 @@ Item {
                             anchors.top: parent.top
                             anchors.topMargin: 3
                             anchors.horizontalCenter: parent.horizontalCenter
-                            width: 8
+                            width: Math.min(8, workspaceButton.width)
                             height: 1
                             color: workspaceStrip.textDim
                         }

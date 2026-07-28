@@ -14,62 +14,73 @@ Rectangle {
     property color textColor: "#e7e9ea"
     property color textSoft: "#a7abad"
     property color textDim: "#6d7376"
-    property color lineColor: Qt.rgba(1, 1, 1, 0.10)
+    property color lineColor: Qt.rgba(1, 1, 1, 0.1)
     property color accentColor: "#8fb3c5"
     property string monoFont: "JetBrains Mono"
-
     property string timeText: "00:00"
     property string dateText: "2026.07.28"
     property string weekdayText: "TUESDAY"
     property bool showVolume: false
     property int volume: 0
     property real shakeOffset: 0
-
     readonly property bool hovered: hoverArea.containsMouse
     readonly property bool ultraCompact: responsiveLevel >= 4
     readonly property bool compact: responsiveLevel >= 3
+    readonly property int timeColumnWidth: ultraCompact ? 64 : (compact ? 72 : 84)
+    readonly property int dateColumnWidth: ultraCompact ? 82 : (compact ? 94 : 102)
+    readonly property int weatherColumnWidth: 64
 
     signal togglePanel()
 
-    implicitWidth: showWeather ? 300 : (ultraCompact ? 170 : (compact ? 190 : 229))
+    function shake() {
+        if (!reducedMotion)
+            shakeAnimation.restart();
+
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const weekdays = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        timeText = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+        dateText = now.getFullYear() + "." + String(now.getMonth() + 1).padStart(2, "0") + "." + String(now.getDate()).padStart(2, "0");
+        weekdayText = weekdays[now.getDay()] + " · " + months[now.getMonth()];
+    }
+
+    implicitWidth: showWeather ? 280 : (ultraCompact ? 160 : (compact ? 176 : 212))
     implicitHeight: 38
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
     border.width: 1
     radius: 3
     clip: true
-    transform: Translate { x: clockIsland.shakeOffset }
     Accessible.role: Accessible.Button
     Accessible.name: "Clock and system controls"
 
-    function shake() {
-        if (!reducedMotion)
-            shakeAnimation.restart()
-    }
-
-    function updateClock() {
-        const now = new Date()
-        const weekdays = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
-        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
-
-        timeText = String(now.getHours()).padStart(2, "0") + ":"
-            + String(now.getMinutes()).padStart(2, "0")
-        dateText = now.getFullYear() + "."
-            + String(now.getMonth() + 1).padStart(2, "0") + "."
-            + String(now.getDate()).padStart(2, "0")
-        weekdayText = weekdays[now.getDay()] + " · " + months[now.getMonth()]
-    }
-
-    Behavior on color {
-        enabled: !clockIsland.reducedMotion
-        ColorAnimation { duration: 180 }
-    }
-
     SequentialAnimation {
         id: shakeAnimation
-        NumberAnimation { target: clockIsland; property: "shakeOffset"; to: 2; duration: 45 }
-        NumberAnimation { target: clockIsland; property: "shakeOffset"; to: -2; duration: 45 }
-        NumberAnimation { target: clockIsland; property: "shakeOffset"; to: 0; duration: 45 }
+
+        NumberAnimation {
+            target: clockIsland
+            property: "shakeOffset"
+            to: 2
+            duration: 45
+        }
+
+        NumberAnimation {
+            target: clockIsland
+            property: "shakeOffset"
+            to: -2
+            duration: 45
+        }
+
+        NumberAnimation {
+            target: clockIsland
+            property: "shakeOffset"
+            to: 0
+            duration: 45
+        }
+
     }
 
     Timer {
@@ -88,28 +99,13 @@ Rectangle {
         color: clockIsland.highlightColor
     }
 
-    Rectangle {
-        anchors.top: parent.top
-        anchors.topMargin: clockIsland.border.width
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: clockIsland.showVolume ? Math.max(24, Math.round(clockIsland.volume * 0.42)) : 24
-        height: 1
-        color: clockIsland.accentColor
-        opacity: 0.9
-        z: 3
-
-        Behavior on width {
-            enabled: !clockIsland.reducedMotion
-            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-        }
-    }
-
     Row {
         id: clockContent
+
         anchors.centerIn: parent
 
         Item {
-            width: clockIsland.compact ? 62 : 78
+            width: clockIsland.timeColumnWidth
             height: clockIsland.height
 
             Text {
@@ -118,10 +114,11 @@ Rectangle {
                 text: clockIsland.timeText
                 color: clockIsland.textColor
                 font.family: clockIsland.monoFont
-                font.pixelSize: 15
+                font.pixelSize: 18
                 font.weight: Font.DemiBold
-                font.letterSpacing: -0.525
+                font.letterSpacing: -0.65
             }
+
         }
 
         Rectangle {
@@ -132,17 +129,20 @@ Rectangle {
         }
 
         Item {
-            width: clockIsland.ultraCompact ? 83 : (clockIsland.compact ? 102 : 112)
+            width: clockIsland.dateColumnWidth
             height: clockIsland.height
 
             Column {
                 anchors.left: parent.left
-                anchors.leftMargin: clockIsland.compact ? 9 : 13
+                anchors.leftMargin: clockIsland.compact ? 8 : 11
                 anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - (clockIsland.compact ? 8 : 11)
                 spacing: 4
 
                 Text {
+                    width: parent.width
                     text: clockIsland.dateText
+                    elide: Text.ElideRight
                     color: clockIsland.textSoft
                     font.family: clockIsland.monoFont
                     font.pixelSize: 7
@@ -150,9 +150,9 @@ Rectangle {
                 }
 
                 Text {
-                    text: clockIsland.showVolume
-                        ? "VOL · " + String(clockIsland.volume).padStart(2, "0") + "%"
-                        : clockIsland.weekdayText
+                    width: parent.width
+                    text: clockIsland.showVolume ? "VOL · " + String(clockIsland.volume).padStart(2, "0") + "%" : clockIsland.weekdayText
+                    elide: Text.ElideRight
                     color: clockIsland.showVolume ? clockIsland.accentColor : clockIsland.textDim
                     font.family: clockIsland.monoFont
                     font.pixelSize: 6
@@ -160,10 +160,17 @@ Rectangle {
 
                     Behavior on color {
                         enabled: !clockIsland.reducedMotion
-                        ColorAnimation { duration: 150 }
+
+                        ColorAnimation {
+                            duration: 150
+                        }
+
                     }
+
                 }
+
             }
+
         }
 
         Rectangle {
@@ -176,7 +183,7 @@ Rectangle {
 
         Item {
             visible: clockIsland.showWeather
-            width: visible ? 70 : 0
+            width: visible ? clockIsland.weatherColumnWidth : 0
             height: clockIsland.height
 
             Text {
@@ -190,14 +197,31 @@ Rectangle {
                 elide: Text.ElideRight
                 width: parent.width - 4
             }
+
         }
+
     }
 
     MouseArea {
         id: hoverArea
+
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: clockIsland.togglePanel()
     }
+
+    transform: Translate {
+        x: clockIsland.shakeOffset
+    }
+
+    Behavior on color {
+        enabled: !clockIsland.reducedMotion
+
+        ColorAnimation {
+            duration: 180
+        }
+
+    }
+
 }

@@ -27,6 +27,9 @@ Rectangle {
     property string monoFont: "JetBrains Mono"
 
     readonly property bool hovered: pointerArea.containsMouse
+    readonly property bool compactLayout: width < 270
+    readonly property int outerPadding: compactLayout ? 6 : 8
+    readonly property int metricFontSize: width < 180 ? 6 : 7
     readonly property var metricData: [
         { "label": "NET", "value": networkValue, "level": networkLevel, "accent": true },
         { "label": "MEM", "value": formatPercent(memoryPercent), "level": percentLevel(memoryPercent), "accent": false },
@@ -36,7 +39,7 @@ Rectangle {
 
     signal clicked()
 
-    implicitWidth: 338
+    implicitWidth: 288
     implicitHeight: 38
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
@@ -78,8 +81,8 @@ Rectangle {
     Spectrum {
         anchors.fill: parent
         anchors.topMargin: 7
-        anchors.leftMargin: 9
-        anchors.rightMargin: 9
+        anchors.leftMargin: metrics.outerPadding
+        anchors.rightMargin: metrics.outerPadding
         anchors.bottomMargin: 4
         bars: metrics.spectrumBars
         active: metrics.spectrumActive
@@ -90,8 +93,8 @@ Rectangle {
     Row {
         id: metricRow
         anchors.fill: parent
-        anchors.leftMargin: 9
-        anchors.rightMargin: 9
+        anchors.leftMargin: metrics.outerPadding
+        anchors.rightMargin: metrics.outerPadding
         z: 2
 
         Repeater {
@@ -102,7 +105,9 @@ Rectangle {
 
                 required property int index
                 required property var modelData
-                readonly property int horizontalPadding: metrics.showSegments ? 9 : 5
+                readonly property int horizontalPadding: metrics.compactLayout
+                    ? (metrics.showSegments ? 4 : 3)
+                    : (metrics.showSegments ? 6 : 5)
 
                 width: metricRow.width / 4
                 height: metricRow.height
@@ -123,22 +128,32 @@ Rectangle {
 
                     Text {
                         anchors.left: parent.left
-                        y: metrics.showSegments ? 9 : 15
+                        width: parent.width * 0.38
+                        y: metrics.showSegments
+                            ? (metrics.compactLayout ? 9 : 8)
+                            : (metrics.compactLayout ? 15 : 14)
                         text: metricCell.modelData.label
+                        elide: Text.ElideRight
                         color: metrics.textDim
                         font.family: metrics.monoFont
-                        font.pixelSize: 6
-                        font.letterSpacing: 0.72
+                        font.pixelSize: metrics.metricFontSize
+                        font.letterSpacing: metrics.compactLayout ? 0.38 : 0.5
                     }
 
                     Text {
                         anchors.right: parent.right
-                        y: metrics.showSegments ? 9 : 15
+                        width: parent.width * 0.57
+                        y: metrics.showSegments
+                            ? (metrics.compactLayout ? 9 : 8)
+                            : (metrics.compactLayout ? 15 : 14)
                         text: metricCell.modelData.value
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignRight
                         color: metrics.textSoft
                         font.family: metrics.monoFont
-                        font.pixelSize: 6
-                        font.letterSpacing: 0.12
+                        font.pixelSize: metrics.metricFontSize
+                        font.weight: Font.Medium
+                        font.letterSpacing: 0.05
                     }
 
                     Row {

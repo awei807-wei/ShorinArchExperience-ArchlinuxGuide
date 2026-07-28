@@ -28,7 +28,6 @@
       --line: rgba(255, 255, 255, 0.10);
       --line-soft: rgba(255, 255, 255, 0.055);
       --accent: #8fb3c5;
-      --accent-soft: rgba(143, 179, 197, 0.20);
 
       --font-sans: Inter, "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
       --font-mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
@@ -126,7 +125,7 @@
 
     .clock-island {
       left: 50%;
-      width: 300px;
+      width: 280px;
       transform: translateX(-50%);
     }
 
@@ -167,16 +166,16 @@
     }
 
     .workspaces {
-      width: 238px;
+      width: 200px;
       display: flex;
       align-items: center;
-      padding: 0 11px;
-      gap: 10px;
+      padding: 0 9px;
+      gap: 6px;
     }
 
     .workspace-meta {
-      width: 58px;
-      flex: 0 0 58px;
+      width: 46px;
+      flex: 0 0 46px;
       font-family: var(--font-mono);
       font-variant-numeric: tabular-nums;
       line-height: 1;
@@ -184,25 +183,25 @@
 
     .workspace-meta .label {
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 1px;
       color: var(--text-dim);
-      font-size: 6px;
-      letter-spacing: .15em;
+      font-size: 7px;
+      letter-spacing: .1em;
     }
 
     .workspace-meta .value {
       display: block;
       color: var(--text);
-      font-size: 8px;
-      letter-spacing: .04em;
+      font-size: 9px;
+      letter-spacing: .022em;
     }
 
     .workspace-meta .sub {
       display: block;
-      margin-top: 4px;
+      margin-top: 1px;
       color: var(--text-soft);
-      font-size: 6px;
-      letter-spacing: .06em;
+      font-size: 7px;
+      letter-spacing: .036em;
     }
 
     .v-rule {
@@ -218,7 +217,7 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       align-items: center;
-      gap: 5px;
+      gap: 3px;
     }
 
     .workspace {
@@ -227,7 +226,7 @@
       cursor: pointer;
       color: var(--text-dim);
       font-family: var(--font-mono);
-      font-size: 6px;
+      font-size: 7px;
       font-variant-numeric: tabular-nums;
       transition: color 140ms ease;
       z-index: 2;
@@ -238,8 +237,8 @@
       position: absolute;
       left: 50%;
       bottom: 3px;
-      width: 12px;
-      height: 2px;
+      width: 14px;
+      height: 3px;
       transform: translateX(-50%);
       background: #4d5254;
       transition: width 140ms ease, background 140ms ease, box-shadow 140ms ease;
@@ -247,7 +246,7 @@
 
     .workspace span {
       position: absolute;
-      top: 4px;
+      top: 3px;
       left: 50%;
       transform: translateX(-50%);
     }
@@ -257,29 +256,22 @@
     .workspace.active::before {
       width: 22px;
       background: var(--accent);
-      box-shadow: 0 0 8px var(--accent-soft);
     }
 
     .clock {
-      width: 300px;
+      width: 280px;
       display: grid;
-      grid-template-columns: 78px 1px 112px 1px 70px;
+      grid-template-columns: 84px 1px 102px 1px 64px;
       align-items: center;
       justify-content: center;
       padding: 0 12px;
       font-variant-numeric: tabular-nums;
     }
 
-    .clock .micro-mark {
-      left: 50%;
-      width: 24px;
-      transform: translateX(-50%);
-    }
-
     .time {
       font-family: var(--font-mono);
       color: var(--text);
-      font-size: 15px;
+      font-size: 18px;
       font-weight: 600;
       letter-spacing: -.035em;
       line-height: 1;
@@ -288,7 +280,7 @@
     }
 
     .date-stack {
-      padding-left: 13px;
+      padding-left: 11px;
       font-family: var(--font-mono);
       line-height: 1;
       z-index: 2;
@@ -336,22 +328,22 @@
     }
 
     .metrics {
-      width: 338px;
+      width: 288px;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       align-items: stretch;
-      padding: 0 9px;
+      padding: 0 8px;
       isolation: isolate;
     }
 
     .spectrum-underlay {
       position: absolute;
-      inset: 7px 9px 4px 9px;
+      inset: 7px 8px 4px 8px;
       display: flex;
       align-items: flex-end;
       gap: 2px;
       z-index: 0;
-      opacity: .22;
+      opacity: .16;
       pointer-events: none;
       mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.78) 45%, rgba(0,0,0,1) 100%);
     }
@@ -359,8 +351,8 @@
     .spectrum-underlay i {
       flex: 1 1 auto;
       height: 8px;
-      background: linear-gradient(180deg, rgba(118,129,136,.08), rgba(118,129,136,.50));
-      border-top: 1px solid rgba(180,194,202,.08);
+      background: linear-gradient(180deg, rgba(118,129,136,.06), rgba(118,129,136,.34));
+      border-top: 1px solid rgba(180,194,202,.06);
       transition: height 180ms ease;
     }
 
@@ -369,7 +361,7 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 0 9px;
+      padding: 0 6px;
       font-family: var(--font-mono);
       font-variant-numeric: tabular-nums;
       z-index: 2;
@@ -395,14 +387,15 @@
 
     .metric-label {
       color: var(--text-dim);
-      font-size: 6px;
-      letter-spacing: .12em;
+      font-size: 7px;
+      letter-spacing: .071em;
     }
 
     .metric-value {
       color: var(--text-soft);
-      font-size: 6px;
-      letter-spacing: .02em;
+      font-size: 7px;
+      font-weight: 500;
+      letter-spacing: .007em;
     }
 
     .segments {
@@ -422,17 +415,17 @@
     .metric.network .segments i.on { background: var(--accent); }
 
     .tray {
-      width: 118px;
+      width: 104px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 4px;
     }
 
     .tray-icon {
       position: relative;
-      width: 15px;
-      height: 15px;
+      width: 18px;
+      height: 18px;
       display: grid;
       place-items: center;
       border: 1px solid rgba(255,255,255,.08);
@@ -450,14 +443,19 @@
     }
 
     .tray-icon svg {
-      width: 9px;
-      height: 9px;
+      width: 13px;
+      height: 13px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.2;
     }
 
     .tray-count {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.08);
       color: var(--text-dim);
       font-family: var(--font-mono);
       font-size: 6px;
@@ -466,6 +464,7 @@
 
     .power {
       width: 38px;
+      margin-left: -4px;
       display: grid;
       place-items: center;
       cursor: pointer;
@@ -562,7 +561,7 @@
         <nav class="island workspaces" aria-label="Workspaces">
           <span class="micro-mark" aria-hidden="true"></span>
           <div class="workspace-meta" aria-hidden="true">
-            <span class="label" id="contextLabel">NIRI RANGE</span>
+            <span class="label" id="contextLabel">RANGE</span>
             <span class="value" id="contextValue">01–05</span>
             <span class="sub" id="contextSub">WS 03</span>
           </div>
@@ -572,7 +571,6 @@
       </div>
 
       <section class="island clock clock-island" aria-label="Clock, date and weather">
-        <span class="micro-mark" aria-hidden="true"></span>
         <time class="time" datetime="2026-07-28T08:42">08:42</time>
         <span class="clock-rule" aria-hidden="true"></span>
         <div class="date-stack">
@@ -714,12 +712,12 @@
       }
 
       if (state.context === 'hyprland') {
-        contextLabel.textContent = 'HYPR WS';
-        contextValue.textContent = pad2(state.active);
+        contextLabel.textContent = 'HYPR';
+        contextValue.textContent = `WS ${pad2(state.active)}`;
         contextSub.textContent = `${state.active} ACTIVE`;
       } else {
         const { start, end } = getVisibleRange(state.active, state.total, VISIBLE_WORKSPACES);
-        contextLabel.textContent = 'NIRI RANGE';
+        contextLabel.textContent = 'RANGE';
         contextValue.textContent = `${pad2(start)}–${pad2(end)}`;
         contextSub.textContent = `WS ${pad2(state.active)}`;
       }

@@ -1,5 +1,5 @@
-import QtQuick
 import "." as Core
+import QtQuick
 import "components"
 
 Rectangle {
@@ -20,24 +20,20 @@ Rectangle {
     property color zenDanger: "#9a5555"
     property var panelWindow: null
     property int trayDirectIconLimit: 3
+    property int trayPowerGap: 4
     property int notificationHistoryCount: 0
     property bool trayPanelExpanded: false
     property real leftIslandOffsetX: 0
     property real centerIslandOffsetX: 0
     property real rightIslandOffsetX: 0
-
     readonly property int islandHeight: 38
     readonly property int islandGap: 8
     readonly property int minimumSupportedWidth: 660
-    readonly property int layoutMode: width >= 1344 ? 0
-        : (width >= 1273 ? 1 : (width >= 980 ? 2 : (width >= 760 ? 3 : 4)))
+    readonly property int layoutMode: width >= 1344 ? 0 : (width >= 1273 ? 1 : (width >= 980 ? 2 : (width >= 760 ? 3 : 4)))
     readonly property bool showWeather: layoutMode === 0
-    readonly property int responsiveTrayIconLimit: layoutMode <= 1
-        ? trayDirectIconLimit : 0
-    readonly property int currentVolume: root && root.volumePercent !== undefined
-        ? root.volumePercent : 0
+    readonly property int responsiveTrayIconLimit: layoutMode <= 1 ? trayDirectIconLimit : 0
+    readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
     readonly property var currentScreen: panelWindow ? panelWindow.screen : null
-
     // Swiss industrial Bar 的稳定视觉 token；与 Matugen 动态面板强调色隔离。
     readonly property color panelSurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.94)
     readonly property color secondarySurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.88)
@@ -48,21 +44,26 @@ Rectangle {
     readonly property color textPrimary: "#e7e9ea"
     readonly property color textSecondary: "#a7abad"
     readonly property color textDim: "#6d7376"
-    readonly property color linePrimary: Qt.rgba(1, 1, 1, 0.10)
+    readonly property color linePrimary: Qt.rgba(1, 1, 1, 0.1)
     readonly property color lineSecondary: Qt.rgba(1, 1, 1, 0.055)
     readonly property color instrumentAccent: "#8fb3c5"
     readonly property color occupiedTone: "#747b7f"
     readonly property color inactiveTone: "#3c4143"
     readonly property string monoFont: "JetBrains Mono"
-
     readonly property real contextRight: contextIslandItem.x + contextIslandItem.width
+    readonly property real contextWidth: contextIslandItem.width
     readonly property real clockLeft: clockIslandItem.x
     readonly property real clockRight: clockIslandItem.x + clockIslandItem.width
+    readonly property real clockWidth: clockIslandItem.width
     readonly property real systemLeft: systemIslandItem.x
     readonly property real systemWidth: systemIslandItem.width
+    readonly property int metricsWidth: systemIslandItem.metricsWidth
+    readonly property int systemSpacing: systemIslandItem.spacing
+    readonly property int utilitySpacing: systemIslandItem.utilityGap
     readonly property bool trayVisible: systemIslandItem.showTray
     readonly property bool metricDetailsVisible: systemIslandItem.showSegments
     readonly property int actualTrayIconLimit: systemIslandItem.trayIconLimit
+    property alias centerIsland: clockIslandItem
 
     signal centerClicked()
     signal systemClicked()
@@ -70,13 +71,12 @@ Rectangle {
     signal trayPanelResizeRequested(real panelWidth)
     signal trayPanelCloseRequested()
 
-    property alias centerIsland: clockIslandItem
-
     implicitHeight: islandHeight
     color: "transparent"
 
     ContextIsland {
         id: contextIslandItem
+
         width: implicitWidth
         height: bar.islandHeight
         anchors.top: parent.top
@@ -101,6 +101,7 @@ Rectangle {
 
     ClockIsland {
         id: clockIslandItem
+
         width: implicitWidth
         height: bar.islandHeight
         anchors.top: parent.top
@@ -125,6 +126,7 @@ Rectangle {
 
     SystemIsland {
         id: systemIslandItem
+
         width: implicitWidth
         height: bar.islandHeight
         anchors.top: parent.top
@@ -137,6 +139,7 @@ Rectangle {
         requestedTrayIconLimit: bar.responsiveTrayIconLimit
         notificationHistoryCount: bar.notificationHistoryCount
         trayPanelExpanded: bar.trayPanelExpanded
+        utilityGap: bar.trayPowerGap
         metricsSurface: bar.secondarySurface
         utilitySurface: bar.utilitySurface
         hoverSurface: bar.hoverSurface
@@ -151,8 +154,13 @@ Rectangle {
         dangerColor: bar.zenDanger
         monoFont: bar.monoFont
         onToggleSystemPanel: bar.systemClicked()
-        onToggleTrayPanel: panelWidth => bar.trayPanelToggleRequested(panelWidth)
-        onResizeTrayPanel: panelWidth => bar.trayPanelResizeRequested(panelWidth)
+        onToggleTrayPanel: (panelWidth) => {
+            return bar.trayPanelToggleRequested(panelWidth);
+        }
+        onResizeTrayPanel: (panelWidth) => {
+            return bar.trayPanelResizeRequested(panelWidth);
+        }
         onCloseTrayPanel: bar.trayPanelCloseRequested()
     }
+
 }

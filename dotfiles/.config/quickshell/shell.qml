@@ -46,6 +46,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real islandPaddingH: 11                 // 以 8px 网格做光学校准
     readonly property real islandPaddingV: 4
     readonly property real islandGap: 8
+    readonly property real trayPowerGap: 4
     readonly property int trayDirectIconLimit: 3              // 折叠态直接显示的托盘应用图标上限
     readonly property real barMarginTop: 4                    // 岛面 y=4，总垂直占位 42px
     readonly property real barMarginSide: 4                   // 左右半网格留白
@@ -708,6 +709,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     rightIslandOffsetX: configRoot.rightIslandOffsetX // 位置偏移注入：右岛
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
+                    trayPowerGap: configRoot.trayPowerGap
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
@@ -752,12 +754,13 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         store: notificationHistoryStore
         open: configRoot.trayPanelVisible
         panelWidth: configRoot.trayPanelWidth
-        // 托盘右边依次是岛间距与电源岛，面板据此和展开托盘的右边缘对齐。
+        // 托盘右边依次是工具组间距与电源岛，面板据此和展开托盘的右边缘对齐。
         rightMargin: Math.max(
             0,
             configRoot.barMarginSide
                 - configRoot.rightIslandOffsetX
-                + 46
+                + configRoot.islandHeight
+                + configRoot.trayPowerGap
         )
         onCloseRequested: configRoot.trayPanelVisible = false
     }

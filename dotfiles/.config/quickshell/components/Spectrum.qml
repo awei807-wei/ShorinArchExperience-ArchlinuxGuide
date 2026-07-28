@@ -10,8 +10,10 @@ Item {
     property bool reducedMotion: false
     property color barColor: "#767f84"
     property color topLineColor: Qt.rgba(180 / 255, 194 / 255, 202 / 255, 0.08)
+    readonly property int barCount: 32
+    readonly property int barGap: 2
 
-    opacity: active ? 0.22 : 0.10
+    opacity: active ? 0.16 : 0.06
 
     function barHeight(index) {
         if (reducedMotion)
@@ -25,16 +27,17 @@ Item {
 
     Row {
         anchors.fill: parent
-        spacing: 2
+        spacing: spectrum.barGap
 
         Repeater {
-            model: 32
+            model: spectrum.barCount
 
             Item {
                 id: spectrumBar
 
                 required property int index
-                width: (spectrum.width - 62) / 32
+                width: Math.max(1, (spectrum.width
+                    - (spectrum.barCount - 1) * spectrum.barGap) / spectrum.barCount)
                 height: spectrum.height
 
                 Rectangle {
@@ -43,7 +46,7 @@ Item {
                     anchors.bottom: parent.bottom
                     height: spectrum.barHeight(spectrumBar.index)
                     color: spectrum.barColor
-                    opacity: spectrum.active ? 0.5 : 0.25
+                    opacity: spectrum.active ? 0.34 : 0.20
 
                     Rectangle {
                         anchors.top: parent.top

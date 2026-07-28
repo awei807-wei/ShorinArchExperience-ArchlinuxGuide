@@ -38,10 +38,10 @@ Rectangle {
     readonly property bool hasCompositeEntry: hiddenTrayCount > 0 || notificationCount > 0
     readonly property int collapsedSlots: Math.min(trayCount, directIconLimit)
         + (hasCompositeEntry ? 1 : 0)
-    readonly property real itemWidth: 17
+    readonly property real itemWidth: 18
     readonly property real iconSize: 16
-    readonly property real itemGap: 6
-    readonly property real horizontalPadding: 32
+    readonly property real itemGap: 4
+    readonly property real horizontalPadding: 20
     readonly property real expandedContentWidth: (trayCount + 1) * itemWidth
         + Math.max(0, trayCount) * itemGap + horizontalPadding
     readonly property real expandedWidth: Math.max(unit * 18, expandedContentWidth)

@@ -4,48 +4,47 @@ import Quickshell.Hyprland
 ContextContent {
     id: hyprlandContext
 
-    readonly property var monitor: targetScreen
-        ? Hyprland.monitorFor(targetScreen) : Hyprland.focusedMonitor
-    readonly property int activeWorkspace: monitor && monitor.activeWorkspace
-        ? monitor.activeWorkspace.id
-        : (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1)
+    readonly property var monitor: targetScreen ? Hyprland.monitorFor(targetScreen) : Hyprland.focusedMonitor
+    readonly property int activeWorkspace: monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : 1)
     readonly property int rangeStart: activeWorkspace <= 3 ? 1 : activeWorkspace - 2
     readonly property var workspaceValues: Hyprland.workspaces.values
     readonly property var occupiedWorkspaces: collectOccupiedWorkspaces()
 
     function collectOccupiedWorkspaces() {
-        const occupied = []
-        const values = workspaceValues || []
+        const occupied = [];
+        const values = workspaceValues || [];
         for (let index = 0; index < values.length; index += 1) {
-            const workspace = values[index]
+            const workspace = values[index];
             if (!workspace || workspace.id < 1)
-                continue
-            if (monitor && workspace.monitor && workspace.monitor.name !== monitor.name)
-                continue
+                continue;
 
-            const toplevels = workspace.toplevels && workspace.toplevels.values
-                ? workspace.toplevels.values : []
+            if (monitor && workspace.monitor && workspace.monitor.name !== monitor.name)
+                continue;
+
+            const toplevels = workspace.toplevels && workspace.toplevels.values ? workspace.toplevels.values : [];
             if (toplevels.length > 0)
-                occupied.push(workspace.id)
+                occupied.push(workspace.id);
+
         }
-        return occupied
+        return occupied;
     }
 
     function pad2(value) {
-        return String(value).padStart(2, "0")
+        return String(value).padStart(2, "0");
     }
 
     function focusWorkspace(workspace) {
         if (monitor && !monitor.focused)
-            Hyprland.dispatch("focusmonitor " + monitor.name)
-        Hyprland.dispatch("workspace " + workspace)
+            Hyprland.dispatch("focusmonitor " + monitor.name);
+
+        Hyprland.dispatch("workspace " + workspace);
     }
 
     WorkspaceStrip {
         anchors.fill: parent
-        labelText: "HYPR WS"
-        valueText: hyprlandContext.pad2(hyprlandContext.activeWorkspace)
-        subText: hyprlandContext.occupiedWorkspaces.length + " OCCUPIED"
+        labelText: "HYPR"
+        valueText: "WS " + hyprlandContext.pad2(hyprlandContext.activeWorkspace)
+        subText: hyprlandContext.occupiedWorkspaces.length + " OCC"
         activeWorkspace: hyprlandContext.activeWorkspace
         rangeStart: hyprlandContext.rangeStart
         occupiedWorkspaces: hyprlandContext.occupiedWorkspaces
@@ -59,6 +58,9 @@ ContextContent {
         occupiedColor: hyprlandContext.occupiedColor
         emptyColor: hyprlandContext.emptyColor
         monoFont: hyprlandContext.monoFont
-        onWorkspaceRequested: workspace => hyprlandContext.focusWorkspace(workspace)
+        onWorkspaceRequested: (workspace) => {
+            return hyprlandContext.focusWorkspace(workspace);
+        }
     }
+
 }

@@ -23,24 +23,23 @@ Row {
     property color segmentOff: "#3c4143"
     property color dangerColor: "#9a5555"
     property string monoFont: "JetBrains Mono"
-
     readonly property bool reducedMotion: metricsState ? metricsState.reducedMotion : false
     readonly property bool showTray: responsiveLevel < 3
     readonly property bool showSegments: responsiveLevel < 3
-    readonly property int metricsWidth: responsiveLevel <= 1 ? 338
-        : (responsiveLevel === 2 ? 260 : (responsiveLevel === 3 ? 220 : 190))
-    readonly property int trayIconLimit: responsiveLevel <= 1
-        ? requestedTrayIconLimit : 0
-
-    spacing: 8
+    readonly property int metricsWidth: responsiveLevel <= 2 ? 288 : (responsiveLevel === 3 ? 220 : 176)
+    readonly property int trayIconLimit: responsiveLevel <= 1 ? requestedTrayIconLimit : 0
+    property int utilityGap: 4
 
     signal toggleSystemPanel()
     signal toggleTrayPanel(real panelWidth)
     signal resizeTrayPanel(real panelWidth)
     signal closeTrayPanel()
 
+    spacing: 8
+
     Metrics {
         id: metricsItem
+
         width: systemIsland.metricsWidth
         height: 38
         networkValue: systemIsland.metricsState ? systemIsland.metricsState.networkRateText : "--"
@@ -66,45 +65,59 @@ Row {
         onClicked: systemIsland.toggleSystemPanel()
     }
 
-    TrayIsland {
-        id: trayItem
-        visible: systemIsland.showTray
-        width: visible ? (preferredWidth > 0 ? preferredWidth : implicitWidth) : 0
+    Row {
+        id: utilityCluster
+
         height: 38
-        unit: 8
-        preferredWidth: systemIsland.responsiveLevel <= 1 ? 118 : 0
-        zenInk: systemIsland.utilitySurface
-        zenMist: systemIsland.borderColor
-        zenStone: systemIsland.hoverSurface
-        zenAsh: systemIsland.lineSoft
-        zenCloud: systemIsland.textDim
-        zenSnow: systemIsland.textSoft
-        zenDanger: systemIsland.dangerColor
-        panelWindow: systemIsland.panelWindow
-        directIconLimit: systemIsland.trayIconLimit
-        notificationCount: systemIsland.notificationHistoryCount
-        expanded: systemIsland.trayPanelExpanded
-        reducedMotion: systemIsland.reducedMotion
-        highlightColor: systemIsland.highlightColor
-        monoFont: systemIsland.monoFont
-        onToggleRequested: panelWidth => systemIsland.toggleTrayPanel(panelWidth)
-        onExpandedWidthChanged: {
-            if (systemIsland.trayPanelExpanded)
-                systemIsland.resizeTrayPanel(expandedWidth)
+        spacing: systemIsland.utilityGap
+
+        TrayIsland {
+            id: trayItem
+
+            visible: systemIsland.showTray
+            width: visible ? (preferredWidth > 0 ? preferredWidth : implicitWidth) : 0
+            height: 38
+            unit: 8
+            preferredWidth: systemIsland.responsiveLevel <= 1 ? 104 : 0
+            zenInk: systemIsland.utilitySurface
+            zenMist: systemIsland.borderColor
+            zenStone: systemIsland.hoverSurface
+            zenAsh: systemIsland.lineSoft
+            zenCloud: systemIsland.textDim
+            zenSnow: systemIsland.textSoft
+            zenDanger: systemIsland.dangerColor
+            panelWindow: systemIsland.panelWindow
+            directIconLimit: systemIsland.trayIconLimit
+            notificationCount: systemIsland.notificationHistoryCount
+            expanded: systemIsland.trayPanelExpanded
+            reducedMotion: systemIsland.reducedMotion
+            highlightColor: systemIsland.highlightColor
+            monoFont: systemIsland.monoFont
+            onToggleRequested: (panelWidth) => {
+                return systemIsland.toggleTrayPanel(panelWidth);
+            }
+            onExpandedWidthChanged: {
+                if (systemIsland.trayPanelExpanded)
+                    systemIsland.resizeTrayPanel(expandedWidth);
+
+            }
+            onCloseRequested: systemIsland.closeTrayPanel()
         }
-        onCloseRequested: systemIsland.closeTrayPanel()
+
+        Power {
+            id: powerItem
+
+            width: 38
+            height: 38
+            reducedMotion: systemIsland.reducedMotion
+            surfaceColor: systemIsland.utilitySurface
+            hoverColor: Qt.rgba(1, 1, 1, 0.035)
+            borderColor: systemIsland.borderColor
+            highlightColor: systemIsland.highlightColor
+            iconColor: systemIsland.textDim
+            iconHoverColor: systemIsland.textSoft
+        }
+
     }
 
-    Power {
-        id: powerItem
-        width: 38
-        height: 38
-        reducedMotion: systemIsland.reducedMotion
-        surfaceColor: systemIsland.utilitySurface
-        hoverColor: Qt.rgba(1, 1, 1, 0.035)
-        borderColor: systemIsland.borderColor
-        highlightColor: systemIsland.highlightColor
-        iconColor: systemIsland.textDim
-        iconHoverColor: systemIsland.textSoft
-    }
 }
