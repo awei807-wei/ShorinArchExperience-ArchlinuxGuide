@@ -9,8 +9,8 @@
 // - 动态配色热更新（监听 matugen 生成的 colors.json）
 // - 创建顶栏窗口（Bar）与两个弹出面板窗口（中心面板/系统面板）
 // 关联功能：
-// - Bar.qml：顶栏容器（组合 LeftIsland/CenterIsland/RightIslands）
-// - CenterIsland：用于时间显示与音量反馈（通过 centerIslandRef 进行联动）
+// - Bar.qml：顶栏容器（组合 ContextIsland/ClockIsland/SystemIsland）
+// - ClockIsland：用于时间显示与轻量音量反馈（通过 centerIslandRef 兼容既有联动）
 // - 面板窗口：中心面板使用 components/CenterPanel；系统面板仍在本文件内“内联”构建（待抽离）
 // 注意：
 // - 外部命令执行依赖系统工具：nmcli/bluetoothctl/wpctl/brightnessctl/pactl/playerctl 等。
@@ -39,16 +39,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real baseUnit: Math.round(ppi / k) // 全局尺寸基准（所有间距/字号等都以它为基础）
 
     // ═══════════════════════════════════════════════════════
-    // 🏝️ L1 · 岛屿几何
+    // 🏝️ L1 · 顶栏几何（独立于面板缩放，保持精密仪表的固定逻辑尺寸）
     // ═══════════════════════════════════════════════════════
-    readonly property real islandHeight: baseUnit * 2.0       // 岛屿高度
-    readonly property real islandRadius: islandHeight * 0.35  // 岛屿圆角
-    readonly property real islandPaddingH: baseUnit * 1.4     // 岛屿水平内边距
-    readonly property real islandPaddingV: baseUnit * 0.4     // 岛屿垂直内边距
-    readonly property real islandGap: baseUnit * 0.8          // 岛屿之间间距
+    readonly property real islandHeight: 38                   // 岛面固定 38px，避免随 PPI 缩放越界
+    readonly property real islandRadius: 3                    // 小圆角，避免胶囊与卡片感
+    readonly property real islandPaddingH: 11                 // 以 8px 网格做光学校准
+    readonly property real islandPaddingV: 4
+    readonly property real islandGap: 8
     readonly property int trayDirectIconLimit: 3              // 折叠态直接显示的托盘应用图标上限
-    readonly property real barMarginTop: baseUnit * 0.2       // 顶栏距屏幕顶部
-    readonly property real barMarginSide: baseUnit * 0.2        // 顶栏左右边距（用于避免贴边）
+    readonly property real barMarginTop: 4                    // 岛面 y=4，总垂直占位 42px
+    readonly property real barMarginSide: 4                   // 左右半网格留白
     // 岛屿位置偏移（正值向右，负值向左）
     readonly property real leftIslandOffsetX:   baseUnit * 0    // 左岛X偏移
     readonly property real centerIslandOffsetX: baseUnit * 0    // 中岛 X 偏移（用于整体对齐/构图微调）
@@ -350,8 +350,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property string cpuModel: "loading..."                   // CPU 型号（从 /proc/cpuinfo 抽取一次）
     property string uptime: "0h"                             // uptime 简化文本（uptime -p）
 
-    // 中岛音量反馈代理
-    property var centerIslandRef: null                       // Bar/CenterIsland 实例引用（用于音量反馈联动）
+    // 时钟岛音量反馈代理
+    property var centerIslandRef: null                       // Bar/ClockIsland 实例引用（兼容音量反馈联动）
     property int lastVolume: 70                              // 上一次音量（用于需要差分逻辑时复用；当前主要用于调试/保留）
     property int rawVolumePercent: 70                        // 原始音量百分比（未截断；用于排查 >100% 情况）
 
@@ -645,7 +645,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
     // 监听音量变化，触发中岛反馈
     onVolumePercentChanged: {
-        if (configRoot.centerIslandRef) { // 只有拿到 CenterIsland 实例引用时才做联动
+        if (configRoot.centerIslandRef) { // 只有拿到 ClockIsland 实例引用时才做联动
             configRoot.centerIslandRef.volume = Math.min(volumePercent, 100) // 写入音量数值（确保不超过 100）
             configRoot.centerIslandRef.showVolume = true // 切换到音量反馈布局
             volFeedbackTimer.restart() // 重置“回到时间显示”的计时
@@ -710,7 +710,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     trayPanelExpanded: configRoot.trayPanelVisible
-                    Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 CenterIsland 实例（用于音量反馈联动）
+                    Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
                     onCenterClicked: {
                         console.log("[shell] centerClicked, toggling panel") // 调试日志：记录点击
                         configRoot.trayPanelVisible = false
@@ -757,7 +757,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             0,
             configRoot.barMarginSide
                 - configRoot.rightIslandOffsetX
-                + configRoot.baseUnit * 2.4
+                + 46
         )
         onCloseRequested: configRoot.trayPanelVisible = false
     }

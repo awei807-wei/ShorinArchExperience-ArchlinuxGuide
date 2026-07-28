@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quickshell Bar — Island Layout Study v2</title>
+  <style>
+    :root {
+      --design-width: 2048;
+      --bar-y: 4px;
+      --bar-h: 38px;
+      --gap: 8px;
+      --radius: 3px;
+
+      --wallpaper-top: #b9b9b9;
+      --wallpaper-bottom: #b5b5b5;
+
+      --panel: rgba(10, 12, 13, 0.94);
+      --panel-secondary: rgba(10, 12, 13, 0.84);
+      --panel-utility: rgba(10, 12, 13, 0.76);
+      --panel-border: rgba(255, 255, 255, 0.085);
+      --panel-highlight: rgba(255, 255, 255, 0.045);
+      --panel-shadow: rgba(0, 0, 0, 0.16);
+
+      --text: #e7e9ea;
+      --text-soft: #a7abad;
+      --text-dim: #6d7376;
+      --line: rgba(255, 255, 255, 0.10);
+      --line-soft: rgba(255, 255, 255, 0.055);
+      --accent: #8fb3c5;
+      --accent-soft: rgba(143, 179, 197, 0.20);
+
+      --font-sans: Inter, "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--wallpaper-bottom);
+    }
+
+    body {
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    button {
+      margin: 0;
+      border: 0;
+      padding: 0;
+      color: inherit;
+      font: inherit;
+      background: transparent;
+    }
+
+    .desktop {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 75% 90% at 50% 20%, rgba(255,255,255,.055), transparent 68%),
+        linear-gradient(180deg, var(--wallpaper-top), var(--wallpaper-bottom));
+    }
+
+    .desktop::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .18;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.74' numOctaves='4' seed='19' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.40'/%3E%3C/svg%3E");
+    }
+
+    .bar-stage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: calc(var(--design-width) * 1px);
+      height: 52px;
+      transform-origin: top left;
+      z-index: 2;
+    }
+
+    .rail-shell {
+      position: absolute;
+      top: var(--bar-y);
+      left: 4px;
+      right: 4px;
+      height: var(--bar-h);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow:
+        inset 0 1px 0 var(--panel-highlight),
+        0 7px 18px var(--panel-shadow);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .bar-group,
+    .clock-island {
+      position: absolute;
+      top: var(--bar-y);
+      height: var(--bar-h);
+    }
+
+    .left-group {
+      left: 4px;
+      display: flex;
+      gap: var(--gap);
+    }
+
+    .right-group {
+      right: 4px;
+      display: flex;
+      gap: var(--gap);
+    }
+
+    .clock-island {
+      left: 50%;
+      width: 300px;
+      transform: translateX(-50%);
+    }
+
+    .island {
+      position: relative;
+      height: var(--bar-h);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow:
+        inset 0 1px 0 var(--panel-highlight),
+        0 7px 18px var(--panel-shadow);
+      overflow: hidden;
+      transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .island::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.018), transparent);
+      opacity: .5;
+    }
+
+    .island.secondary { background: var(--panel-secondary); }
+    .island.utility { background: var(--panel-utility); }
+
+    .micro-mark {
+      position: absolute;
+      top: 0;
+      left: 12px;
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+      opacity: .9;
+      z-index: 3;
+    }
+
+    .workspaces {
+      width: 238px;
+      display: flex;
+      align-items: center;
+      padding: 0 11px;
+      gap: 10px;
+    }
+
+    .workspace-meta {
+      width: 58px;
+      flex: 0 0 58px;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .workspace-meta .label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-dim);
+      font-size: 6px;
+      letter-spacing: .15em;
+    }
+
+    .workspace-meta .value {
+      display: block;
+      color: var(--text);
+      font-size: 8px;
+      letter-spacing: .04em;
+    }
+
+    .workspace-meta .sub {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-soft);
+      font-size: 6px;
+      letter-spacing: .06em;
+    }
+
+    .v-rule {
+      width: 1px;
+      height: 18px;
+      flex: 0 0 1px;
+      background: var(--line);
+    }
+
+    .workspace-list {
+      height: 100%;
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      gap: 5px;
+    }
+
+    .workspace {
+      position: relative;
+      height: 24px;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 6px;
+      font-variant-numeric: tabular-nums;
+      transition: color 140ms ease;
+      z-index: 2;
+    }
+
+    .workspace::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 3px;
+      width: 12px;
+      height: 2px;
+      transform: translateX(-50%);
+      background: #4d5254;
+      transition: width 140ms ease, background 140ms ease, box-shadow 140ms ease;
+    }
+
+    .workspace span {
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .workspace:hover { color: var(--text-soft); }
+    .workspace.active { color: var(--text); }
+    .workspace.active::before {
+      width: 22px;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-soft);
+    }
+
+    .clock {
+      width: 300px;
+      display: grid;
+      grid-template-columns: 78px 1px 112px 1px 70px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock .micro-mark {
+      left: 50%;
+      width: 24px;
+      transform: translateX(-50%);
+    }
+
+    .time {
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -.035em;
+      line-height: 1;
+      text-align: left;
+      z-index: 2;
+    }
+
+    .date-stack {
+      padding-left: 13px;
+      font-family: var(--font-mono);
+      line-height: 1;
+      z-index: 2;
+    }
+
+    .date-stack .date {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-soft);
+      font-size: 7px;
+      letter-spacing: .055em;
+    }
+
+    .date-stack .weekday {
+      display: block;
+      color: var(--text-dim);
+      font-size: 6px;
+      letter-spacing: .16em;
+    }
+
+    .clock-rule {
+      width: 1px;
+      height: 18px;
+      background: var(--line);
+      z-index: 2;
+    }
+
+    .weather {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      color: var(--text-soft);
+      font-family: var(--font-mono);
+      font-size: 7px;
+      z-index: 2;
+    }
+
+    .weather svg {
+      width: 13px;
+      height: 13px;
+      stroke: var(--text-dim);
+      stroke-width: 1.25;
+      fill: none;
+    }
+
+    .metrics {
+      width: 338px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: stretch;
+      padding: 0 9px;
+      isolation: isolate;
+    }
+
+    .spectrum-underlay {
+      position: absolute;
+      inset: 7px 9px 4px 9px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      z-index: 0;
+      opacity: .22;
+      pointer-events: none;
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.78) 45%, rgba(0,0,0,1) 100%);
+    }
+
+    .spectrum-underlay i {
+      flex: 1 1 auto;
+      height: 8px;
+      background: linear-gradient(180deg, rgba(118,129,136,.08), rgba(118,129,136,.50));
+      border-top: 1px solid rgba(180,194,202,.08);
+      transition: height 180ms ease;
+    }
+
+    .metric {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 9px;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      z-index: 2;
+    }
+
+    .metric + .metric::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 1px;
+      height: 17px;
+      background: var(--line-soft);
+    }
+
+    .metric-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 5px;
+      line-height: 1;
+    }
+
+    .metric-label {
+      color: var(--text-dim);
+      font-size: 6px;
+      letter-spacing: .12em;
+    }
+
+    .metric-value {
+      color: var(--text-soft);
+      font-size: 6px;
+      letter-spacing: .02em;
+    }
+
+    .segments {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      margin-top: 6px;
+      height: 2px;
+    }
+
+    .segments i {
+      display: block;
+      background: #3c4143;
+    }
+
+    .segments i.on { background: #747b7f; }
+    .metric.network .segments i.on { background: var(--accent); }
+
+    .tray {
+      width: 118px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .tray-icon {
+      position: relative;
+      width: 15px;
+      height: 15px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.08);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 6px;
+      line-height: 1;
+      transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .tray-icon:hover {
+      color: var(--text-soft);
+      border-color: rgba(255,255,255,.15);
+      background: rgba(255,255,255,.025);
+    }
+
+    .tray-icon svg {
+      width: 9px;
+      height: 9px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.2;
+    }
+
+    .tray-count {
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 6px;
+      letter-spacing: .03em;
+    }
+
+    .power {
+      width: 38px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background 130ms ease;
+    }
+
+    .power:hover { background: rgba(255,255,255,.035); }
+
+    .power svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: var(--text-dim);
+      stroke-width: 1.25;
+      stroke-linecap: round;
+      transition: stroke 130ms ease;
+    }
+
+    .power:hover svg { stroke: var(--text-soft); }
+
+    .desktop[data-layout="rail"] .rail-shell { opacity: 1; }
+    .desktop[data-layout="rail"] .island {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+    .desktop[data-layout="rail"] .island::after { opacity: 0; }
+    .desktop[data-layout="rail"] .workspaces,
+    .desktop[data-layout="rail"] .clock,
+    .desktop[data-layout="rail"] .metrics,
+    .desktop[data-layout="rail"] .tray,
+    .desktop[data-layout="rail"] .power { border-radius: 0; }
+    .desktop[data-layout="rail"] .right-group .island + .island::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: 9px;
+      width: 1px;
+      height: 20px;
+      background: var(--line);
+    }
+
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      background-image:
+        linear-gradient(to right, rgba(20,35,42,.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(20,35,42,.12) 1px, transparent 1px);
+      background-size: 8px 8px;
+      transition: opacity 140ms ease;
+    }
+
+    .desktop[data-grid="true"] .grid-overlay { opacity: 1; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 5;
+      min-width: 164px;
+      padding: 9px 12px;
+      transform: translate(-50%, 8px);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 3px;
+      background: rgba(10,12,13,.88);
+      color: #b9bdc0;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="desktop" data-layout="islands" data-grid="false" aria-label="Quickshell bar visual mockup">
+    <div class="grid-overlay" aria-hidden="true"></div>
+
+    <section class="bar-stage" aria-label="Top bar">
+      <div class="rail-shell" aria-hidden="true"></div>
+
+      <div class="bar-group left-group">
+        <nav class="island workspaces" aria-label="Workspaces">
+          <span class="micro-mark" aria-hidden="true"></span>
+          <div class="workspace-meta" aria-hidden="true">
+            <span class="label" id="contextLabel">NIRI RANGE</span>
+            <span class="value" id="contextValue">01–05</span>
+            <span class="sub" id="contextSub">WS 03</span>
+          </div>
+          <span class="v-rule" aria-hidden="true"></span>
+          <div class="workspace-list" id="workspaceList"></div>
+        </nav>
+      </div>
+
+      <section class="island clock clock-island" aria-label="Clock, date and weather">
+        <span class="micro-mark" aria-hidden="true"></span>
+        <time class="time" datetime="2026-07-28T08:42">08:42</time>
+        <span class="clock-rule" aria-hidden="true"></span>
+        <div class="date-stack">
+          <span class="date">2026.07.28</span>
+          <span class="weekday">周二 · JUL</span>
+        </div>
+        <span class="clock-rule" aria-hidden="true"></span>
+        <div class="weather" aria-label="Cloudy, 27 degrees Celsius">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4.2 12.2h7.1a2.3 2.3 0 0 0 .2-4.6A3.8 3.8 0 0 0 4.3 6.3 2.95 2.95 0 0 0 4.2 12.2Z"/>
+          </svg>
+          <span>27°C</span>
+        </div>
+      </section>
+
+      <div class="bar-group right-group">
+        <section class="island secondary metrics" aria-label="System metrics">
+          <span class="micro-mark" aria-hidden="true"></span>
+          <div class="spectrum-underlay" id="spectrumUnderlay" aria-hidden="true"></div>
+
+          <div class="metric network">
+            <div class="metric-head"><span class="metric-label">NET</span><span class="metric-value">1.8M</span></div>
+            <div class="segments" aria-hidden="true">
+              <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-head"><span class="metric-label">MEM</span><span class="metric-value">58%</span></div>
+            <div class="segments" aria-hidden="true">
+              <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i>
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-head"><span class="metric-label">CPU</span><span class="metric-value">06%</span></div>
+            <div class="segments" aria-hidden="true">
+              <i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+
+          <div class="metric">
+            <div class="metric-head"><span class="metric-label">VOL</span><span class="metric-value">100</span></div>
+            <div class="segments" aria-hidden="true">
+              <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+            </div>
+          </div>
+        </section>
+
+        <section class="island utility tray" aria-label="System tray">
+          <span class="tray-icon" title="Terminal" aria-label="Terminal">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2 3 2 2-2 2M5.5 8h3.5"/></svg>
+          </span>
+          <span class="tray-icon" title="Network tunnel" aria-label="Network tunnel">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5 10 3v2.8c0 2.2-1.5 3.9-4 4.7-2.5-.8-4-2.5-4-4.7V3Z"/><path d="M4.2 6 5.4 7.2 8 4.7"/></svg>
+          </span>
+          <span class="tray-icon" title="Bluetooth" aria-label="Bluetooth">BT</span>
+          <span class="tray-count" aria-label="Two more tray items">+2</span>
+        </section>
+
+        <button class="island utility power" type="button" aria-label="Power menu" title="Power menu">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1.8v5.1"/>
+            <path d="M4.45 3.45a5.4 5.4 0 1 0 7.1 0"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <div class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const DESIGN_WIDTH = 2048;
+    const VISIBLE_WORKSPACES = 5;
+    const desktop = document.querySelector('.desktop');
+    const stage = document.querySelector('.bar-stage');
+    const toast = document.querySelector('.toast');
+    const workspaceList = document.querySelector('#workspaceList');
+    const contextLabel = document.querySelector('#contextLabel');
+    const contextValue = document.querySelector('#contextValue');
+    const contextSub = document.querySelector('#contextSub');
+    const spectrumUnderlay = document.querySelector('#spectrumUnderlay');
+    let toastTimer;
+
+    const params = new URLSearchParams(location.search);
+    const state = {
+      total: Math.max(5, Number(params.get('total')) || 36),
+      active: Math.max(1, Number(params.get('ws')) || 3),
+      context: params.get('context') || 'niri',
+      layout: params.get('layout') === 'rail' ? 'rail' : 'islands',
+      grid: params.get('grid') === '1'
+    };
+
+    desktop.dataset.layout = state.layout;
+    desktop.dataset.grid = String(state.grid);
+
+    function pad2(number) {
+      return String(number).padStart(2, '0');
+    }
+
+    function fitStage() {
+      stage.style.transform = `scale(${window.innerWidth / DESIGN_WIDTH})`;
+    }
+
+    function notify(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1050);
+    }
+
+    function toggleLayout() {
+      const next = desktop.dataset.layout === 'islands' ? 'rail' : 'islands';
+      desktop.dataset.layout = next;
+      notify(next === 'islands' ? 'LAYOUT · ISLANDS' : 'LAYOUT · CONTINUOUS RAIL');
+    }
+
+    function toggleGrid() {
+      const next = desktop.dataset.grid !== 'true';
+      desktop.dataset.grid = String(next);
+      notify(next ? '8 PX GRID · ON' : '8 PX GRID · OFF');
+    }
+
+    function getVisibleRange(active, total, count) {
+      const pageStart = Math.floor((active - 1) / count) * count + 1;
+      const pageEnd = Math.min(pageStart + count - 1, total);
+      return { start: pageStart, end: pageEnd };
+    }
+
+    function renderContext() {
+      workspaceList.innerHTML = '';
+
+      if (state.context === 'kde') {
+        contextLabel.textContent = 'DESKTOP';
+        contextValue.textContent = 'WEB';
+        contextSub.textContent = 'KDE ACTIVITY';
+        return;
+      }
+
+      if (state.context === 'hyprland') {
+        contextLabel.textContent = 'HYPR WS';
+        contextValue.textContent = pad2(state.active);
+        contextSub.textContent = `${state.active} ACTIVE`;
+      } else {
+        const { start, end } = getVisibleRange(state.active, state.total, VISIBLE_WORKSPACES);
+        contextLabel.textContent = 'NIRI RANGE';
+        contextValue.textContent = `${pad2(start)}–${pad2(end)}`;
+        contextSub.textContent = `WS ${pad2(state.active)}`;
+      }
+
+      const { start, end } = state.context === 'niri'
+        ? getVisibleRange(state.active, state.total, VISIBLE_WORKSPACES)
+        : { start: Math.max(1, state.active - 2), end: Math.min(state.total, state.active + 2) };
+
+      for (let index = start; index <= end; index += 1) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `workspace${index === state.active ? ' active' : ''}`;
+        button.dataset.workspace = pad2(index);
+        button.ariaLabel = `Workspace ${index}`;
+        if (index === state.active) button.setAttribute('aria-current', 'true');
+        button.innerHTML = `<span>${pad2(index)}</span>`;
+        button.addEventListener('click', () => {
+          state.active = index;
+          renderWorkspaces();
+        });
+        workspaceList.appendChild(button);
+      }
+    }
+
+    function seedSpectrum() {
+      for (let i = 0; i < 32; i += 1) {
+        const bar = document.createElement('i');
+        bar.style.height = `${8 + Math.round(Math.random() * 10)}px`;
+        spectrumUnderlay.appendChild(bar);
+      }
+    }
+
+    function animateSpectrum() {
+      const bars = [...spectrumUnderlay.children];
+      let phase = 0;
+      setInterval(() => {
+        phase += 0.38;
+        bars.forEach((bar, index) => {
+          const wave = Math.sin((index * 0.45) + phase) * 0.5 + 0.5;
+          const drift = Math.sin((index * 0.17) + phase * 0.55) * 0.5 + 0.5;
+          const height = 6 + Math.round((wave * 10) + (drift * 6));
+          bar.style.height = `${height}px`;
+        });
+      }, 180);
+    }
+
+    function stepWorkspace(direction) {
+      state.active += direction;
+      if (state.active < 1) state.active = state.total;
+      if (state.active > state.total) state.active = 1;
+      renderWorkspaces();
+    }
+
+    document.querySelector('.power').addEventListener('click', () => notify('POWER MENU · MOCKUP'));
+
+    window.addEventListener('resize', fitStage, { passive: true });
+    window.addEventListener('keydown', (event) => {
+      const key = event.key.toLowerCase();
+      if (key === 'l') toggleLayout();
+      if (key === 'g') toggleGrid();
+      if (key === 'arrowright') stepWorkspace(1);
+      if (key === 'arrowleft') stepWorkspace(-1);
+      if (key === 'c') cycleContext();
+    });
+
+    seedSpectrum();
+    animateSpectrum();
+    renderContext();
+    fitStage();
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 #!/bin/bash
 # 模块：cava.sh（Quickshell 频谱桥接脚本）
 # 功能：启动 cava 并把其 raw/ascii 输出转换成 Quickshell 友好的 JSON 行流：
-# - bars: 由 8 个“高度字符”组成的频谱字符串（用于 RightIslands.qml 展示）
+# - bars: 由 32 个“高度字符”组成的频谱字符串（用于 SystemIsland 背景暗纹）
 # - active: 是否存在非零柱（用于 UI 判定“当前是否有声音输入/播放”）
 # 注意：
 # - 本脚本是“长驻输出”模式：被 Quickshell.Io.Process 常驻启动并持续读取 stdout
@@ -10,7 +10,8 @@
 CAVA_CONFIG=$(mktemp /tmp/cava-qs-XXXXXX.conf) # 临时 cava 配置文件路径（退出时清理）
 cat > "$CAVA_CONFIG" << 'CONFEOF'
 [general]
-bars = 8
+bars = 32
+framerate = 12
 sleep_timer = 0
 [input]
 method = pulse
@@ -22,7 +23,7 @@ ascii_max_range = 7
 bar_delimiter = 59
 frame_delimiter = 10
 CONFEOF
-trap "rm -f $CAVA_CONFIG" EXIT # 退出时删除临时配置文件（避免 /tmp 堆积）
+trap 'rm -f "$CAVA_CONFIG"' EXIT # 退出时删除临时配置文件（避免 /tmp 堆积）
 
 CHARS="▁▂▃▄▅▆▇█" # 高度字符表：索引 0~7 映射到从低到高的柱形符号
 

@@ -1,36 +1,46 @@
-// 右岛托盘：3 个直显应用槽位 + 1 个独立复合入口。
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
-import Quickshell.Widgets
 
 Rectangle {
     id: trayIsland
 
-    property real unit: 13.6
-    property color zenInk: "#141414"
-    property color zenMist: "#2a2a2a"
-    property color zenStone: "#1f1f1f"
-    property color zenAsh: "#3a3a3a"
-    property color zenCloud: "#8a8a8a"
-    property color zenSnow: "#cacaca"
+    property real unit: 8
+    property color zenInk: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
+    property color zenMist: Qt.rgba(1, 1, 1, 0.085)
+    property color zenStone: Qt.rgba(1, 1, 1, 0.025)
+    property color zenAsh: Qt.rgba(1, 1, 1, 0.055)
+    property color zenCloud: "#6d7376"
+    property color zenSnow: "#a7abad"
     property color zenDanger: "#9a5555"
+    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
+    property string monoFont: "JetBrains Mono"
     property var panelWindow: null
     property var trayItems: SystemTray.items
     property int directIconLimit: 3
     property int notificationCount: 0
     property bool expanded: false
+    property bool reducedMotion: false
+    property real preferredWidth: 0
 
-    readonly property int trayCount: Array.isArray(trayItems)
-        ? trayItems.length
-        : (trayItems?.values ? trayItems.values.length : (trayItems?.count ?? 0))
+    readonly property int trayCount: {
+        if (Array.isArray(trayItems))
+            return trayItems.length
+        if (trayItems && trayItems.values)
+            return trayItems.values.length
+        if (trayItems && trayItems.count !== undefined)
+            return trayItems.count
+        return 0
+    }
     readonly property int hiddenTrayCount: Math.max(0, trayCount - directIconLimit)
     readonly property bool hasCompositeEntry: hiddenTrayCount > 0 || notificationCount > 0
     readonly property int collapsedSlots: Math.min(trayCount, directIconLimit)
         + (hasCompositeEntry ? 1 : 0)
-    readonly property real itemWidth: unit * 1.2
-    readonly property real itemGap: unit * 0.4
-    readonly property real horizontalPadding: unit * 1.2
+    readonly property real itemWidth: 15
+    readonly property real itemGap: 8
+    readonly property real horizontalPadding: 34
     readonly property real expandedContentWidth: (trayCount + 1) * itemWidth
         + Math.max(0, trayCount) * itemGap + horizontalPadding
     readonly property real expandedWidth: Math.max(unit * 18, expandedContentWidth)
@@ -38,24 +48,30 @@ Rectangle {
     signal toggleRequested(real panelWidth)
     signal closeRequested()
 
-    implicitWidth: {
-        if (collapsedSlots === 0)
-            return unit * 2.5
-        return collapsedSlots * itemWidth
+    implicitWidth: collapsedSlots === 0 ? 20
+        : collapsedSlots * itemWidth
             + Math.max(0, collapsedSlots - 1) * itemGap
             + horizontalPadding
-    }
-    width: implicitWidth
-    height: parent?.height ?? unit * 2
+    implicitHeight: 38
+    width: preferredWidth > 0 ? preferredWidth : implicitWidth
     color: zenInk
     border.color: zenMist
     border.width: 1
-    radius: 2
+    radius: 3
     clip: false
 
     onHasCompositeEntryChanged: {
         if (!hasCompositeEntry && expanded)
             closeRequested()
+    }
+
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 1
+        color: trayIsland.highlightColor
+        z: 4
     }
 
     Rectangle {
@@ -68,19 +84,28 @@ Rectangle {
         color: trayIsland.zenInk
         border.color: trayIsland.zenMist
         border.width: 1
-        radius: 2
+        radius: 3
         opacity: visible ? 1 : 0
 
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: trayIsland.highlightColor
+        }
+
         Behavior on opacity {
+            enabled: !trayIsland.reducedMotion
             NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
         }
     }
 
     Row {
         id: trayRow
-        z: 1
+        z: 2
         anchors.right: parent.right
-        anchors.rightMargin: trayIsland.unit * 0.6
+        anchors.rightMargin: trayIsland.horizontalPadding / 2
         anchors.verticalCenter: parent.verticalCenter
         spacing: trayIsland.itemGap
 
@@ -89,32 +114,83 @@ Rectangle {
 
             Item {
                 id: trayItemContainer
+
+                required property int index
+                required property var modelData
                 visible: trayIsland.expanded || index < trayIsland.directIconLimit
                 width: visible ? trayIsland.itemWidth : 0
                 height: trayIsland.itemWidth
                 opacity: visible ? 1 : 0
+                activeFocusOnTab: visible
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData && modelData.title ? modelData.title : "System tray item"
+
+                Keys.onReturnPressed: activateTrayItem()
+                Keys.onSpacePressed: activateTrayItem()
+
+                function activateTrayItem() {
+                    if (modelData && modelData.activate) {
+                        modelData.activate()
+                        trayIsland.closeRequested()
+                    }
+                }
 
                 Behavior on width {
+                    enabled: !trayIsland.reducedMotion
                     NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
                 }
                 Behavior on opacity {
+                    enabled: !trayIsland.reducedMotion
                     NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
                 }
 
                 Rectangle {
                     id: trayItemBackground
                     anchors.fill: parent
-                    color: trayItemMouse.containsMouse ? trayIsland.zenStone : "transparent"
-                    radius: 2
+                    color: trayItemMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.025) : "transparent"
+                    border.color: trayItemMouse.containsMouse
+                        ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
+                    border.width: 1
 
                     Image {
+                        id: trayIcon
                         anchors.centerIn: parent
-                        width: trayIsland.unit * 0.9
-                        height: width
-                        source: modelData.icon
+                        width: 11
+                        height: 11
+                        source: trayItemContainer.modelData ? trayItemContainer.modelData.icon : ""
                         sourceSize.width: width
                         sourceSize.height: height
                     }
+
+                    Item {
+                        visible: trayIcon.status === Image.Error || trayIcon.source === ""
+                        anchors.centerIn: parent
+                        width: 7
+                        height: 7
+
+                        Rectangle {
+                            width: 1
+                            height: parent.height
+                            anchors.centerIn: parent
+                            rotation: 45
+                            color: trayIsland.zenCloud
+                        }
+                        Rectangle {
+                            width: 1
+                            height: parent.height
+                            anchors.centerIn: parent
+                            rotation: -45
+                            color: trayIsland.zenCloud
+                        }
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -2
+                    color: "transparent"
+                    border.width: trayItemContainer.activeFocus ? 1 : 0
+                    border.color: trayIsland.zenCloud
                 }
 
                 MouseArea {
@@ -124,19 +200,19 @@ Rectangle {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
                     onClicked: mouse => {
+                        trayItemContainer.forceActiveFocus()
                         if (mouse.button === Qt.RightButton) {
-                            if (modelData.hasMenu)
+                            if (trayItemContainer.modelData && trayItemContainer.modelData.hasMenu)
                                 menuAnchor.open()
                         } else {
-                            modelData.activate()
-                            trayIsland.closeRequested()
+                            trayItemContainer.activateTrayItem()
                         }
                     }
                 }
 
                 QsMenuAnchor {
                     id: menuAnchor
-                    menu: modelData.menu
+                    menu: trayItemContainer.modelData ? trayItemContainer.modelData.menu : null
                     anchor.window: trayIsland.panelWindow
                     anchor.item: trayItemBackground
                 }
@@ -145,24 +221,34 @@ Rectangle {
 
         Item {
             id: compositeEntry
+
             property bool hovered: false
             visible: !trayIsland.expanded && trayIsland.hasCompositeEntry
             width: visible ? trayIsland.itemWidth : 0
             height: trayIsland.itemWidth
             opacity: visible ? 1 : 0
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: "More tray items and notification history"
+
+            Keys.onReturnPressed: trayIsland.toggleRequested(trayIsland.expandedWidth)
+            Keys.onSpacePressed: trayIsland.toggleRequested(trayIsland.expandedWidth)
 
             Behavior on width {
+                enabled: !trayIsland.reducedMotion
                 NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
             }
             Behavior on opacity {
+                enabled: !trayIsland.reducedMotion
                 NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
             }
 
             Rectangle {
                 anchors.fill: parent
-                radius: 2
-                color: compositeEntry.hovered ? trayIsland.zenStone : "transparent"
-                border.color: compositeEntry.hovered ? trayIsland.zenAsh : "transparent"
+                color: compositeEntry.hovered ? Qt.rgba(1, 1, 1, 0.025) : "transparent"
+                border.color: compositeEntry.hovered
+                    ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
+                border.width: 1
             }
 
             Text {
@@ -170,36 +256,34 @@ Rectangle {
                 anchors.centerIn: parent
                 text: "+" + trayIsland.hiddenTrayCount
                 textFormat: Text.PlainText
-                font.pixelSize: trayIsland.unit * 0.4
-                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 6
+                font.family: trayIsland.monoFont
                 color: trayIsland.zenCloud
             }
 
             Item {
                 visible: trayIsland.hiddenTrayCount === 0 && trayIsland.notificationCount > 0
                 anchors.centerIn: parent
-                width: trayIsland.unit * 0.58
-                height: trayIsland.unit * 0.62
+                width: 9
+                height: 9
 
                 Rectangle {
-                    x: trayIsland.unit * 0.08
-                    y: trayIsland.unit * 0.03
-                    width: trayIsland.unit * 0.5
-                    height: trayIsland.unit * 0.43
+                    x: 2
+                    y: 0
+                    width: 7
+                    height: 6
                     color: "transparent"
                     border.color: trayIsland.zenCloud
                     border.width: 1
-                    radius: 1
                 }
                 Rectangle {
                     x: 0
-                    y: trayIsland.unit * 0.14
-                    width: trayIsland.unit * 0.5
-                    height: trayIsland.unit * 0.43
+                    y: 3
+                    width: 7
+                    height: 6
                     color: trayIsland.zenInk
                     border.color: trayIsland.zenCloud
                     border.width: 1
-                    radius: 1
                 }
             }
 
@@ -207,10 +291,10 @@ Rectangle {
                 visible: trayIsland.notificationCount > 0
                 anchors.top: parent.top
                 anchors.right: parent.right
-                anchors.topMargin: -trayIsland.unit * 0.12
-                anchors.rightMargin: -trayIsland.unit * 0.16
-                height: trayIsland.unit * 0.58
-                width: Math.max(height, notificationBadgeText.implicitWidth + trayIsland.unit * 0.28)
+                anchors.topMargin: -4
+                anchors.rightMargin: -5
+                height: 10
+                width: Math.max(height, notificationBadgeText.implicitWidth + 5)
                 radius: height / 2
                 color: trayIsland.zenDanger
                 border.color: trayIsland.zenInk
@@ -221,11 +305,19 @@ Rectangle {
                     anchors.centerIn: parent
                     text: trayIsland.notificationCount > 99 ? "99+" : String(trayIsland.notificationCount)
                     textFormat: Text.PlainText
-                    font.pixelSize: trayIsland.unit * 0.26
-                    font.bold: true
-                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 5
+                    font.weight: Font.DemiBold
+                    font.family: trayIsland.monoFont
                     color: trayIsland.zenSnow
                 }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -2
+                color: "transparent"
+                border.width: compositeEntry.activeFocus ? 1 : 0
+                border.color: trayIsland.zenCloud
             }
 
             MouseArea {
@@ -234,23 +326,28 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onEntered: compositeEntry.hovered = true
                 onExited: compositeEntry.hovered = false
-                onClicked: trayIsland.toggleRequested(trayIsland.expandedWidth)
+                onClicked: {
+                    compositeEntry.forceActiveFocus()
+                    trayIsland.toggleRequested(trayIsland.expandedWidth)
+                }
             }
         }
 
         Item {
             id: collapseButton
+
             property bool hovered: false
             visible: trayIsland.expanded
             width: visible ? trayIsland.itemWidth : 0
             height: trayIsland.itemWidth
             opacity: visible ? 1 : 0
+            activeFocusOnTab: visible
 
             Text {
                 anchors.centerIn: parent
                 text: "«"
-                font.pixelSize: trayIsland.unit * 0.45
-                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 8
+                font.family: trayIsland.monoFont
                 color: collapseButton.hovered ? trayIsland.zenSnow : trayIsland.zenCloud
             }
 
@@ -270,8 +367,8 @@ Rectangle {
                 && !trayIsland.expanded
             anchors.verticalCenter: parent.verticalCenter
             text: "···"
-            font.pixelSize: trayIsland.unit * 0.4
-            font.family: "JetBrainsMono Nerd Font"
+            font.pixelSize: 6
+            font.family: trayIsland.monoFont
             color: trayIsland.zenAsh
         }
     }

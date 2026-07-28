@@ -25,6 +25,8 @@ ShellRoot {
 
     NotificationHistoryStore {
         id: store
+        historyPathOverride: "/tmp/quickshell-notification-store-check-"
+            + Quickshell.processId + ".json"
 
         onHistoryLoaded: (entries, recovered, warning) => {
             testRoot.expectEqual(entries.length, 4, "bounded loaded entry count")

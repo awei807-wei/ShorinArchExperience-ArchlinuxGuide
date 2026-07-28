@@ -1,92 +1,235 @@
 pragma Singleton
 
-// 模块：Niri（Quickshell QML Singleton）
-// 功能：为“工作区指示/切换”提供 niri 工作区状态（activeIdx/workspaceCount）的单例数据源。
-// 关联功能：左侧工作区岛（LeftIsland）可以直接使用本单例（或直接调用 niri 命令，二者择一）。
-// 数据来源：
-// - 初始状态：`niri msg -j workspaces`（一次性拉取工作区列表与当前激活项）
-// - 增量更新：`niri msg --json event-stream`（持续输出 JSON 事件流）
-// 约束/注意：
-// - stdout 可能包含半截 JSON（流式输出），因此解析必须 try/catch。
-// - 本文件只维护“状态”，不直接发起 focus-workspace（由 UI 组件负责触发）。
-
-import Quickshell // Quickshell 根类型（Singleton）等基础能力
-import Quickshell.Io // Process/SplitParser：执行外部命令并解析输出
-import QtQuick // QML 基础类型（Component、信号、属性）
+import QtQuick
+import Quickshell
+import Quickshell.Io
 
 Singleton {
-    property int activeIdx: 1
-    property int workspaceCount: 5
-    
-    function updateWorkspaces(workspacesEvent) {
-        // 输入：workspacesEvent = event.WorkspacesChanged（来自 niri event-stream 的 JSON）
-        // 输出：无返回值；通过副作用更新 activeIdx/workspaceCount
-        // 副作用：写入本 Singleton 的属性（供 UI 绑定刷新）
+    id: niriState
 
-        const workspaceList = workspacesEvent.workspaces; // 取出工作区数组（元素包含 id/idx/is_active 等）
-        workspaceList.sort((a, b) => a.idx - b.idx); // 按 idx 升序排序，保证 UI 顺序稳定
-        workspaceCount = Math.max(workspaceList.length, 5); // 兜底至少显示 5 个工作区指示（避免 UI 过短）
-        
-        for (const ws of workspaceList) { // 遍历排序后的工作区列表
-            if (ws.is_active) { // 找到当前激活工作区
-                activeIdx = ws.idx; // 同步激活工作区的 idx（用于 UI 高亮）
-                break; // 找到后立刻退出循环（避免被后续覆盖）
-            }
+    readonly property bool testMode: {
+        const value = env("QUICKSHELL_TEST_MODE").toLowerCase()
+        return value === "1" || value === "true" || value === "yes"
+    }
+    readonly property bool enabled: {
+        const desktop = (env("XDG_CURRENT_DESKTOP") + " "
+            + env("XDG_SESSION_DESKTOP")).toLowerCase()
+        return !testMode && (env("NIRI_SOCKET") !== "" || desktop.indexOf("niri") !== -1)
+    }
+    property var workspaces: []
+    property bool ready: false
+    property string errorMessage: ""
+    property bool parseErrorLogged: false
+    property int reconnectAttempts: 0
+    property int pendingWorkspace: 0
+    property string pendingOutput: ""
+
+    readonly property string focusedOutput: {
+        for (let index = 0; index < workspaces.length; index += 1) {
+            const workspace = workspaces[index]
+            if (workspace.is_focused)
+                return workspace.output || ""
+        }
+        return ""
+    }
+
+    function env(name) {
+        const value = Quickshell.env(name)
+        return value === null || value === undefined ? "" : String(value)
+    }
+
+    function normalizeWorkspace(workspace) {
+        return {
+            "id": Number(workspace.id) || 0,
+            "idx": Number(workspace.idx) || 1,
+            "name": workspace.name || "",
+            "output": workspace.output || "",
+            "is_active": workspace.is_active === true,
+            "is_focused": workspace.is_focused === true,
+            "is_urgent": workspace.is_urgent === true,
+            "active_window_id": workspace.active_window_id || null
         }
     }
-    
-    function activateWorkspace(event) {
-        // 输入：event = event.WorkspaceActivated（来自 niri event-stream 的 JSON）
-        // 输出：无返回值；通过副作用更新 activeIdx
-        // 注意：该事件可能携带 idx；若未来只携带 id，可改用映射转换（见 LeftIsland 的 idToIdxMap 思路）。
 
-        activeIdx = event.idx; // 直接同步激活工作区 idx（用于 UI 高亮）
+    function applyWorkspaces(workspaceList) {
+        if (!Array.isArray(workspaceList)) {
+            errorMessage = "INVALID WORKSPACE DATA"
+            return
+        }
+
+        const normalized = workspaceList.map(normalizeWorkspace)
+        normalized.sort((left, right) => {
+            if (left.output === right.output)
+                return left.idx - right.idx
+            return left.output.localeCompare(right.output)
+        })
+        workspaces = normalized
+        ready = true
+        errorMessage = ""
+        reconnectAttempts = 0
     }
-    
+
+    function workspaceForOutput(outputName) {
+        let focusedWorkspace = null
+        let firstActiveWorkspace = null
+
+        for (let index = 0; index < workspaces.length; index += 1) {
+            const workspace = workspaces[index]
+            if (workspace.is_focused)
+                focusedWorkspace = workspace
+            if (workspace.is_active && firstActiveWorkspace === null)
+                firstActiveWorkspace = workspace
+            if (outputName !== "" && workspace.output === outputName && workspace.is_active)
+                return workspace
+        }
+
+        return focusedWorkspace || firstActiveWorkspace
+    }
+
+    function occupiedIndexes(outputName) {
+        const indexes = []
+        for (let index = 0; index < workspaces.length; index += 1) {
+            const workspace = workspaces[index]
+            if (outputName !== "" && workspace.output !== outputName)
+                continue
+            if (workspace.active_window_id !== null && indexes.indexOf(workspace.idx) === -1)
+                indexes.push(workspace.idx)
+        }
+        return indexes
+    }
+
+    function refresh() {
+        if (enabled && !initialQuery.running)
+            initialQuery.running = true
+    }
+
+    function handleEvent(event) {
+        if (event.WorkspacesChanged) {
+            applyWorkspaces(event.WorkspacesChanged.workspaces)
+            return
+        }
+
+        if (event.WorkspaceActivated || event.WindowFocusChanged)
+            refreshDebounce.restart()
+    }
+
+    function startEventStream() {
+        if (enabled && !eventStream.running)
+            eventStream.running = true
+    }
+
+    function focusWorkspace(workspaceIndex, outputName) {
+        if (!enabled || workspaceIndex < 1)
+            return
+
+        pendingWorkspace = workspaceIndex
+        pendingOutput = outputName || ""
+
+        if (pendingOutput !== "" && pendingOutput !== focusedOutput) {
+            if (!focusMonitorProcess.running) {
+                focusMonitorProcess.command = ["niri", "msg", "action", "focus-monitor", pendingOutput]
+                focusMonitorProcess.running = true
+            }
+            return
+        }
+
+        runPendingWorkspaceFocus()
+    }
+
+    function runPendingWorkspaceFocus() {
+        if (focusWorkspaceProcess.running || pendingWorkspace < 1)
+            return
+
+        const workspaceIndex = pendingWorkspace
+        pendingWorkspace = 0
+        focusWorkspaceProcess.command = [
+            "niri", "msg", "action", "focus-workspace", String(workspaceIndex)
+        ]
+        focusWorkspaceProcess.running = true
+    }
+
+    Component.onCompleted: {
+        if (enabled) {
+            refresh()
+            startEventStream()
+        }
+    }
+
     Process {
-        id: niriEvents
-        running: true
-        command: ["niri", "msg", "--json", "event-stream"]
-        
+        id: initialQuery
+        command: ["niri", "msg", "-j", "workspaces"]
+        onExited: {
+            if (!niriState.ready && niriState.errorMessage === "")
+                niriState.errorMessage = "NIRI OFFLINE"
+        }
         stdout: SplitParser {
             onRead: data => {
                 try {
-                    const event = JSON.parse(data.trim()); // 尝试把当前分片解析为 JSON 事件对象
-                    if (event.WorkspacesChanged) { // 工作区列表/状态发生变化
-                        updateWorkspaces(event.WorkspacesChanged); // 更新列表长度与当前激活工作区
+                    niriState.applyWorkspaces(JSON.parse(data))
+                } catch (error) {
+                    niriState.errorMessage = "NIRI DATA ERROR"
+                    if (!niriState.parseErrorLogged) {
+                        niriState.parseErrorLogged = true
+                        console.warn("[Niri] invalid workspace payload: " + error)
                     }
-                    else if (event.WorkspaceActivated) { // 仅工作区激活项发生变化
-                        activateWorkspace(event.WorkspaceActivated); // 更新激活工作区 idx
-                    } // 其他事件忽略（本单例只关心工作区相关）
-                } catch (e) {
-                    // 忽略解析错误（常见原因：流式输出导致收到半截 JSON）
                 }
             }
         }
     }
-    
-    // 初始查询
-    Component.onCompleted: {
-        initQuery.running = true; // 启动一次性查询：拉取当前工作区列表与激活项
-    }
-    
+
     Process {
-        id: initQuery
-        command: ["niri", "msg", "-j", "workspaces"]
+        id: eventStream
+        command: ["niri", "msg", "--json", "event-stream"]
+        onExited: {
+            if (!niriState.enabled)
+                return
+            niriState.errorMessage = "NIRI RECONNECTING"
+            niriState.reconnectAttempts += 1
+            reconnectTimer.restart()
+        }
         stdout: SplitParser {
             onRead: data => {
                 try {
-                    const list = JSON.parse(data); // 解析一次性查询输出：工作区数组
-                    list.sort((a, b) => a.idx - b.idx); // 按 idx 升序排序，保证 UI 顺序稳定
-                    workspaceCount = Math.max(list.length, 5); // 兜底至少显示 5 个工作区指示
-                    for (const ws of list) { // 遍历以找到当前激活项
-                        if (ws.is_active) { // niri 标记的激活工作区
-                            activeIdx = ws.idx; // 同步激活 idx
-                            break; // 找到后退出
-                        }
-                    } // 若未找到激活项，则保留默认值 activeIdx=1
-                } catch(e) {}
+                    niriState.handleEvent(JSON.parse(data.trim()))
+                } catch (error) {
+                    if (!niriState.parseErrorLogged) {
+                        niriState.parseErrorLogged = true
+                        console.warn("[Niri] invalid event payload: " + error)
+                    }
+                }
             }
+        }
+    }
+
+    Timer {
+        id: reconnectTimer
+        interval: Math.min(10000, 1000 * Math.pow(2, Math.min(niriState.reconnectAttempts, 3)))
+        repeat: false
+        onTriggered: {
+            niriState.refresh()
+            niriState.startEventStream()
+        }
+    }
+
+    Timer {
+        id: refreshDebounce
+        interval: 45
+        repeat: false
+        onTriggered: niriState.refresh()
+    }
+
+    Process {
+        id: focusMonitorProcess
+        command: ["niri", "msg", "action", "focus-monitor", ""]
+        onExited: niriState.runPendingWorkspaceFocus()
+    }
+
+    Process {
+        id: focusWorkspaceProcess
+        command: ["niri", "msg", "action", "focus-workspace", "1"]
+        onExited: {
+            if (niriState.pendingWorkspace > 0)
+                niriState.runPendingWorkspaceFocus()
         }
     }
 }

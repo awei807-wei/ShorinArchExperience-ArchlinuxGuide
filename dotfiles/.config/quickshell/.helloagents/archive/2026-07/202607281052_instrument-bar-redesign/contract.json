@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "Quickshell 运行时加载与 QML 绑定错误",
+    "2048、1280、1024、800 宽度的响应式碰撞与隐藏顺序",
+    "niri、天气、Cava 与系统指标在多屏下只启动一套采集",
+    "Tray 复合入口、通知历史计数与菜单行为回归",
+    "实际 niri 顶栏截图与 preview.html 设计契约一致性"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202607281052_instrument-bar-redesign/plan.md",
+      ".helloagents/DESIGN.md",
+      "hello-ui"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "用户规格与 preview.html 已明确视觉方向，且已完成独立只读视觉规范提取。",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "本次是跨多个组件的顶栏视觉重做，需要真实桌面截图验证尺寸、层级、碰撞和可读性。",
+      "screens": [
+        "2048px 宽屏全量状态",
+        "1280px 隐藏天气状态",
+        "1024px 托盘压缩状态",
+        "800px 紧凑指标状态",
+        "当前 niri 实际屏幕"
+      ],
+      "states": [
+        "niri workspace active/occupied/empty",
+        "天气成功或降级",
+        "Cava active/idle",
+        "Tray 无项/直显/溢出/通知计数",
+        "Power hover"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "已通过两个独立只读子任务完成架构与视觉复查。",
+    "focus": [],
+    "preferredSources": []
+  }
+}

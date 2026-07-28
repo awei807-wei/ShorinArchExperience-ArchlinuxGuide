@@ -8,6 +8,7 @@ Item {
 
     property int historyCount: 0
     property int maxPendingAppends: 200
+    property string historyPathOverride: ""
     property string errorMessage: ""
     property string warningMessage: ""
     readonly property bool busy: historyProcess.running || operationQueue.length > 0
@@ -70,11 +71,14 @@ Item {
         const pending = operationQueue.slice()
         activeOperation = pending.shift()
         operationQueue = pending
-        historyProcess.command = [
+        const command = [
             "python3",
             Quickshell.shellPath("scripts/notification-history.py"),
             activeOperation.operation
         ]
+        historyProcess.command = historyPathOverride === ""
+            ? command
+            : ["env", "QUICKSHELL_NOTIFICATION_HISTORY_PATH=" + historyPathOverride].concat(command)
         historyProcess.running = true
     }
 
