@@ -7,11 +7,11 @@
 // - 系统状态采集与控制（通过 Quickshell.Io.Process 执行外部命令）
 // - 媒体状态读取与控制（通过 Quickshell.Services.Mpris）
 // - 动态配色热更新（监听 matugen 生成的 colors.json）
-// - 创建顶栏窗口（Bar）与两个弹出面板窗口（中心面板/系统面板）
+// - 创建顶栏窗口（Bar）、通知面板与右侧控制中心
 // 关联功能：
 // - Bar.qml：顶栏容器（组合 ContextIsland/ClockIsland/SystemIsland）
-// - ClockIsland：用于时间显示与轻量音量反馈（通过 centerIslandRef 兼容既有联动）
-// - 面板窗口：中心面板使用 components/CenterPanel；系统面板仍在本文件内“内联”构建（待抽离）
+// - ClockIsland：用于时间显示与轻量音量反馈（通过 centerIslandRef 联动）
+// - 右侧控制中心：使用 components/ImportedControlCenterPanel
 // 注意：
 // - 外部命令执行依赖系统工具：nmcli/bluetoothctl/wpctl/brightnessctl/pactl/playerctl 等。
 // - 为降低开销，音量采用“事件驱动（pactl subscribe）+ 去抖”，亮度采用“低频轮询兜底”。
@@ -53,41 +53,16 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     readonly property real rightIslandOffsetX: Config.BarTuning.rightIslandOffsetX
 
     // ═══════════════════════════════════════════════════════
-    // 🔤 L2 · 字体与图标
-    // ═══════════════════════════════════════════════════════
-    readonly property real fontPrimary: baseUnit * 0.9        // 主字体（时间等）
-    readonly property real fontSecondary: baseUnit * 0.7      // 次要字体（标签等）
-    readonly property real fontTiny: baseUnit * 0.5           // 最小字体
-    readonly property real fontSection: baseUnit * 0.28       // 分区标题字体
-    readonly property real iconSize: baseUnit * 1.2           // 图标尺寸
-    readonly property real iconSizeSmall: baseUnit * 0.8      // 小图标尺寸
-
-    // ═══════════════════════════════════════════════════════
     // 📦 L3 · 子面板
     // ═══════════════════════════════════════════════════════
-    readonly property real panelWidth: baseUnit * 30          // 面板宽度
-    readonly property real panelPadding: baseUnit * 1       // 面板内边距
-    readonly property real panelRadius: baseUnit * 0.15       // 面板圆角
-    readonly property real panelGap: baseUnit * 0.15          // 面板内元素间距
     readonly property real panelOffsetY: baseUnit * 2.4       // 面板 Y 偏移（面板从顶栏向下的距离）
-    readonly property real panelLabelWidth: baseUnit * 5      // 面板标签宽度
-    readonly property real panelRowHeight: baseUnit * 0.9     // 面板行高（每一行数据/滑条的基准高度）
-    readonly property real panelSectionGap: baseUnit * 1.2      // 面板分区间距（盒子之间的距离）
-    readonly property real panelRowGap: baseUnit * 0.35         // 面板行间距（盒子内部相邻行的垂直间隔）
     readonly property real notificationPopupWidth: baseUnit * 18 // 临时通知浮窗宽度
     readonly property int notificationMaxVisible: 4              // 临时通知最多同时显示条数
 
     // ═══════════════════════════════════════════════════════
-    // 🎚️ L4 · 滑块/进度条
-    // ═══════════════════════════════════════════════════════
-    readonly property real sliderHeight: 3                    // 滑块高度
-    readonly property real sliderHitArea: 10                // 滑块点击热区扩展（像素；便于小尺寸下操作）
-    // ═══════════════════════════════════════════════════════
     // 🎬 L5 · 动画配置
     // ═══════════════════════════════════════════════════════
     readonly property int animSpeedNormal: 200              // 常规动画时长（ms）
-    readonly property int animSpeedFast: 150                // 快速动画时长（ms）
-    readonly property var animEasing: Easing.OutQuad        // 统一缓动曲线（保持动画风格一致）
 
     // ═══════════════════════════════════════════════════════
     // 🎨 Cyber-Zen 配色 (带动态兜底逻辑)
@@ -108,22 +83,41 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 📊 系统状态数据
     // ═══════════════════════════════════════════════════════
     property bool systemPanelVisible: false                 // 系统面板是否可见（用于 window.visible 绑定）
-    property bool centerPanelVisible: false                 // 中心面板是否可见（用于 window.visible 绑定）
-    property bool centerPanelClosing: false                 // 中心面板“关闭动画期间”的占位可见（避免点击后立刻消失造成事件/动画问题）
     property bool systemPanelClosing: false                 // 系统面板“关闭动画期间”的占位可见
     property bool trayPanelVisible: false                  // 托盘横向展开与通知历史面板统一开关
     property real trayPanelWidth: notificationPopupWidth   // 顶部展开条与下方通知面板共享宽度
     property bool colorParseErrorLogged: false             // 动态配色解析错误只记录一次
     // 提供给子组件的显式引用（避免组件内出现 undefined / 自引用绑定）
-    property alias centerPanelCloseTimer: centerPanelCloseTimer
     property alias systemPanelCloseTimer: systemPanelCloseTimer
     property string netSSID: "loading..."                   // 网络 SSID（由 nmcli 采集）
     property string netInterface: "wlo1"                    // 网络接口名（展示用/占位；当前不随命令自动更新）
+    property string networkType: "disconnected"             // ethernet / wifi / disconnected
+    property string networkDevice: ""                       // 当前活动网络设备名
+    property bool wifiAvailable: false                       // 系统是否存在 Wi-Fi 设备
+    property bool wifiEnabled: true                          // Wi-Fi 射频状态（控制中心开关）
+    property bool bluetoothAvailable: false                  // 系统是否存在可用蓝牙控制器
     property string btStatus: "OFF"                         // 蓝牙电源状态（ON/OFF；由 bluetoothctl 采集）
-    property int volumePercent: 70                          // 音量百分比（0-100；由 wpctl 采集并截断）
+    property real volumePercent: 70                         // 音量百分比（保留小数以支持连续拖动）
+    property bool volumeMuted: false                        // 默认输出设备静音状态
     property int brightnessPercent: 50                      // 亮度百分比（0-100；由 brightnessctl 采集）
     property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
     property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
+    readonly property var notificationGroups: {
+        const groups = []
+        const byApp = ({})
+        configRoot.activeNotifications.forEach(notice => {
+            const appName = configRoot.cleanNotificationText(notice.appName || "Notification")
+            const key = appName.toLowerCase()
+            if (byApp[key] === undefined) {
+                byApp[key] = groups.length
+                groups.push({ "appName": appName, "notifications": [], "critical": false })
+            }
+            const group = groups[byApp[key]]
+            group.notifications.push(notice)
+            group.critical = group.critical || notice.urgency === NotificationUrgency.Critical
+        })
+        return groups
+    }
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
     property var lastActivePlayer: null                     // 上一次“正在播放”的播放器（用于在暂停时保持来源稳定）
     readonly property var mprisPlayer: {
@@ -298,7 +292,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         keepOnReload: false // 只验证新进入的通知，避免 reload 后重复处理旧通知
         bodySupported: true // 告诉客户端可以传递正文
         bodyMarkupSupported: false // 当前只做接收验证，先不声明支持富文本渲染
-        actionsSupported: false // 当前未做按钮 UI，先不声明支持交互动作
+        actionsSupported: true // 分组通知展开后提供原生通知操作按钮
         imageSupported: false // 当前未做图片展示，先不声明支持图片能力
         inlineReplySupported: false // 当前未做行内回复
 
@@ -338,63 +332,105 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
-    property string gpuInfo: "loading..."                    // GPU 信息（由 lspci 采集）
     property string nvmeUsage: "0%"                          // 根分区占用百分比（由 df 采集）
-    property string loadAvg: "0.00"                          // 1 分钟 load average（由 /proc/loadavg 采集）
-    property int processCount: 0                             // 进程数量（由 ps 采集）
-    property real memTotal: 32.0                             // 总内存（GB；由 free -g 采集）
-    property real memUsed: 0.0                               // 已用内存（GB；由 free -g 采集）
-    property string kernelVer: "loading..."                  // 内核版本（uname -r）
-    property string cpuModel: "loading..."                   // CPU 型号（从 /proc/cpuinfo 抽取一次）
-    property string uptime: "0h"                             // uptime 简化文本（uptime -p）
 
     // 时钟岛音量反馈代理
     property var centerIslandRef: null                       // Bar/ClockIsland 实例引用（兼容音量反馈联动）
     property int lastVolume: 70                              // 上一次音量（用于需要差分逻辑时复用；当前主要用于调试/保留）
-    property int rawVolumePercent: 70                        // 原始音量百分比（未截断；用于排查 >100% 情况）
+    property real rawVolumePercent: 70                       // 原始音量百分比（未截断；用于排查 >100% 情况）
+    property real requestedVolumePercent: 70                 // 滑块最新请求值
+    property real appliedVolumePercent: 70                   // 最近一次已提交给 wpctl 的值
 
-    function refreshPanelData() {
+    function refreshControlData() {
         // 输入：无
         // 输出：无返回值
-        // 副作用：触发“中心面板”所需数据刷新（网络/蓝牙/亮度）
-        // 触发来源：中心面板展开时（onCenterClicked / autoRefreshTimer）
+        // 副作用：刷新右侧控制中心使用的网络、蓝牙和亮度状态
+        // 触发来源：控制中心打开或执行控制操作后
 
         netProc.running = true // 刷新网络连接信息（SSID）
+        wifiStatusProc.running = true // 刷新 Wi-Fi 射频状态
         btProc.running = true // 刷新蓝牙电源状态
-        // 音量已完全移交给事件驱动（pactl subscribe + volProc），中心面板不再主动轮询音量
+        // 音量已完全移交给事件驱动（pactl subscribe + volProc），无需主动轮询
         briProc.running = true // 刷新亮度信息（亮度仍使用低频轮询兜底）
+    }
+
+    function applyNetworkState(rawText) {
+        const lines = String(rawText || "").trim().split("\n").filter(line => line.length > 0)
+        let wifiFound = false
+        let chosenType = "disconnected"
+        let chosenDevice = ""
+        let chosenName = "Disconnected"
+
+        for (const line of lines) {
+            const parts = line.split(":")
+            const device = parts[0] || ""
+            const type = parts[1] || ""
+            const state = parts[2] || ""
+            const connection = parts.slice(3).join(":").replace(/\\:/g, ":")
+
+            if (type === "wifi")
+                wifiFound = true
+            if (state !== "connected")
+                continue
+
+            if (type === "ethernet") {
+                chosenType = "ethernet"
+                chosenDevice = device
+                chosenName = connection || device || "Ethernet"
+            } else if (type === "wifi" && chosenType !== "ethernet") {
+                chosenType = "wifi"
+                chosenDevice = device
+                chosenName = connection || device || "Wi-Fi"
+            }
+        }
+
+        configRoot.wifiAvailable = wifiFound
+        configRoot.networkType = chosenType
+        configRoot.networkDevice = chosenDevice
+        configRoot.netInterface = chosenDevice || configRoot.netInterface
+        configRoot.netSSID = chosenName
+        console.log("[Network] type=" + chosenType + " device=" + chosenDevice
+                    + " wifiAvailable=" + wifiFound + " name=" + chosenName)
     }
 
     // Data Processes（中心面板/顶栏所需的“即时状态”采集）
     Process {
         id: netProc
         running: true // 启动时就采集一次网络连接信息（避免面板首次展开仍是 loading）
-        command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"] // 输出格式：NAME:TYPE（逐行）
+        command: ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"]
+        stdout: StdioCollector { id: netStateOutput; waitForEnd: true }
+        onExited: configRoot.applyNetworkState(netStateOutput.text)
+    }
+    Process {
+        id: wifiStatusProc
+        running: true
+        command: ["nmcli", "radio", "wifi"]
         stdout: SplitParser {
-            onRead: data => {
-                let parts = data.split(":") // 拆分为 [NAME, TYPE]
-                // 逻辑：优先显示 Wi-Fi SSID，如果有线连接存在且当前没有 Wi-Fi，则显示有线名称
-                if (parts[1] === "802-11-wireless") {
-                    configRoot.netSSID = parts[0] || "Disconnected"
-                } else if (parts[1] === "802-3-ethernet" && (configRoot.netSSID === "loading..." || configRoot.netSSID === "Disconnected")) {
-                    configRoot.netSSID = parts[0] || "Wired"
-                }
-            }
+            onRead: data => configRoot.wifiEnabled = data.trim() === "enabled"
         }
     }
     Process {
         id: btProc
-        command: ["sh", "-c", "bluetoothctl show | grep -q 'Powered: yes' && echo 'ON' || echo 'OFF'"] // 判断蓝牙电源是否开启
-        stdout: SplitParser { onRead: data => configRoot.btStatus = data.trim() } // 写回 ON/OFF（驱动 UI）
+        command: ["bluetoothctl", "show"]
+        stdout: StdioCollector { id: bluetoothStateOutput; waitForEnd: true }
+        onExited: (exitCode, exitStatus) => {
+            const output = String(bluetoothStateOutput.text || "")
+            configRoot.bluetoothAvailable = exitCode === 0 && output.includes("Controller ")
+            configRoot.btStatus = configRoot.bluetoothAvailable && output.includes("Powered: yes") ? "ON" : "OFF"
+            console.log("[Bluetooth] available=" + configRoot.bluetoothAvailable
+                        + " powered=" + (configRoot.btStatus === "ON"))
+        }
     }
     Process {
         id: volProc
-        command: ["sh", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2*100)}'"] // 把 0.0~1.0 映射到 0~100
+        command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
         stdout: SplitParser {
             onRead: data => {
-                let raw = parseInt(data) || 0 // 解析音量百分比（可能因解析失败得到 NaN，因此兜底 0）
+                const match = data.match(/Volume:\s+([0-9.]+)/)
+                let raw = match ? parseFloat(match[1]) * 100 : 0
                 configRoot.rawVolumePercent = raw // 记录原始值（便于排查 >100% 的情况）
                 configRoot.volumePercent = Math.min(raw, 100) // 对外展示统一截断到 0~100（UI 不显示 >100%）
+                configRoot.volumeMuted = data.includes("[MUTED]")
             }
         }
     }
@@ -406,8 +442,57 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 媒体数据已通过 MPRIS 服务自动同步，无需轮询
 
     // Control Processes
-    Process { id: volSetProc; command: ["echo"] } // 占位：设置音量时动态替换为 wpctl set-volume
+    Process {
+        id: volSetProc
+        command: ["echo"]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.warn("[Audio] wpctl set-volume failed, exit=" + exitCode)
+            volProc.running = true
+            if (Math.abs(configRoot.requestedVolumePercent - configRoot.appliedVolumePercent) > 0.05)
+                volumeSetTimer.restart()
+        }
+    }
     Process { id: briSetProc; command: ["echo"] } // 占位：设置亮度时动态替换为 brightnessctl set
+    Process {
+        id: wifiToggleProc
+        command: ["echo"]
+        onExited: {
+            wifiStatusProc.running = true
+            netProc.running = true
+        }
+    }
+    Process {
+        id: bluetoothToggleProc
+        command: ["echo"]
+        onExited: btProc.running = true
+    }
+    Process {
+        id: muteToggleProc
+        command: ["echo"]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                console.warn("[Audio] wpctl set-mute failed, exit=" + exitCode)
+            volProc.running = true
+        }
+    }
+    Timer {
+        id: volumeSetTimer
+        interval: 35
+        repeat: false
+        onTriggered: {
+            if (volSetProc.running) {
+                restart()
+                return
+            }
+            configRoot.appliedVolumePercent = configRoot.requestedVolumePercent
+            volSetProc.command = [
+                "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
+                (configRoot.appliedVolumePercent / 100).toFixed(3)
+            ]
+            volSetProc.running = true
+        }
+    }
     Process {
         id: idleBootstrapProc
         running: true // 启动主壳时统一接管 swayidle，确保 30/40/60 策略与状态文件生效
@@ -424,10 +509,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // - 调用 wpctl 设置默认输出设备音量
         // - 立即更新 volumePercent（让 UI 即时响应；真实值随后会被 volProc 校正）
 
-        let vol = (pct / 100).toFixed(2)
-        volSetProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", vol]
-        volSetProc.running = true
-        configRoot.volumePercent = pct
+        const value = Math.max(0, Math.min(100, Number(pct) || 0))
+        configRoot.requestedVolumePercent = value
+        configRoot.volumePercent = value
+        volumeSetTimer.restart()
     }
     function setBrightness(pct) {
         // 输入：pct（0~100 的整数百分比）
@@ -440,14 +525,33 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         briSetProc.running = true
         configRoot.brightnessPercent = pct
     }
-
-
-    // System Panel Processes（系统面板展示用状态采集）
-    Process {
-        id: gpuProc
-        command: ["sh", "-c", "lspci | grep -i vga | sed 's/.*: //;s/Corporation //;s/\\[.*\\]//' | head -1 | xargs"]
-        stdout: SplitParser { onRead: data => configRoot.gpuInfo = data.trim() || "Unknown" }
+    function toggleMute() {
+        muteToggleProc.command = ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]
+        muteToggleProc.running = true
+        configRoot.volumeMuted = !configRoot.volumeMuted
+        volDebounceTimer.restart()
     }
+    function toggleWifi() {
+        if (!configRoot.wifiAvailable || configRoot.networkType === "ethernet")
+            return
+        const enable = !configRoot.wifiEnabled
+        wifiToggleProc.command = ["nmcli", "radio", "wifi", enable ? "on" : "off"]
+        wifiToggleProc.running = true
+        configRoot.wifiEnabled = enable
+        if (!enable)
+            configRoot.netSSID = "Wi-Fi off"
+    }
+    function toggleBluetooth() {
+        if (!configRoot.bluetoothAvailable)
+            return
+        const enable = configRoot.btStatus !== "ON"
+        bluetoothToggleProc.command = ["bluetoothctl", "power", enable ? "on" : "off"]
+        bluetoothToggleProc.running = true
+        configRoot.btStatus = enable ? "ON" : "OFF"
+    }
+
+
+    // 右侧控制中心磁盘占用采集
     Process {
         id: nvmeProc
         command: ["df", "-h", "/"]
@@ -458,63 +562,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             }
         }}
     }
-    Process {
-        id: loadProc
-        command: ["sh", "-c", "cat /proc/loadavg | cut -d' ' -f1"] // 取 1 分钟 load average
-        stdout: SplitParser { onRead: data => configRoot.loadAvg = data.trim() || "0.00" } // 写回 load average
-    }
-    Process {
-        id: procCountProc
-        command: ["sh", "-c", "ps aux | wc -l"] // 粗略统计进程行数（包含表头；用于“趋势”而非精确值）
-        stdout: SplitParser { onRead: data => configRoot.processCount = parseInt(data) || 0 } // 写回进程数量
-    }
-    Process {
-        id: memTotalProc
-        command: ["sh", "-c", "free -g | awk 'NR==2 {print $2}'"] // 取总内存（GB）
-        stdout: SplitParser { onRead: data => configRoot.memTotal = parseFloat(data) || 32 } // 写回总内存（解析失败回退 32）
-    }
-    Process {
-        id: memUsedProc
-        command: ["sh", "-c", "free -g | awk 'NR==2 {print $3}'"] // 取已用内存（GB）
-        stdout: SplitParser { onRead: data => configRoot.memUsed = parseFloat(data) || 0 } // 写回已用内存
-    }
-    Process {
-        id: kernelProc
-        command: ["sh", "-c", "uname -r"] // 读取内核版本
-        stdout: SplitParser { onRead: data => configRoot.kernelVer = data.trim() } // 写回内核版本字符串
-    }
-    Process {
-        id: cpuModelProc
-        command: ["cat", "/proc/cpuinfo"] // 读取 CPU 信息（多行；SplitParser 会逐行回调）
-        stdout: SplitParser { 
-            onRead: data => {
-                if (data.includes("model name") && configRoot.cpuModel === "loading...") { // 仅在首次命中时写入（避免重复覆盖）
-                    configRoot.cpuModel = data.split(":")[1].trim() // 提取冒号后面的型号字符串
-                }
-            }
-        }
-    }
-    Process {
-        id: uptimeProc
-        command: ["sh", "-c", "uptime -p | sed 's/up //' | cut -d, -f1"] // 取简化 uptime（只保留第一段，如 2 hours）
-        stdout: SplitParser { onRead: data => configRoot.uptime = data.trim() } // 写回 uptime 字符串
-    }
-
-    function refreshSystemData() {
-        // 输入：无
-        // 输出：无返回值
-        // 副作用：触发“系统面板”所需数据刷新（GPU/存储/负载/进程/内存/系统信息）
-        // 触发来源：系统面板展开时（onSystemClicked / autoRefreshTimer / Component.onCompleted）
-
-        gpuProc.running = true // 刷新 GPU 信息
-        nvmeProc.running = true // 刷新根分区占用
-        loadProc.running = true // 刷新 load average
-        procCountProc.running = true // 刷新进程数量
-        memTotalProc.running = true // 刷新总内存
-        memUsedProc.running = true // 刷新已用内存
-        kernelProc.running = true // 刷新内核版本
-        cpuModelProc.running = true // 刷新 CPU 型号（首次写入后开销很低）
-        uptimeProc.running = true // 刷新 uptime
+    function refreshDiskData() {
+        nvmeProc.running = true
     }
 
     // 🎨 动态配色加载引擎
@@ -601,12 +650,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         onTriggered: briProc.running = true // 触发一次亮度采集（brightnessctl）
     }
 
-    // 面板关闭计时器（修复鼠标锁定 Bug）
-    Timer {
-        id: centerPanelCloseTimer // 中心面板关闭“缓冲期”定时器（配合 opacity 动画）
-        interval: configRoot.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志（多给 50ms 保险）
-        onTriggered: configRoot.centerPanelClosing = false // 关闭缓冲期结束：允许 window 彻底不可见
-    }
+    // 右侧控制中心关闭计时器
     Timer {
         id: systemPanelCloseTimer // 系统面板关闭“缓冲期”定时器
         interval: configRoot.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志
@@ -622,22 +666,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
-    // 面板自动刷新（展开时每 1s 刷新数据，降低性能消耗）
-    Timer {
-        id: autoRefreshTimer
-        interval: 1000 // 刷新周期（ms）：面板展开时每秒刷新一次
-        running: configRoot.centerPanelVisible || configRoot.systemPanelVisible // 仅在任一面板可见时运行（降低后台开销）
-        repeat: true // 周期性触发
-        onTriggered: {
-            if (configRoot.centerPanelVisible) { // 中心面板展开时才刷新其数据
-                configRoot.refreshPanelData() // 刷新网络/蓝牙/亮度等
-            }
-            if (configRoot.systemPanelVisible) configRoot.refreshSystemData() // 系统面板展开时刷新系统信息
-        }
-        Component.onCompleted: {
-            configRoot.refreshSystemData() // 启动后主动采集一次系统信息（避免首次打开系统面板仍是 loading）
-            volProc.running = true // 启动后同步一次音量（让中岛反馈与面板默认值一致）
-        }
+    Component.onCompleted: {
+        configRoot.refreshControlData()
+        configRoot.refreshDiskData()
+        volProc.running = true
     }
 
 
@@ -706,17 +738,14 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
-                    onCenterClicked: {
-                        console.log("[shell] centerClicked, toggling panel") // 调试日志：记录点击
-                        configRoot.trayPanelVisible = false
-                        configRoot.centerPanelVisible = !configRoot.centerPanelVisible // 切换中心面板可见性
-                        if (configRoot.centerPanelVisible) configRoot.refreshPanelData() // 打开时立刻刷新数据（避免陈旧）
-                    }
                     onSystemClicked: {
                         console.log("[shell] systemClicked, toggling system panel") // 调试日志：记录点击
                         configRoot.trayPanelVisible = false
                         configRoot.systemPanelVisible = !configRoot.systemPanelVisible // 切换系统面板可见性
-                        if (configRoot.systemPanelVisible) configRoot.refreshSystemData() // 打开时立刻刷新数据
+                        if (configRoot.systemPanelVisible) {
+                            configRoot.refreshControlData()
+                            configRoot.refreshDiskData()
+                        }
                     }
                     onTrayPanelToggleRequested: panelWidth => {
                         const opening = !configRoot.trayPanelVisible
@@ -724,7 +753,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                             configRoot.notificationPopupWidth,
                             panelWidth
                         )
-                        configRoot.centerPanelVisible = false
                         configRoot.systemPanelVisible = false
                         configRoot.trayPanelVisible = opening
                     }
@@ -781,163 +809,22 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     spacing: configRoot.baseUnit * 0.35
 
                     Repeater {
-                        model: notificationServer.trackedNotifications
+                        model: configRoot.notificationGroups
 
-                        Rectangle {
+                        NotificationPopupGroup {
                             id: notificationCard
-                            property var notice: modelData
-                            property bool active: configRoot.notificationIsActive(notificationCard.notice)
-                            property bool opened: false
-                            property bool closing: false
-                            property string closeReason: "expire"
-                            property real slideOffset: notificationCard.width
-
-                            function playOpenOnce() {
-                                if (!notificationCard.active || notificationCard.opened) return
-                                notificationCard.opened = true
-                                notificationSurface.x = notificationCard.width
-                                notificationSurface.opacity = 0
-                                openAnimation.start()
-                            }
-
-                            function closeWithAnimation(reason) {
-                                if (notificationCard.closing) return
-                                notificationCard.closeReason = reason
-                                notificationCard.closing = true
-                                openAnimation.stop()
-                                notificationSurface.x = 0
-                                notificationSurface.opacity = 1
-                                closeAnimation.start()
-                            }
-
+                            required property var modelData
                             width: notificationColumn.width
-                            height: (notificationCard.active || notificationCard.closing) ? Math.max(configRoot.baseUnit * 3.4, notificationContent.implicitHeight + configRoot.baseUnit * 1.1) : 0
-                            visible: notificationCard.active || notificationCard.closing
-                            color: "transparent"
-                            clip: true
-
-                            Component.onCompleted: notificationCard.playOpenOnce()
-                            onActiveChanged: notificationCard.playOpenOnce()
-
-                            ParallelAnimation {
-                                id: openAnimation
-                                NumberAnimation {
-                                    target: notificationSurface
-                                    property: "x"
-                                    from: notificationCard.width
-                                    to: 0
-                                    duration: 580
-                                    easing.type: Easing.OutCubic
-                                }
-                                NumberAnimation {
-                                    target: notificationSurface
-                                    property: "opacity"
-                                    from: 0
-                                    to: 1
-                                    duration: 480
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-
-                            ParallelAnimation {
-                                id: closeAnimation
-                                NumberAnimation {
-                                    target: notificationSurface
-                                    property: "x"
-                                    from: 0
-                                    to: notificationCard.width
-                                    duration: 420
-                                    easing.type: Easing.InOutCubic
-                                }
-                                NumberAnimation {
-                                    target: notificationSurface
-                                    property: "opacity"
-                                    from: 1
-                                    to: 0
-                                    duration: 320
-                                    easing.type: Easing.InQuad
-                                }
-                                onFinished: {
-                                    if (notificationCard.closeReason === "dismiss") {
-                                        notificationCard.notice.dismiss()
-                                    } else {
-                                        notificationCard.notice.expire()
-                                    }
-                                }
-                            }
-
-                            Timer {
-                                interval: 6000
-                                running: notificationCard.active && notificationCard.notice.urgency !== NotificationUrgency.Critical && !notificationCard.closing
-                                repeat: false
-                                onTriggered: notificationCard.closeWithAnimation("expire")
-                            }
-
-                            Rectangle {
-                                id: notificationSurface
-                                x: notificationCard.width
-                                width: notificationCard.width
-                                height: notificationCard.height
-                                color: cardMouse.containsMouse ? configRoot.zenStone : configRoot.zenInk
-                                border.color: notificationCard.notice.urgency === NotificationUrgency.Critical ? "#b85c5c" : configRoot.zenMist
-                                border.width: 1
-                                radius: 2
-
-                                Column {
-                                    id: notificationContent
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.leftMargin: configRoot.baseUnit * 0.65
-                                    anchors.rightMargin: configRoot.baseUnit * 0.65
-                                    spacing: configRoot.baseUnit * 0.18
-
-                                    Text {
-                                        width: parent.width
-                                        text: configRoot.cleanNotificationText(notificationCard.notice.appName || "Notification")
-                                        textFormat: Text.PlainText
-                                        elide: Text.ElideRight
-                                        font.pixelSize: configRoot.baseUnit * 0.42
-                                        font.family: "JetBrainsMono Nerd Font"
-                                        color: configRoot.zenCloud
-                                    }
-
-                                    Text {
-                                        width: parent.width
-                                        text: configRoot.cleanNotificationText(notificationCard.notice.summary || "")
-                                        textFormat: Text.PlainText
-                                        elide: Text.ElideRight
-                                        font.pixelSize: configRoot.baseUnit * 0.58
-                                        font.family: "JetBrainsMono Nerd Font"
-                                        font.bold: true
-                                        color: configRoot.zenSnow
-                                    }
-
-                                    Text {
-                                        width: parent.width
-                                        visible: text.length > 0
-                                        text: configRoot.cleanNotificationText(notificationCard.notice.body || "")
-                                        textFormat: Text.PlainText
-                                        elide: Text.ElideRight
-                                        maximumLineCount: 2
-                                        wrapMode: Text.Wrap
-                                        font.pixelSize: configRoot.baseUnit * 0.46
-                                        font.family: "JetBrainsMono Nerd Font"
-                                        color: configRoot.zenSmoke
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: cardMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        configRoot.focusNotificationSource(notificationCard.notice)
-                                        notificationCard.closeWithAnimation("dismiss")
-                                    }
-                                }
-                            }
+                            group: modelData
+                            unit: configRoot.baseUnit
+                            ink: configRoot.zenInk
+                            stone: configRoot.zenStone
+                            mist: configRoot.zenMist
+                            smoke: configRoot.zenSmoke
+                            cloud: configRoot.zenCloud
+                            snow: configRoot.zenSnow
+                            onDismissRequested: notice => notice.dismiss()
+                            onSourceRequested: notice => configRoot.focusNotificationSource(notice)
                         }
                     }
                 }
@@ -945,80 +832,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
-    // ===== CENTER PANEL WINDOW =====
-    Variants {
-        model: Quickshell.screens
-        delegate: Component {
-            PanelWindow {
-                id: centerPanelWindow
-                required property var modelData
-                screen: modelData
-                visible: configRoot.centerPanelVisible || configRoot.centerPanelClosing
-                exclusiveZone: -1
-                anchors { top: true; bottom: true; left: true; right: true }
-                color: "transparent"
-
-                // 底层：点击外部关闭
-                MouseArea {
-                    z: 0
-                    anchors.fill: parent
-                    onClicked: {
-                        if (configRoot.centerPanelVisible) {
-                            configRoot.centerPanelClosing = true
-                            configRoot.centerPanelVisible = false
-                            configRoot.centerPanelCloseTimer.start()
-                        }
-                    }
-                }
-
-                CenterPanel {
-                    root: configRoot
-                    centerPanelCloseTimer: configRoot.centerPanelCloseTimer
-
-                    centerPanelVisible: configRoot.centerPanelVisible
-                    centerPanelClosing: configRoot.centerPanelClosing
-
-                    // 核心重构：真正的相对绑定。直接使用中岛的实时坐标，无视复杂的布局计算
-                    panelX: (configRoot.centerIslandRef ? (configRoot.centerIslandRef.x + configRoot.centerIslandRef.width / 2) : (modelData.width / 2)) - configRoot.panelWidth / 2
-
-                    animEasing: configRoot.animEasing
-                    animSpeedNormal: configRoot.animSpeedNormal
-                    baseUnit: configRoot.baseUnit
-                    brightnessPercent: configRoot.brightnessPercent
-                    btStatus: configRoot.btStatus
-                    fontSecondary: configRoot.fontSecondary
-                    fontSection: configRoot.fontSection
-                    fontTiny: configRoot.fontTiny
-                    mediaArtist: configRoot.mediaArtist
-                    mediaArtUrl: configRoot.mediaArtUrl
-                    mediaPlaying: configRoot.mediaPlaying
-                    mediaPosition: configRoot.mediaPosition
-                    mediaTitle: configRoot.mediaTitle
-                    mprisPlayer: configRoot.mprisPlayer
-                    netInterface: configRoot.netInterface
-                    netSSID: configRoot.netSSID
-                    panelGap: configRoot.panelGap
-                    panelLabelWidth: configRoot.panelLabelWidth
-                    panelOffsetY: configRoot.panelOffsetY
-                    panelPadding: configRoot.panelPadding
-                    panelRadius: configRoot.panelRadius
-                    panelRowHeight: configRoot.panelRowHeight
-                    panelRowGap: configRoot.panelRowGap
-                    panelSectionGap: configRoot.panelSectionGap
-                    panelWidth: configRoot.panelWidth
-                    sliderHeight: configRoot.sliderHeight
-                    sliderHitArea: configRoot.sliderHitArea
-                    volumePercent: configRoot.volumePercent
-                    zenAsh: configRoot.zenAsh
-                    zenCloud: configRoot.zenCloud
-                    zenInk: configRoot.zenInk
-                    zenMist: configRoot.zenMist
-                    zenSmoke: configRoot.zenSmoke
-                    zenSnow: configRoot.zenSnow
-                }
-            }
-        }
-    }
     // ===== SYSTEM PANEL WINDOW =====
     Variants {
         model: Quickshell.screens // 多屏支持：为每个 screen 创建一套“系统面板”窗口（全屏透明层 + 右侧面板）
@@ -1045,49 +858,21 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     }
                 }
 
-                // 上层：Panel 内容
-                SystemPanel {
-                    root: configRoot
-                    systemPanelCloseTimer: configRoot.systemPanelCloseTimer
-
-                    systemPanelVisible: configRoot.systemPanelVisible
-                    systemPanelClosing: configRoot.systemPanelClosing
-
-                    barMarginSide: configRoot.barMarginSide
-                    panelGap: configRoot.panelGap
-                    panelLabelWidth: configRoot.panelLabelWidth
+                // 右侧控制中心
+                ImportedControlCenterPanel {
+                    shellRoot: configRoot
+                    open: configRoot.systemPanelVisible
+                    closing: configRoot.systemPanelClosing
                     panelOffsetY: configRoot.panelOffsetY
-                    panelPadding: configRoot.panelPadding
-                    panelRadius: configRoot.panelRadius
-                    panelWidth: configRoot.panelWidth
-                    panelRowHeight: configRoot.panelRowHeight
-                    panelRowGap: configRoot.panelRowGap
-                    panelSectionGap: configRoot.panelSectionGap
-
-                    fontSecondary: configRoot.fontSecondary
-                    fontSection: configRoot.fontSection
-                    fontTiny: configRoot.fontTiny
-
-                    gpuInfo: configRoot.gpuInfo
-                    nvmeUsage: configRoot.nvmeUsage
-                    loadAvg: configRoot.loadAvg
-                    processCount: configRoot.processCount
-                    memTotal: configRoot.memTotal
-                    memUsed: configRoot.memUsed
-                    kernelVer: configRoot.kernelVer
-                    cpuModel: configRoot.cpuModel
-                    uptime: configRoot.uptime
-
-                    zenVoid: configRoot.zenVoid
-                    zenInk: configRoot.zenInk
-                    zenStone: configRoot.zenStone
-                    zenMist: configRoot.zenMist
-                    zenAsh: configRoot.zenAsh
-                    zenSmoke: configRoot.zenSmoke
-                    zenCloud: configRoot.zenCloud
-                    zenSnow: configRoot.zenSnow
-                    zenPure: configRoot.zenPure
-                    zenAccent: configRoot.zenAccent
+                    rightMargin: configRoot.barMarginSide
+                    backgroundColor: configRoot.zenInk
+                    surfaceColor: configRoot.zenStone
+                    elevatedColor: configRoot.zenMist
+                    borderColor: configRoot.zenMist
+                    textColor: configRoot.zenSnow
+                    mutedColor: configRoot.zenSmoke
+                    accentColor: configRoot.zenAccent
+                    dangerColor: configRoot.zenDanger
                 }
             }
         }

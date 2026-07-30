@@ -5,8 +5,6 @@ Rectangle {
     id: clockIsland
 
     property int responsiveLevel: 0
-    property bool showWeather: true
-    property string weatherText: "--°C"
     property bool reducedMotion: false
     property color surfaceColor: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.94)
     property color hoverColor: Qt.rgba(18 / 255, 20 / 255, 21 / 255, 0.95)
@@ -29,9 +27,6 @@ Rectangle {
     readonly property bool compact: responsiveLevel >= 3
     readonly property int timeColumnWidth: ultraCompact ? Config.BarTuning.clockUltraTimeColumnWidth : (compact ? Config.BarTuning.clockCompactTimeColumnWidth : Config.BarTuning.clockTimeColumnWidth)
     readonly property int dateColumnWidth: ultraCompact ? Config.BarTuning.clockUltraDateColumnWidth : (compact ? Config.BarTuning.clockCompactDateColumnWidth : Config.BarTuning.clockDateColumnWidth)
-    readonly property int weatherColumnWidth: Config.BarTuning.clockWeatherColumnWidth
-
-    signal togglePanel()
 
     function shake() {
         if (!reducedMotion)
@@ -48,15 +43,15 @@ Rectangle {
         weekdayText = weekdays[now.getDay()] + " · " + months[now.getMonth()];
     }
 
-    implicitWidth: showWeather ? Config.BarTuning.clockWidthWithWeather : (ultraCompact ? Config.BarTuning.clockUltraWidth : (compact ? Config.BarTuning.clockCompactWidth : Config.BarTuning.clockWidth))
+    implicitWidth: ultraCompact ? Config.BarTuning.clockUltraWidth : (compact ? Config.BarTuning.clockCompactWidth : Config.BarTuning.clockWidth)
     implicitHeight: Config.BarTuning.islandHeight
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
     radius: Config.BarTuning.islandRadius
     clip: true
-    Accessible.role: Accessible.Button
-    Accessible.name: "Clock and system controls"
+    Accessible.role: Accessible.StaticText
+    Accessible.name: "Clock"
 
     SequentialAnimation {
         id: shakeAnimation
@@ -174,33 +169,6 @@ Rectangle {
 
         }
 
-        Rectangle {
-            visible: clockIsland.showWeather
-            width: visible ? 1 : 0
-            height: Config.BarTuning.clockDividerHeight
-            anchors.verticalCenter: parent.verticalCenter
-            color: clockIsland.lineColor
-        }
-
-        Item {
-            visible: clockIsland.showWeather
-            width: visible ? clockIsland.weatherColumnWidth : 0
-            height: clockIsland.height
-
-            Text {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                text: clockIsland.weatherText
-                color: clockIsland.textSoft
-                font.family: clockIsland.monoFont
-                font.pixelSize: Config.BarTuning.clockWeatherFontSize
-                horizontalAlignment: Text.AlignRight
-                elide: Text.ElideRight
-                width: parent.width - 4
-            }
-
-        }
-
     }
 
     MouseArea {
@@ -208,8 +176,7 @@ Rectangle {
 
         anchors.fill: parent
         hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: clockIsland.togglePanel()
+        acceptedButtons: Qt.NoButton
     }
 
     transform: Translate {

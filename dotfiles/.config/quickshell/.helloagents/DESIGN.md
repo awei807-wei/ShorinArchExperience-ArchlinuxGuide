@@ -1,47 +1,47 @@
 # Quickshell 桌面界面设计系统
 
 ## 产品表面
-桌面常驻界面由顶部 Bar、临时通知、通知历史面板、中心控制面板与系统详情面板组成。Bar 只承载高频上下文、时间和系统摘要；详情与操作继续由对应面板承担，避免把顶栏做成信息墙。
+桌面常驻界面由顶部 Bar、临时通知、通知历史面板与右侧控制中心组成。Bar 只承载高频上下文、时间和系统摘要；详情与操作由右侧控制中心承担，避免把顶栏做成信息墙。
 
 ## 美学方向
 Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级与专业工作站的精密感。整体克制、低噪、技术化，但不使用赛博朋克、游戏 HUD、macOS 胶囊或网页卡片语言。通知与详情面板沿用同一黑白灰基础，并保留必要的危险语义色。
 
 ## 设计 token
-- 几何：岛面固定 `38px`，顶部与左右外边距 `4px`，顶级间距 `8px`，Tray/Power 工具组间距 `4px`，圆角 `3px`，边框 `1px`。
+- 几何：岛面固定 `40px`，顶部与左右外边距 `4px`，顶级间距 `8px`，Tray/Power 工具组间距 `4px`，圆角 `6px`，边框 `1px`。
 - 主表面：`rgba(10,12,13,.94)`；次级与工具表面保持 `86%–88%` 不透明度。
 - 边框与高光：白色 `8.5%` 边框、白色 `4.5%` 顶部内高光；不使用外发光或 hover 抬升。
 - 文本：主文字 `#E7E9EA`、次文字 `#A7ABAD`、弱文字 `#6D7376`。
 - 唯一常规强调色：低饱和冰蓝 `#8FB3C5`；固定用于 Bar 校准标记、当前工作区与 NET 主仪表，不随 Matugen 改色。
 - 仪表：开启段 `#747B7F`、关闭段 `#3C4143`；危险/通知徽标继续使用统一低饱和暗红。
 - 字体：JetBrains Mono 承担时间、数字、标签与状态值；中文由系统 CJK 字体回退。字号不随屏幕宽度整体缩放。
-- 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，宽屏 Metrics 标签和值使用 `7px`，日期、星期与天气保持 `7px` 以下的次级层级。
+- 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，宽屏 Metrics 标签和值使用 `7px`，日期与星期保持 `7px` 以下的次级层级；天气只在右侧控制中心标题栏显示。
 
 ## 像素微调入口
-Bar 的位置、宽度、高度、字号、内部间距、工作区短线、频谱透明度、Tray 图标槽位和 Power 图标尺寸统一由 `config/BarTuning.qml` 管理。该文件按“整体位置 → 响应式阈值 → Context → Clock → Metrics/频谱 → Tray/Power”分区，并为每个参数标注实际控制位置；手动调整时不应再修改组件内部常量。
+Bar 的位置、宽度、高度、字号、内部间距、工作区短线、控制中心天气、频谱透明度、Tray 图标槽位和 Power 图标尺寸统一由 `config/BarTuning.qml` 管理。该文件按“整体位置 → 响应式阈值 → Context → Clock → 控制中心标题栏 → Metrics/频谱 → Tray/Power”分区，并为每个参数标注实际控制位置；手动调整时不应再修改组件内部常量。
 
 布局测试直接读取同一配置，因此正常的像素微调无需同步改写测试期望。响应式阈值必须保持从大到小排列，Tray 图标尺寸不得超过槽位尺寸，所有支持宽度仍需满足三岛最小安全间距。
 
 ## 布局策略
-Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、Clock 相对屏幕真实居中、System 右对齐。宽屏基准为 Context `200px`、Clock `280px`、Metrics `288px`、Tray `104px`、Power `38px`；Metrics 与工具组间距 `8px`，Tray 与 Power 间距 `4px`。响应式只做稳定宽度预算和内容退让，不缩放 38px 高度：
+Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、Clock 相对屏幕真实居中、System 右对齐。宽屏基准为 Context `200px`、Clock `240px`、Metrics `288px`、Tray `104px`、Power `38px`；Metrics 与工具组间距 `8px`，Tray 与 Power 间距 `4px`。响应式只做稳定宽度预算和内容退让，不缩放 40px 高度：
 
-1. `<1344px` 隐藏 Weather。
-2. `<1273px` 隐藏 Tray 直接图标，保留复合入口。
-3. `<980px` 隐藏 Tray 表面与分段仪表，并压缩 Context、Clock 和 Metrics。
-4. `<760px` 进入超紧凑宽度预算，继续保留四项主指标值。
+1. `<1273px` 隐藏 Tray 直接图标，保留复合入口。
+2. `<1008px` 隐藏 Tray 表面与分段仪表，并压缩 Context、Clock 和 Metrics。
+3. `<760px` 进入超紧凑宽度预算，继续保留四项主指标值。
 
 Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 
 ## 组件与模式
 - `ContextIsland` 根据会话加载 `NiriContext`、`HyprlandContext`、`DesktopContext` 或 `FallbackContext`，统一外观但不伪造不可获得的数据。
 - Niri 使用无限 5-slot 分页；Hyprland 使用附近 5 个工作区并区分 active、occupied、empty。
-- `ClockIsland` 始终保留时间与日期；天气最低优先级，音量反馈只占用辅助行。
+- `ClockIsland` 只保留时间、日期与辅助行音量反馈，不响应点击或创建子面板；天气移动到右侧控制中心标题栏的时间右侧。
+- `ImportedControlCenterPanel` 在标题栏并列呈现时间、日期与天气，天气字号继续由 `clockWeatherFontSize` 统一调节。
 - `SystemIsland` 组合 `Metrics`、低权重 `TrayIsland` 和独立 `Power`；频谱只能作为 Metrics 内部中性灰暗纹。
 - 托盘复合入口的隐藏应用数与通知历史角标分别表达，禁止合并计数。
 - 通知历史保持单卡片视窗与静态后卡轮廓，禁止为全部历史创建隐藏 delegate。
 
 ## 状态覆盖
 - 加载：保持岛面和标签结构稳定，以 `--` 或可验证状态文本降级，不使用全屏 spinner。
-- 空：Workspace、Tray、Weather 与通知计数按真实数据收缩，不保留无意义占位卡片。
+- 空：Workspace、Tray 与通知计数按真实数据收缩；控制中心天气暂不可用时显示短占位值，不保留额外卡片。
 - 错误：Niri/天气/存储错误显示短状态并保留重试链路，不伪装为成功数据。
 - 成功：复制使用短暂 `COPIED`；清理完成同步归零并关闭面板。
 - 禁用与危险：存储操作期间阻止重复清理；破坏性操作使用独立危险语义反馈。
@@ -62,7 +62,7 @@ Context 与 Metrics 顶部保留一条位于边框内侧的 1px 冰蓝校准标�
 禁止紫白渐变、大圆角胶囊、发光边框、RGB、玻璃拟态、3D 按钮、emoji 图标、白底卡片堆叠、可见调试网格、频谱前景化、通知与托盘计数混算、自动清空真实历史。
 
 ## 约束定义
-Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；Weather、Tray 直接图标和分段仪表必须严格按优先级退让。
+Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；天气不占用 Bar 宽度，Tray 直接图标和分段仪表必须严格按优先级退让。
 
 ## 实现备注
-Bar 的几何与排版 token 位于 `config/BarTuning.qml`，稳定颜色 token 位于 `Bar.qml`，均不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/980/979/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。
+Bar 的几何与排版 token 位于 `config/BarTuning.qml`，稳定颜色 token 位于 `Bar.qml`，均不继承 Matugen 的动态强调色；环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供；结构组件位于 `components/`。视觉验收覆盖 2048/1280/1024/1008/1007/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。

@@ -25,16 +25,15 @@ ShellRoot {
     }
 
     function expectNoOverlap(target, label) {
-        expect(target.contextRight + target.islandGap <= target.clockLeft, label + " context/clock overlap");
-        expect(target.clockRight + target.islandGap <= target.systemLeft, label + " clock/system overlap");
+        expect(target.contextRight + target.islandGap <= target.clockLeft,
+               label + " context/clock overlap: " + target.contextRight + " + " + target.islandGap + " > " + target.clockLeft);
+        expect(target.clockRight + target.islandGap <= target.systemLeft,
+               label + " clock/system overlap: " + target.clockRight + " + " + target.islandGap + " > " + target.systemLeft);
     }
 
     function expectedLayoutMode(targetWidth) {
-        if (targetWidth >= Config.BarTuning.weatherVisibleMinWidth)
-            return 0;
-
         if (targetWidth >= Config.BarTuning.fullTrayMinWidth)
-            return 1;
+            return 0;
 
         if (targetWidth >= Config.BarTuning.traySurfaceMinWidth)
             return 2;
@@ -50,9 +49,6 @@ ShellRoot {
     }
 
     function expectedClockWidth(mode) {
-        if (mode === 0)
-            return Config.BarTuning.clockWidthWithWeather;
-
         if (mode >= 4)
             return Config.BarTuning.clockUltraWidth;
 
@@ -83,7 +79,6 @@ ShellRoot {
         const mode = expectedLayoutMode(target.width);
         expectEqual(target.layoutMode, mode, label + " layout mode");
         expectEqual(target.islandHeight, Config.BarTuning.islandHeight, label + " island height");
-        expectEqual(target.showWeather, mode === 0, label + " weather state");
         expectEqual(target.actualTrayIconLimit, mode <= 1 ? target.trayDirectIconLimit : 0, label + " direct tray icon limit");
         expectEqual(target.trayVisible, mode < 3, label + " tray visibility");
         expectEqual(target.metricDetailsVisible, mode < 3, label + " metric detail visibility");
@@ -97,7 +92,6 @@ ShellRoot {
     }
 
     function runChecks() {
-        expect(Config.BarTuning.weatherVisibleMinWidth > Config.BarTuning.fullTrayMinWidth, "weather threshold must exceed full-tray threshold");
         expect(Config.BarTuning.fullTrayMinWidth > Config.BarTuning.traySurfaceMinWidth, "full-tray threshold must exceed tray-surface threshold");
         expect(Config.BarTuning.traySurfaceMinWidth > Config.BarTuning.compactMinWidth, "tray-surface threshold must exceed compact threshold");
         expect(Config.BarTuning.compactMinWidth > Config.BarTuning.minimumSupportedWidth, "compact threshold must exceed minimum supported width");

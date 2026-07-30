@@ -13,9 +13,9 @@ QtObject {
     // ═══════════════════════════════════════════════════════
 
     // 控制：所有岛的高度，同时决定顶栏窗口高度。
-    property int islandHeight: 38
+    property int islandHeight: 40
     // 控制：所有岛的圆角半径。
-    property int islandRadius: 3
+    property int islandRadius: 6
     // 控制：岛面外边框宽度。
     property int islandBorderWidth: 1
     // 控制：岛内顶部白色高光线高度。
@@ -37,12 +37,10 @@ QtObject {
     // 2. 响应式切换阈值（屏幕宽度 px）
     // ═══════════════════════════════════════════════════════
 
-    // 控制：达到此宽度后显示天气。
-    property int weatherVisibleMinWidth: 1344
     // 控制：达到此宽度后显示 Tray 直接图标。
     property int fullTrayMinWidth: 1273
     // 控制：达到此宽度后保留 Tray 表面；更窄时只保留 Power。
-    property int traySurfaceMinWidth: 980
+    property int traySurfaceMinWidth: 1008
     // 控制：达到此宽度后使用紧凑档；更窄进入超紧凑档。
     property int compactMinWidth: 760
     // 控制：布局测试覆盖的最小支持宽度。
@@ -97,23 +95,23 @@ QtObject {
     // 控制：五个工作区槽位之间的紧凑间距。
     property int workspaceCompactGap: 2
     // 控制：工作区编号字号。
-    property int workspaceNumberFontSize: 7
+    property int workspaceNumberFontSize: 10
     // 控制：工作区编号距岛顶部的位置。
-    property int workspaceNumberTop: 6
+    property int workspaceNumberTop: 12
     // 控制：工作区底部短线高度。
     property int workspaceIndicatorHeight: 3
     // 控制：工作区短线距岛底部的位置。
-    property int workspaceIndicatorBottom: 3
+    property int workspaceIndicatorBottom: 6
     // 控制：当前工作区短线的常规宽度。
-    property int workspaceActiveWidth: 22
+    property int workspaceActiveWidth: 30
     // 控制：当前工作区短线的紧凑宽度。
-    property int workspaceCompactActiveWidth: 20
+    property int workspaceCompactActiveWidth: 24
     // 控制：非当前工作区短线的常规宽度。
-    property int workspaceInactiveWidth: 14
+    property int workspaceInactiveWidth: 10
     // 控制：非当前工作区短线的紧凑宽度。
     property int workspaceCompactInactiveWidth: 12
     // 控制：键盘焦点顶部短线宽度。
-    property int workspaceFocusWidth: 8
+    property int workspaceFocusWidth: 0
     // 控制：键盘焦点短线距岛顶部的位置。
     property int workspaceFocusTop: 3
 
@@ -140,16 +138,14 @@ QtObject {
     // 4. 中央 Clock Island
     // ═══════════════════════════════════════════════════════
 
-    // 控制：显示天气时的中岛总宽度。
-    property int clockWidthWithWeather: 280
-    // 控制：隐藏天气后的常规中岛宽度。
-    property int clockWidth: 212
+    // 控制：中岛常规宽度。
+    property int clockWidth: 240
     // 控制：中岛在 760–979px 档的宽度。
     property int clockCompactWidth: 176
     // 控制：中岛在 <760px 档的宽度。
     property int clockUltraWidth: 160
     // 控制：常规档时间列宽度。
-    property int clockTimeColumnWidth: 84
+    property int clockTimeColumnWidth: 80
     // 控制：紧凑档时间列宽度。
     property int clockCompactTimeColumnWidth: 72
     // 控制：超紧凑档时间列宽度。
@@ -160,16 +156,12 @@ QtObject {
     property int clockCompactDateColumnWidth: 94
     // 控制：超紧凑档日期列宽度。
     property int clockUltraDateColumnWidth: 82
-    // 控制：天气列宽度。
-    property int clockWeatherColumnWidth: 64
     // 控制：主时间字号。
     property int clockTimeFontSize: 18
     // 控制：日期字号。
     property int clockDateFontSize: 7
     // 控制：星期和音量反馈字号。
     property int clockWeekdayFontSize: 6
-    // 控制：天气字号。
-    property int clockWeatherFontSize: 7
     // 控制：日期列内容距左侧分隔线的常规位置。
     property int clockDateInset: 11
     // 控制：日期列内容距左侧分隔线的紧凑位置。
@@ -182,7 +174,18 @@ QtObject {
     property real clockTimeLetterSpacing: -0.65
 
     // ═══════════════════════════════════════════════════════
-    // 5. 右侧 Metrics 与频谱
+    // 5. 右侧控制中心标题栏
+    // ═══════════════════════════════════════════════════════
+
+    // 控制：时间右侧天气文本区域宽度。
+    property int controlCenterWeatherWidth: 44
+    // 控制：时间与天气之间竖分隔线高度。
+    property int controlCenterWeatherDividerHeight: 28
+    // 控制：右侧控制中心天气字号；保留旧名称以兼容现有手动配置。
+    property int clockWeatherFontSize: 12
+
+    // ═══════════════════════════════════════════════════════
+    // 6. 右侧 Metrics 与频谱
     // ═══════════════════════════════════════════════════════
 
     // 控制：Metrics 常规宽度。
@@ -257,7 +260,7 @@ QtObject {
     // 控制：频谱柱从最低到最高额外增加的高度。
     property int spectrumBarHeightRange: 16
     // 控制：有音频时整个频谱层透明度。
-    property real spectrumActiveOpacity: 0.16
+    property real spectrumActiveOpacity: 0.62
     // 控制：无音频时整个频谱层透明度。
     property real spectrumInactiveOpacity: 0.06
     // 控制：有音频时单柱透明度。
@@ -266,7 +269,7 @@ QtObject {
     property real spectrumInactiveBarOpacity: 0.20
 
     // ═══════════════════════════════════════════════════════
-    // 6. Tray 与 Power
+    // 7. Tray 与 Power
     // ═══════════════════════════════════════════════════════
 
     // 控制：Tray 与 Power 两个表面之间的距离。
@@ -276,7 +279,7 @@ QtObject {
     // 控制：每个 Tray 图标槽位的宽高。
     property int trayItemWidth: 18
     // 控制：Tray 应用图标实际宽高；16 表示不缩小。
-    property int trayIconSize: 16
+    property int trayIconSize: 18
     // 控制：Tray 图标槽位之间的间距。
     property int trayItemGap: 4
     // 控制：Tray 左右内边距总和。
@@ -286,7 +289,7 @@ QtObject {
     // 控制：Tray 展开最小宽度的单位倍数。
     property int trayExpandedMinUnits: 18
     // 控制：“+2”复合入口字号。
-    property int trayCompositeFontSize: 6
+    property int trayCompositeFontSize: 10
     // 控制：通知角标相对槽位顶部的位置。
     property int trayBadgeTopOffset: -4
     // 控制：通知角标相对槽位右侧的位置。
@@ -296,7 +299,7 @@ QtObject {
     // 控制：通知角标数字字号。
     property int trayBadgeFontSize: 5
     // 控制：展开态收起符号字号。
-    property int trayCollapseFontSize: 8
+    property int trayCollapseFontSize: 9
     // 控制：空 Tray 的省略符字号。
     property int trayEmptyFontSize: 6
     // 控制：Power 岛宽度。

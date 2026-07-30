@@ -30,8 +30,7 @@ Rectangle {
     readonly property int islandHeight: Config.BarTuning.islandHeight
     readonly property int islandGap: Config.BarTuning.islandGap
     readonly property int minimumSupportedWidth: Config.BarTuning.minimumSupportedWidth
-    readonly property int layoutMode: width >= Config.BarTuning.weatherVisibleMinWidth ? 0 : (width >= Config.BarTuning.fullTrayMinWidth ? 1 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4)))
-    readonly property bool showWeather: layoutMode === 0
+    readonly property int layoutMode: width >= Config.BarTuning.fullTrayMinWidth ? 0 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4))
     readonly property int responsiveTrayIconLimit: layoutMode <= 1 ? trayDirectIconLimit : 0
     readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
     readonly property var currentScreen: panelWindow ? panelWindow.screen : null
@@ -66,7 +65,6 @@ Rectangle {
     readonly property int actualTrayIconLimit: systemIslandItem.trayIconLimit
     property alias centerIsland: clockIslandItem
 
-    signal centerClicked()
     signal systemClicked()
     signal trayPanelToggleRequested(real panelWidth)
     signal trayPanelResizeRequested(real panelWidth)
@@ -109,8 +107,6 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.horizontalCenterOffset: bar.centerIslandOffsetX
         responsiveLevel: bar.layoutMode
-        showWeather: bar.showWeather
-        weatherText: Core.TopBarState.weatherText
         reducedMotion: Core.TopBarState.reducedMotion
         surfaceColor: bar.panelSurface
         hoverColor: bar.hoverSurface
@@ -122,7 +118,6 @@ Rectangle {
         lineColor: bar.linePrimary
         accentColor: bar.instrumentAccent
         monoFont: bar.monoFont
-        onTogglePanel: bar.centerClicked()
     }
 
     SystemIsland {
