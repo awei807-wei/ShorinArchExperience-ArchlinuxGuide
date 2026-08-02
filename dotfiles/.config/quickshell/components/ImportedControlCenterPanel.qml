@@ -16,11 +16,11 @@ Rectangle {
     property color backgroundColor: "#101010"
     property color surfaceColor: "#1c1c1c"
     property color elevatedColor: "#252525"
-    property color borderColor: "#303030"
+    property color borderColor: Config.Theme.outline
     property color textColor: "#d0d0d0"
     property color mutedColor: "#707070"
     property color accentColor: "#8fb3c5"
-    property color dangerColor: "#9a5555"
+    property color dangerColor: Config.Theme.danger
     property bool reducedMotion: Core.TopBarState.reducedMotion
 
     readonly property int diskPercent: {
@@ -45,7 +45,7 @@ Rectangle {
         return parent ? Math.max(0, Math.min(desired, parent.height - panelOffsetY - 12)) : desired
     }
     z: 2
-    radius: 28
+    radius: Config.Theme.radiusLarge
     color: backgroundColor
     border.color: borderColor
     border.width: 1
@@ -66,6 +66,41 @@ Rectangle {
     Behavior on scale {
         enabled: !root.reducedMotion
         NumberAnimation { duration: 240; easing.type: Easing.OutBack }
+    }
+
+    // 打开时的全屏背景遮罩（点击外部关闭由 shell.qml 的全屏 MouseArea 处理，这里只负责视觉）
+    Rectangle {
+        z: -1
+        x: -root.x
+        y: -root.y
+        width: root.parent ? root.parent.width : 0
+        height: root.parent ? root.parent.height : 0
+        color: Config.Theme.shadowColor
+        opacity: root.open ? 0.4 : 0
+
+        Behavior on opacity {
+            enabled: !root.reducedMotion
+            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
+        }
+    }
+
+    // 柔和投影（轻量实现：底下垫两层半透明黑矩形，避免 GraphicalEffects 的 DropShadow 开销）
+    Rectangle {
+        z: -1
+        anchors.fill: parent
+        anchors.margins: -1
+        radius: root.radius + 1
+        color: "#000000"
+        opacity: 0.18
+    }
+
+    Rectangle {
+        z: -1
+        anchors.fill: parent
+        anchors.topMargin: 2
+        radius: root.radius
+        color: "#000000"
+        opacity: 0.35
     }
 
     Process {
@@ -143,14 +178,17 @@ Rectangle {
 
             HeaderButton {
                 icon: "󰒓"
+                toolTip: "Network Settings"
                 onClicked: settingsProcess.running = true
             }
             HeaderButton {
                 icon: "󰌾"
+                toolTip: "Lock"
                 onClicked: lockProcess.running = true
             }
             HeaderButton {
                 icon: "󰐥"
+                toolTip: "Power"
                 danger: true
                 onClicked: powerProcess.running = true
             }
@@ -211,6 +249,7 @@ Rectangle {
                         ? "󰝟"
                         : root.shellRoot.volumePercent > 66 ? "󰕾"
                         : root.shellRoot.volumePercent > 33 ? "󰖀" : "󰕿"
+                    toolTip: "音量"
                     value: root.shellRoot.volumePercent
                     inactive: root.shellRoot.volumeMuted
                     accentColor: root.accentColor
@@ -225,6 +264,7 @@ Rectangle {
                 ControlCenterSlider {
                     icon: root.shellRoot.brightnessPercent > 70 ? "󰃠"
                         : root.shellRoot.brightnessPercent > 30 ? "󰃟" : "󰃞"
+                    toolTip: "亮度"
                     value: root.shellRoot.brightnessPercent
                     accentColor: root.accentColor
                     surfaceColor: root.surfaceColor
@@ -247,9 +287,9 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: mediaContent.visible ? 96 : 62
-                    radius: 22
+                    radius: Config.Theme.radiusMedium
                     color: root.surfaceColor
-                    border.color: Qt.rgba(1, 1, 1, 0.05)
+                    border.color: Config.Theme.outlineVariant
 
                     RowLayout {
                         id: mediaContent
@@ -261,7 +301,7 @@ Rectangle {
                         Rectangle {
                             Layout.preferredWidth: 64
                             Layout.preferredHeight: 64
-                            radius: 14
+                            radius: Config.Theme.radiusMedium
                             clip: true
                             color: root.elevatedColor
 
@@ -308,6 +348,7 @@ Rectangle {
 
                         HeaderButton {
                             icon: root.shellRoot.mediaPlaying ? "󰏤" : "󰐊"
+                            toolTip: root.shellRoot.mediaPlaying ? "Pause" : "Play"
                             emphasized: true
                             onClicked: {
                                 if (root.shellRoot.mprisPlayer)
@@ -335,6 +376,7 @@ Rectangle {
     component HeaderButton: Rectangle {
         id: button
         property string icon: ""
+        property string toolTip: ""
         property bool danger: false
         property bool emphasized: false
         signal clicked()
@@ -346,12 +388,17 @@ Rectangle {
             : buttonMouse.pressed ? root.elevatedColor
             : buttonMouse.containsMouse ? root.surfaceColor : "transparent"
 
+        Behavior on color {
+            enabled: !root.reducedMotion
+            ColorAnimation { duration: Config.Theme.animFast }
+        }
+
         Text {
             anchors.centerIn: parent
             text: button.icon
             font.family: "Material Design Icons"
             font.pixelSize: button.emphasized ? 24 : 20
-            color: button.emphasized ? root.backgroundColor
+            color: button.emphasized ? Config.Theme.surface
                 : button.danger ? root.dangerColor : root.textColor
         }
 
@@ -361,6 +408,14 @@ Rectangle {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: button.clicked()
+        }
+
+        AppToolTip {
+            anchors.top: parent.bottom
+            anchors.topMargin: Config.Theme.spacingTiny
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: button.toolTip
+            target: buttonMouse
         }
     }
 }

@@ -1,4 +1,5 @@
 // 磁盘通知历史面板：卡片堆视觉，但运行时始终只有一个真实通知卡片。
+import "../config" as Config
 import QtQuick
 
 Item {
@@ -8,15 +9,15 @@ Item {
     property bool open: false
     property real unit: 13.6
     property real panelWidth: unit * 18
-    property color zenInk: "#101010"
-    property color zenStone: "#1c1c1c"
-    property color zenMist: "#252525"
-    property color zenAsh: "#404040"
-    property color zenSmoke: "#707070"
-    property color zenCloud: "#999999"
-    property color zenSnow: "#d0d0d0"
+    property color zenInk: Config.Theme.surface
+    property color zenStone: Config.Theme.surfaceContainer
+    property color zenMist: Config.Theme.outline
+    property color zenAsh: Config.Theme.outlineVariant
+    property color zenSmoke: Config.Theme.textMuted
+    property color zenCloud: Config.Theme.textSecondary
+    property color zenSnow: Config.Theme.textPrimary
     property color zenAccent: "#5a9a8a"
-    property color zenDanger: "#9a5555"
+    property color zenDanger: Config.Theme.danger
 
     property var entries: []
     property int currentIndex: 0
@@ -173,13 +174,23 @@ Item {
         onTriggered: historyPanel.refresh()
     }
 
+    // 柔和投影（底下垫一层偏移 2px 的半透明黑矩形）
+    Rectangle {
+        z: -1
+        anchors.fill: parent
+        anchors.topMargin: 2
+        radius: Config.Theme.radiusLarge
+        color: "#000000"
+        opacity: 0.35
+    }
+
     Rectangle {
         id: panelSurface
         anchors.fill: parent
         color: historyPanel.zenInk
         border.color: historyPanel.zenMist
         border.width: 1
-        radius: 2
+        radius: Config.Theme.radiusLarge
         opacity: historyPanel.open ? 1 : 0
         transform: Translate {
             y: historyPanel.open ? 0 : -historyPanel.unit * 0.7
@@ -225,7 +236,7 @@ Item {
                         ? String(historyPanel.currentIndex + 1).padStart(2, "0")
                             + "/" + String(historyPanel.entries.length).padStart(2, "0")
                         : historyPanel.panelState.toUpperCase())
-                font.pixelSize: historyPanel.unit * 0.34
+                font.pixelSize: Math.max(Config.Theme.fontTiny, historyPanel.unit * 0.34)
                 font.family: "JetBrainsMono Nerd Font"
                 color: historyPanel.feedbackMessage.indexOf("ERROR") >= 0
                     ? historyPanel.zenDanger
@@ -301,7 +312,7 @@ Item {
                     wrapMode: Text.Wrap
                     maximumLineCount: 3
                     elide: Text.ElideRight
-                    font.pixelSize: historyPanel.unit * 0.32
+                    font.pixelSize: Math.max(Config.Theme.fontTiny, historyPanel.unit * 0.32)
                     font.family: "JetBrainsMono Nerd Font"
                     color: historyPanel.zenSmoke
                 }
@@ -310,7 +321,7 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     text: "CLICK TO RETRY"
-                    font.pixelSize: historyPanel.unit * 0.31
+                    font.pixelSize: Math.max(Config.Theme.fontTiny, historyPanel.unit * 0.31)
                     font.family: "JetBrainsMono Nerd Font"
                     color: historyPanel.zenAccent
                 }

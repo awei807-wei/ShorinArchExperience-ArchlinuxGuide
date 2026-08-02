@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 import QtQuick.Layouts
 
@@ -17,9 +18,9 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 22
+        radius: Config.Theme.radiusMedium
         color: root.surfaceColor
-        border.color: Qt.rgba(1, 1, 1, 0.05)
+        border.color: Config.Theme.outlineVariant
     }
 
     RowLayout {
@@ -58,7 +59,7 @@ Item {
                 text: stat.label
                 horizontalAlignment: Text.AlignHCenter
                 font.family: "JetBrains Mono"
-                font.pixelSize: 10
+                font.pixelSize: Config.Theme.fontSmall
                 font.letterSpacing: 1
                 color: root.mutedColor
             }
@@ -84,7 +85,7 @@ Item {
                     width: parent.width * Math.max(0, Math.min(1, stat.value / 100))
                     height: parent.height
                     radius: parent.radius
-                    color: stat.value >= 85 ? "#9a5555" : root.accentColor
+                    color: stat.value >= 85 ? Config.Theme.danger : root.accentColor
                 }
             }
         }

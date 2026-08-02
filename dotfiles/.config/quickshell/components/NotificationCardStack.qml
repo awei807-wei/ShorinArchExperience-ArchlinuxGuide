@@ -1,4 +1,5 @@
 // 两层静态轮廓与一张真实通知卡片。
+import "../config" as Config
 import QtQuick
 
 Item {
@@ -8,14 +9,14 @@ Item {
     property int entryCount: 0
     property bool ready: false
     property real unit: 13.6
-    property color zenInk: "#101010"
-    property color zenStone: "#1c1c1c"
-    property color zenMist: "#252525"
-    property color zenAsh: "#404040"
-    property color zenSmoke: "#707070"
-    property color zenCloud: "#999999"
-    property color zenSnow: "#d0d0d0"
-    property color zenDanger: "#9a5555"
+    property color zenInk: Config.Theme.surface
+    property color zenStone: Config.Theme.surfaceContainer
+    property color zenMist: Config.Theme.outline
+    property color zenAsh: Config.Theme.outlineVariant
+    property color zenSmoke: Config.Theme.textMuted
+    property color zenCloud: Config.Theme.textSecondary
+    property color zenSnow: Config.Theme.textPrimary
+    property color zenDanger: Config.Theme.danger
 
     signal copyRequested()
     signal moveRequested(int delta)
@@ -50,7 +51,7 @@ Item {
         color: "transparent"
         border.color: cardStack.zenAsh
         border.width: 1
-        radius: 2
+        radius: Config.Theme.radiusMedium
         opacity: 0.45
     }
 
@@ -63,7 +64,7 @@ Item {
         color: cardStack.zenInk
         border.color: cardStack.zenAsh
         border.width: 1
-        radius: 2
+        radius: Config.Theme.radiusMedium
         opacity: 0.72
     }
 
@@ -79,8 +80,12 @@ Item {
             ? cardStack.zenDanger
             : cardStack.zenMist
         border.width: 1
-        radius: 2
+        radius: Config.Theme.radiusMedium
         clip: true
+
+        Behavior on color {
+            ColorAnimation { duration: Config.Theme.animFast }
+        }
 
         Column {
             anchors.fill: parent
@@ -93,7 +98,7 @@ Item {
                     + "  ·  " + cardStack.displayTime(cardStack.entry?.timestamp)
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
-                font.pixelSize: cardStack.unit * 0.34
+                font.pixelSize: Math.max(Config.Theme.fontTiny, cardStack.unit * 0.34)
                 font.family: "JetBrainsMono Nerd Font"
                 color: cardStack.zenCloud
             }
@@ -126,7 +131,7 @@ Item {
                     + "  ·  #" + String(cardStack.entry?.id ?? 0)
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
-                font.pixelSize: cardStack.unit * 0.3
+                font.pixelSize: Math.max(Config.Theme.fontTiny, cardStack.unit * 0.3)
                 font.family: "JetBrainsMono Nerd Font"
                 color: cardStack.zenSmoke
             }
