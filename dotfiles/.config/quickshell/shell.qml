@@ -572,15 +572,30 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     function applyDynamicColors(fileContent) {
         // 输入：fileContent（colors.json 的完整文本内容）
         // 输出：无返回值
-        // 副作用：更新 zen* 主题色属性（驱动 Bar/面板整体换肤）
+        // 副作用：更新 zenAccent（向后兼容）+ Config.Theme 单例颜色 token（带 300ms 平滑过渡，驱动 Bar/面板整体换肤）
         // 触发来源：FileView.onLoadedChanged / FileView.onFileChanged（热更新）
+        // matugen 字段 → Theme token 映射：
+        //   primary→accent  surface→surface  on_surface→textPrimary
+        //   outline→textSecondary  surface_container→surfaceContainer
+        //   outline_variant→outline  secondary→accentSecondary  tertiary→accentTertiary
+        // （textMuted / danger / outlineVariant 保留静态兜底）
 
         if (!fileContent) return;
         try {
             var data = JSON.parse(fileContent);
-            if (!data.colors || !data.colors.primary) return;
-            configRoot.zenAccent = data.colors.primary;
-            console.log("[shell] Dynamic accent applied: " + data.colors.primary);
+            var c = data.colors;
+            if (!c || !c.primary) return;
+            configRoot.zenAccent = c.primary; // 向后兼容：原有 zen* 属性保留不动
+            var theme = Config.Theme;
+            if (c.primary) theme.accent = c.primary;
+            if (c.surface) theme.surface = c.surface;
+            if (c.on_surface) theme.textPrimary = c.on_surface;
+            if (c.outline) theme.textSecondary = c.outline;
+            if (c.surface_container) theme.surfaceContainer = c.surface_container;
+            if (c.outline_variant) theme.outline = c.outline_variant;
+            if (c.secondary) theme.accentSecondary = c.secondary;
+            if (c.tertiary) theme.accentTertiary = c.tertiary;
+            console.log("[shell] Dynamic theme applied: accent=" + c.primary);
         } catch (error) {
             if (!configRoot.colorParseErrorLogged) {
                 configRoot.colorParseErrorLogged = true
