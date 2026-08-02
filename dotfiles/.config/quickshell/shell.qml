@@ -880,7 +880,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 margins.right: configRoot.barMarginSide + configRoot.baseUnit * 0.4
                 implicitWidth: configRoot.notificationPopupWidth
                 implicitHeight: notificationColumn.implicitHeight
-                color: "transparent"
+                color: "transparent" // 窗口透明，实际视觉由通知卡片绘制
 
                 Column {
                     id: notificationColumn
@@ -926,12 +926,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     }
 
                     // 退场动画播放期间临时保留对应数量的已移除卡片（占位防闪）
+                    // 说明：repeater.model 保持绑定分组数组，不要在这里覆盖；
+                    // 任务E的"占位"语义由卡片自身退出动画承担，无需改 model。
                     property int exitCleanupPending: 0
-                    onExitCleanupPendingChanged: cleanupRepeaterModel()
-                    Component.onCompleted: cleanupRepeaterModel()
-                    function cleanupRepeaterModel() {
-                        notificationGroupRepeater.model = configRoot.notificationGroups.length + exitCleanupPending
-                    }
                 }
             }
         }
@@ -945,7 +942,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 id: sysPanelWindow
                 required property var modelData // Variants 委托注入：当前 screen 对象
                 screen: modelData // 将窗口绑定到当前屏幕
-                visible: configRoot.systemPanelVisible || configRoot.systemPanelClosing // 可见条件：打开或处于关闭动画缓冲期
+                visible: configRoot.systemPanelVisible // 关闭缓冲期立刻隐藏窗口，绝不用 closing 维持全屏可见（否则吞掉全屏点击）
                 exclusiveZone: -1 // 不占用布局保留区（允许窗口覆盖全屏）
                 anchors { top: true; bottom: true; left: true; right: true } // 覆盖全屏：用于捕获“点击外部关闭”
                 color: "transparent" // 窗口透明：只显示面板本体

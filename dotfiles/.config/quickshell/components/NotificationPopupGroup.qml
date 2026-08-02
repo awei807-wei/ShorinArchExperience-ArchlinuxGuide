@@ -88,10 +88,6 @@ Rectangle {
 
     property bool exiting: false
 
-    // 初始透明 + 右偏移，由 reveal 动画播到可见；否则动画 from 值来不及生效会先闪一帧
-    opacity: 0
-    x: root.unit
-
     Component.onCompleted: reveal.start()
 
     ParallelAnimation {

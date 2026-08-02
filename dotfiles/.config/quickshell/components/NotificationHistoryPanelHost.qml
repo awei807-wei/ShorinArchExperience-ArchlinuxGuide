@@ -35,9 +35,14 @@ Variants {
         }
     }
 
+    // ⚠️ 绝对不能用 closing 缓冲维持全屏窗口可见：
+    // 本组件的 PanelWindow anchors 铺满全屏（用于点击外部关闭），
+    // closing 期间窗口仍在，会吞掉全屏所有点击（用户实测：只有 bar 一行能点）。
+    // 真正的退场动画交给 TrayNotificationPanel 内部做（它自己的窗口只包面板区域），
+    // 全屏窗口在 open 变 false 的瞬间必须立刻消失。
     Timer {
         id: closeTimer
-        interval: Config.Theme.animNormal + 100 // 等退场动画结束后再真正隐藏窗口
+        interval: Config.Theme.animNormal + 100 // 仅保留计时器接口兼容，不再驱动全屏可见
         onTriggered: panelHost.closing = false
     }
 
@@ -48,7 +53,8 @@ Variants {
             id: historyWindow
             required property var modelData
             screen: modelData
-            visible: (panelHost.open || panelHost.closing) && panelHost.store?.historyCount > 0
+            // 全屏窗口只承担"点击外部关闭"：open 为 false 时立刻隐藏，绝不用 closing 缓冲
+            visible: panelHost.open && panelHost.store?.historyCount > 0
             exclusiveZone: -1
             anchors {
                 top: true
