@@ -15,24 +15,22 @@ Rectangle {
     property bool spectrumActive: false
     property bool showSegments: true
     property bool reducedMotion: false
-    property color surfaceColor: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.88)
-    property color hoverColor: Qt.rgba(18 / 255, 20 / 255, 21 / 255, 0.91)
-    property color borderColor: Qt.rgba(1, 1, 1, 0.085)
-    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
-    property color textSoft: "#a7abad"
-    property color textDim: "#6d7376"
-    property color lineSoft: Qt.rgba(1, 1, 1, 0.055)
-    property color accentColor: "#8fb3c5"
-    property color segmentOn: "#747b7f"
-    property color segmentOff: "#3c4143"
+    property color surfaceColor: Config.Theme.surface
+    property color hoverColor: Config.Theme.surfaceContainer
+    property color borderColor: Config.Theme.outline
+    property color highlightColor: Config.Theme.outlineVariant
+    property color textSoft: Config.Theme.textSecondary
+    property color textDim: Config.Theme.textMuted
+    property color lineSoft: Config.Theme.outlineVariant
+    property color accentColor: Config.Theme.accent
+    property color segmentOn: Config.Theme.textMuted
+    property color segmentOff: Config.Theme.surfaceContainer
     property string monoFont: "JetBrains Mono"
 
     readonly property bool hovered: pointerArea.containsMouse
     readonly property bool compactLayout: width < Config.BarTuning.metricsCompactLayoutThreshold
     readonly property int outerPadding: compactLayout
         ? Config.BarTuning.metricsCompactOuterPadding : Config.BarTuning.metricsOuterPadding
-    readonly property int metricFontSize: width < Config.BarTuning.metricsSmallFontThreshold
-        ? Config.BarTuning.metricsSmallFontSize : Config.BarTuning.metricsFontSize
     readonly property var metricData: [
         { "label": "NET", "value": networkValue, "level": networkLevel, "accent": true },
         { "label": "MEM", "value": formatPercent(memoryPercent), "level": percentLevel(memoryPercent), "accent": false },
@@ -47,7 +45,7 @@ Rectangle {
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
-    radius: Config.BarTuning.islandRadius
+    radius: Config.Theme.radiusMedium
     clip: true
 
     function formatPercent(value) {
@@ -61,7 +59,7 @@ Rectangle {
 
     Behavior on color {
         enabled: !metrics.reducedMotion
-        ColorAnimation { duration: 180 }
+        ColorAnimation { duration: Config.Theme.animNormal }
     }
 
     Rectangle {
@@ -148,7 +146,7 @@ Rectangle {
                         elide: Text.ElideRight
                         color: metrics.textDim
                         font.family: metrics.monoFont
-                        font.pixelSize: metrics.metricFontSize
+                        font.pixelSize: Config.Theme.fontTiny
                         font.letterSpacing: metrics.compactLayout ? 0.38 : 0.5
                     }
 
@@ -167,7 +165,7 @@ Rectangle {
                         horizontalAlignment: Text.AlignRight
                         color: metrics.textSoft
                         font.family: metrics.monoFont
-                        font.pixelSize: metrics.metricFontSize
+                        font.pixelSize: Config.Theme.fontTiny
                         font.weight: Font.Medium
                         font.letterSpacing: 0.05
                     }
@@ -198,7 +196,7 @@ Rectangle {
 
                                 Behavior on color {
                                     enabled: !metrics.reducedMotion
-                                    ColorAnimation { duration: 140 }
+                                    ColorAnimation { duration: Config.Theme.animFast }
                                 }
                             }
                         }

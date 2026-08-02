@@ -14,13 +14,13 @@ Item {
     property var occupiedWorkspaces: []
     property bool compact: false
     property bool reducedMotion: false
-    property color textColor: "#e7e9ea"
-    property color textSoft: "#a7abad"
-    property color textDim: "#6d7376"
-    property color lineColor: Qt.rgba(1, 1, 1, 0.10)
-    property color accentColor: "#8fb3c5"
-    property color occupiedColor: "#747b7f"
-    property color emptyColor: "#3c4143"
+    property color textColor: Config.Theme.textPrimary
+    property color textSoft: Config.Theme.textSecondary
+    property color textDim: Config.Theme.textMuted
+    property color lineColor: Config.Theme.outline
+    property color accentColor: Config.Theme.accent
+    property color occupiedColor: Config.Theme.textMuted
+    property color emptyColor: Config.Theme.surfaceContainer
     property string monoFont: "JetBrains Mono"
 
     readonly property int horizontalPadding: compact
@@ -64,7 +64,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textDim
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: Config.BarTuning.contextLabelFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.7
                 }
 
@@ -74,7 +74,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textColor
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: Config.BarTuning.contextValueFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.2
                 }
 
@@ -84,7 +84,7 @@ Item {
                     elide: Text.ElideRight
                     color: workspaceStrip.textSoft
                     font.family: workspaceStrip.monoFont
-                    font.pixelSize: Config.BarTuning.contextStatusFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.25
                 }
             }
@@ -145,7 +145,7 @@ Item {
 
                             Behavior on color {
                                 enabled: !workspaceStrip.reducedMotion
-                                ColorAnimation { duration: 140 }
+                                ColorAnimation { duration: Config.Theme.animFast }
                             }
                         }
 
@@ -168,11 +168,11 @@ Item {
 
                             Behavior on width {
                                 enabled: !workspaceStrip.reducedMotion
-                                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Config.Theme.animFast; easing.type: Easing.OutCubic }
                             }
                             Behavior on color {
                                 enabled: !workspaceStrip.reducedMotion
-                                ColorAnimation { duration: 140 }
+                                ColorAnimation { duration: Config.Theme.animFast }
                             }
                         }
 

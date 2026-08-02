@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 
 Item {
@@ -7,12 +8,12 @@ Item {
     property string screenName: ""
     property bool compact: false
     property bool reducedMotion: false
-    property color textColor: "#e7e9ea"
-    property color textSoft: "#a7abad"
-    property color textDim: "#6d7376"
-    property color lineColor: Qt.rgba(1, 1, 1, 0.10)
-    property color accentColor: "#8fb3c5"
-    property color occupiedColor: "#747b7f"
-    property color emptyColor: "#3c4143"
+    property color textColor: Config.Theme.textPrimary
+    property color textSoft: Config.Theme.textSecondary
+    property color textDim: Config.Theme.textMuted
+    property color lineColor: Config.Theme.outline
+    property color accentColor: Config.Theme.accent
+    property color occupiedColor: Config.Theme.textMuted
+    property color emptyColor: Config.Theme.surfaceContainer
     property string monoFont: "JetBrains Mono"
 }

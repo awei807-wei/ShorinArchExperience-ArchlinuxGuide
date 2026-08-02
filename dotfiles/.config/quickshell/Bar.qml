@@ -35,20 +35,20 @@ Rectangle {
     readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
     readonly property var currentScreen: panelWindow ? panelWindow.screen : null
     // Swiss industrial Bar 的稳定视觉 token；与 Matugen 动态面板强调色隔离。
-    readonly property color panelSurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.94)
-    readonly property color secondarySurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.88)
-    readonly property color utilitySurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
-    readonly property color hoverSurface: Qt.rgba(18 / 255, 20 / 255, 21 / 255, 0.95)
-    readonly property color panelBorder: Qt.rgba(1, 1, 1, 0.085)
-    readonly property color panelHighlight: Qt.rgba(1, 1, 1, 0.045)
-    readonly property color textPrimary: "#e7e9ea"
-    readonly property color textSecondary: "#a7abad"
-    readonly property color textDim: "#6d7376"
-    readonly property color linePrimary: Qt.rgba(1, 1, 1, 0.1)
-    readonly property color lineSecondary: Qt.rgba(1, 1, 1, 0.055)
-    readonly property color instrumentAccent: "#8fb3c5"
-    readonly property color occupiedTone: "#747b7f"
-    readonly property color inactiveTone: "#3c4143"
+    readonly property color panelSurface: Config.Theme.surface
+    readonly property color secondarySurface: Config.Theme.surface
+    readonly property color utilitySurface: Config.Theme.surface
+    readonly property color hoverSurface: Config.Theme.surfaceContainer
+    readonly property color panelBorder: Config.Theme.outline
+    readonly property color panelHighlight: Config.Theme.outlineVariant
+    readonly property color textPrimary: Config.Theme.textPrimary
+    readonly property color textSecondary: Config.Theme.textSecondary
+    readonly property color textDim: Config.Theme.textMuted
+    readonly property color linePrimary: Config.Theme.outline
+    readonly property color lineSecondary: Config.Theme.outlineVariant
+    readonly property color instrumentAccent: Config.Theme.accent
+    readonly property color occupiedTone: Config.Theme.textMuted
+    readonly property color inactiveTone: Config.Theme.surfaceContainer
     readonly property string monoFont: "JetBrains Mono"
     readonly property real contextRight: contextIslandItem.x + contextIslandItem.width
     readonly property real contextWidth: contextIslandItem.width
