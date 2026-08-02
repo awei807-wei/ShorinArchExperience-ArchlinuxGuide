@@ -956,6 +956,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 MouseArea {
                     z: 0 // 底层：在面板之下，用于捕获空白处点击
                     anchors.fill: parent // 覆盖整个窗口（全屏）
+                    // 关闭缓冲期立即禁用，避免退场动画期间挡住屏幕上其他点击
+                    enabled: configRoot.systemPanelVisible
                     onClicked: {
                         if (configRoot.systemPanelVisible) {
                             configRoot.systemPanelClosing = true // 进入关闭缓冲期（让动画/事件有时间完成）

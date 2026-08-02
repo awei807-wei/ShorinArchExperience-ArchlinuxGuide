@@ -60,6 +60,8 @@ Variants {
             MouseArea {
                 z: 0
                 anchors.fill: parent
+                // 关闭缓冲期立即禁用点击，避免退场动画期间挡住屏幕上其他点击
+                enabled: panelHost.open
                 onClicked: panelHost.closeRequested()
             }
 
