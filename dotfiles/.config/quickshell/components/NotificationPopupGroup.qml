@@ -4,7 +4,6 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Notifications
 import Quickshell.Widgets
-import "../config" as Config
 
 Rectangle {
     id: root
