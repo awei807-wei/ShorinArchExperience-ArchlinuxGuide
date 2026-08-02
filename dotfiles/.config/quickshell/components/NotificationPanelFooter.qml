@@ -1,4 +1,5 @@
 // 通知面板底部导航提示与破坏性清理操作。
+import "../config" as Config
 import QtQuick
 
 Item {
@@ -7,9 +8,9 @@ Item {
     property real unit: 13.6
     property int entryCount: 0
     property bool clearing: false
-    property color zenMist: "#252525"
-    property color zenSmoke: "#707070"
-    property color zenDanger: "#9a5555"
+    property color zenMist: Config.Theme.outline
+    property color zenSmoke: Config.Theme.textMuted
+    property color zenDanger: Config.Theme.danger
 
     signal clearRequested()
 
@@ -20,7 +21,7 @@ Item {
         anchors.leftMargin: footer.unit * 0.8
         anchors.verticalCenter: parent.verticalCenter
         text: "SCROLL ↑↓  ·  ENTER COPY"
-        font.pixelSize: footer.unit * 0.29
+        font.pixelSize: Math.max(Config.Theme.fontTiny, footer.unit * 0.29)
         font.family: "JetBrainsMono Nerd Font"
         color: footer.zenSmoke
     }
@@ -33,11 +34,19 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: footer.unit * 1.25
         height: footer.unit * 1.15
-        radius: 2
+        radius: Config.Theme.radiusSmall
         color: hovered ? Qt.rgba(0.6, 0.25, 0.25, 0.18) : "transparent"
         border.color: hovered ? footer.zenDanger : footer.zenMist
         border.width: 1
         opacity: footer.entryCount > 0 && !footer.clearing ? 1 : 0.35
+
+        Behavior on color {
+            ColorAnimation { duration: Config.Theme.animFast }
+        }
+
+        Behavior on border.color {
+            ColorAnimation { duration: Config.Theme.animFast }
+        }
 
         Item {
             anchors.centerIn: parent
@@ -70,6 +79,7 @@ Item {
         }
 
         MouseArea {
+            id: clearMouse
             anchors.fill: parent
             enabled: footer.entryCount > 0 && !footer.clearing
             hoverEnabled: true
@@ -80,6 +90,15 @@ Item {
             onReleased: clearButton.scale = 1
             onCanceled: clearButton.scale = 1
             onClicked: footer.clearRequested()
+        }
+
+        AppToolTip {
+            anchors.bottom: parent.top
+            anchors.bottomMargin: Config.Theme.spacingTiny
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "Clear History"
+            target: clearMouse
+            enabled: footer.entryCount > 0 && !footer.clearing
         }
     }
 }

@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 import QtQuick.Layouts
 
@@ -5,6 +6,7 @@ Item {
     id: root
 
     property string icon: ""
+    property string toolTip: ""
     property real value: 0
     property bool inactive: false
     property color accentColor: "#8fb3c5"
@@ -21,9 +23,9 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 20
+        radius: Config.Theme.radiusMedium
         color: root.surfaceColor
-        border.color: Qt.rgba(1, 1, 1, 0.05)
+        border.color: Config.Theme.outlineVariant
     }
 
     RowLayout {
@@ -42,6 +44,11 @@ Item {
                     ? Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.07)
                     : "transparent"
 
+            Behavior on color {
+                enabled: !root.reducedMotion
+                ColorAnimation { duration: Config.Theme.animFast }
+            }
+
             Text {
                 anchors.centerIn: parent
                 text: root.icon
@@ -56,6 +63,14 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.iconClicked()
+            }
+
+            AppToolTip {
+                anchors.bottom: parent.top
+                anchors.bottomMargin: Config.Theme.spacingTiny
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: root.toolTip
+                target: iconMouse
             }
         }
 
@@ -77,6 +92,12 @@ Item {
                     height: parent.height
                     radius: parent.radius
                     color: root.inactive ? root.mutedColor : root.accentColor
+
+                    // 数值跳变平滑（外部更新 / 拖动都走同一动画）
+                    Behavior on width {
+                        enabled: !root.reducedMotion
+                        NumberAnimation { duration: Config.Theme.animFast; easing.type: Easing.OutCubic }
+                    }
                 }
             }
 
@@ -89,6 +110,11 @@ Item {
                 height: sliderMouse.pressed ? 30 : 20
                 radius: 9
                 color: root.accentColor
+
+                Behavior on x {
+                    enabled: !root.reducedMotion
+                    NumberAnimation { duration: Config.Theme.animFast; easing.type: Easing.OutCubic }
+                }
 
                 Behavior on height {
                     enabled: !root.reducedMotion

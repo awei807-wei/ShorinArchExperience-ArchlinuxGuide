@@ -1,3 +1,4 @@
+import "../config" as Config
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -59,14 +60,15 @@ Rectangle {
     }
     property real unit: 13.6
     property bool expanded: false
-    property color ink: "#101010"
-    property color stone: "#1c1c1c"
-    property color mist: "#252525"
-    property color smoke: "#707070"
-    property color cloud: "#999999"
-    property color snow: "#d0d0d0"
+    property color ink: Config.Theme.surface
+    property color stone: Config.Theme.surfaceContainer
+    property color mist: Config.Theme.outline
+    property color ash: Config.Theme.outlineVariant
+    property color smoke: Config.Theme.textMuted
+    property color cloud: Config.Theme.textSecondary
+    property color snow: Config.Theme.textPrimary
     property color accent: "#8fb3c5"
-    property color danger: "#9a5555"
+    property color danger: Config.Theme.danger
 
     signal dismissRequested(var notification)
     signal sourceRequested(var notification)
@@ -76,7 +78,7 @@ Rectangle {
     color: headerHover.hovered ? stone : ink
     border.color: critical ? danger : mist
     border.width: 1
-    radius: 3
+    radius: Config.Theme.radiusMedium
     clip: true
 
     Component.onCompleted: reveal.start()
@@ -117,7 +119,17 @@ Rectangle {
     }
 
     Behavior on color {
-        ColorAnimation { duration: 120 }
+        ColorAnimation { duration: Config.Theme.animFast }
+    }
+
+    // 柔和投影（底下垫一层偏移 2px 的半透明黑矩形）
+    Rectangle {
+        z: -1
+        anchors.fill: parent
+        anchors.topMargin: 2
+        radius: root.radius
+        color: "#000000"
+        opacity: 0.35
     }
 
     Column {
@@ -136,7 +148,7 @@ Rectangle {
             Rectangle {
                 Layout.preferredWidth: root.unit * 1.45
                 Layout.preferredHeight: width
-                radius: 2
+                radius: Config.Theme.radiusSmall
                 color: root.mist
 
                 IconImage {
@@ -181,7 +193,7 @@ Rectangle {
                         ? "NOW"
                         : String(root.notifications.length).padStart(2, "0") + " NOTIFICATIONS"
                     font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: root.unit * 0.29
+                    font.pixelSize: Math.max(Config.Theme.fontTiny, root.unit * 0.29)
                     color: root.smoke
                 }
             }
@@ -287,23 +299,29 @@ Rectangle {
                                 readonly property string label: modelData.label
                                 height: parent.height
                                 width: Math.max(owner.unit * 5, actionLabel.implicitWidth + owner.unit * 1.2)
-                                radius: 2
-                                color: actionMouse.pressed ? owner.cloud : owner.mist
+                                radius: Config.Theme.radiusSmall
+                                color: actionMouse.pressed ? owner.cloud
+                                    : actionMouse.containsMouse ? owner.ash : owner.mist
                                 border.color: owner.smoke
                                 border.width: 1
+
+                                Behavior on color {
+                                    ColorAnimation { duration: Config.Theme.animFast }
+                                }
 
                                 Text {
                                     id: actionLabel
                                     anchors.centerIn: parent
                                     text: actionButton.label
                                     font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: actionButton.owner.unit * 0.35
+                                    font.pixelSize: Math.max(Config.Theme.fontTiny, actionButton.owner.unit * 0.35)
                                     color: actionMouse.pressed ? actionButton.owner.ink : actionButton.owner.snow
                                 }
 
                                 MouseArea {
                                     id: actionMouse
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         actionButton.nativeAction.invoke()
@@ -311,30 +329,52 @@ Rectangle {
                                             actionButton.owner.dismissRequested(actionButton.notification)
                                     }
                                 }
+
+                                AppToolTip {
+                                    anchors.top: parent.bottom
+                                    anchors.topMargin: Config.Theme.spacingTiny
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: actionButton.label
+                                    target: actionMouse
+                                }
                             }
                         }
 
                         Rectangle {
                             height: actionRow.height
                             width: root.unit * 4.5
-                            radius: 2
-                            color: closeMouse.pressed ? root.danger : root.mist
+                            radius: Config.Theme.radiusSmall
+                            color: closeMouse.pressed ? root.danger
+                                : closeMouse.containsMouse ? root.ash : root.mist
                             border.color: root.smoke
                             border.width: 1
+
+                            Behavior on color {
+                                ColorAnimation { duration: Config.Theme.animFast }
+                            }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: "DISMISS"
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: root.unit * 0.32
+                                font.pixelSize: Math.max(Config.Theme.fontTiny, root.unit * 0.32)
                                 color: root.snow
                             }
 
                             MouseArea {
                                 id: closeMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.dismissRequested(noticeRow.notification)
+                            }
+
+                            AppToolTip {
+                                anchors.top: parent.bottom
+                                anchors.topMargin: Config.Theme.spacingTiny
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Dismiss"
+                                target: closeMouse
                             }
                         }
                     }
