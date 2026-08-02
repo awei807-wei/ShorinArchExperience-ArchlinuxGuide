@@ -17,7 +17,14 @@ Variants {
 
     signal closeRequested()
 
+    // 注意：open 初始为 false，Variants 委托构建时 onOpenChanged 会立即触发一次，
+    // 必须忽略这次“初始化触发”，否则 closeTimer 尚未创建（ReferenceError: closeTimer is not defined）
+    property bool __initialized: false
+    Component.onCompleted: __initialized = true
+
     onOpenChanged: {
+        if (!__initialized)
+            return
         if (open) {
             closeTimer.stop()
             closing = false
