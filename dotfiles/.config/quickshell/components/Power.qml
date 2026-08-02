@@ -36,6 +36,9 @@ Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
+        // 水平内缩一个圆角半径，避免直角高亮条戳出圆角轮廓
+        anchors.leftMargin: power.radius
+        anchors.rightMargin: power.radius
         height: Config.BarTuning.islandTopHighlightHeight
         color: power.highlightColor
     }
