@@ -3,9 +3,13 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Notifications
 import Quickshell.Widgets
+import "../config" as Config
 
 Rectangle {
     id: root
+
+    readonly property int animFast: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animFast : 120
+    readonly property int animNormal: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animNormal : 200
 
     required property var group
     readonly property var notifications: group?.notifications ?? []
@@ -70,6 +74,8 @@ Rectangle {
 
     signal dismissRequested(var notification)
     signal sourceRequested(var notification)
+    signal exitStarted(var notification)
+    signal exitFinished()
 
     width: parent?.width ?? implicitWidth
     implicitHeight: content.implicitHeight + unit * 0.9
@@ -78,6 +84,8 @@ Rectangle {
     border.width: 1
     radius: 3
     clip: true
+
+    property bool exiting: false
 
     Component.onCompleted: reveal.start()
 
@@ -88,7 +96,7 @@ Rectangle {
             property: "opacity"
             from: 0
             to: 1
-            duration: 180
+            duration: root.animNormal
             easing.type: Easing.OutQuad
         }
         NumberAnimation {
@@ -96,10 +104,49 @@ Rectangle {
             property: "x"
             from: root.unit
             to: 0
-            duration: 220
+            duration: root.animNormal
             easing.type: Easing.OutCubic
         }
     }
+
+    // 退场：滑出（向右移出）+ 淡出，播放完后发出 exitFinished（由宿主销毁卡片）
+    ParallelAnimation {
+        id: exitAnim
+        NumberAnimation {
+            target: root
+            property: "x"
+            to: root.width + root.unit * 2
+            duration: root.animNormal
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: root
+            property: "opacity"
+            to: 0
+            duration: root.animNormal
+            easing.type: Easing.InCubic
+        }
+        onStopped: root.exitFinished()
+    }
+
+    function beginExit(notification) {
+        if (root.exiting)
+            return
+        root.exiting = true
+        reveal.stop()
+        root.exitStarted(notification)
+        exitAnim.start()
+    }
+
+    // 组内某条通知即将从数据源移除：驱动退场动画（只响应一次）
+    onNotificationsChanged: {
+        if (!root.exiting && root.notifications.length === 0) {
+            const closing = root.__lastNotifications ?? []
+            root.beginExit(closing.length > 0 ? closing[closing.length - 1] : null)
+        }
+        root.__lastNotifications = root.notifications
+    }
+    property var __lastNotifications: []
 
     Instantiator {
         model: root.notifications
@@ -113,11 +160,16 @@ Rectangle {
     }
 
     Behavior on implicitHeight {
-        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: root.animNormal; easing.type: Easing.OutCubic }
     }
 
     Behavior on color {
-        ColorAnimation { duration: 120 }
+        ColorAnimation { duration: root.animFast }
+    }
+
+    // 通知组重排时平滑上移/下移（替代瞬移）
+    Behavior on y {
+        NumberAnimation { duration: root.animNormal; easing.type: Easing.OutCubic }
     }
 
     Column {

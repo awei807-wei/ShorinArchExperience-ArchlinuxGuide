@@ -102,21 +102,83 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property int brightnessPercent: 50                      // 亮度百分比（0-100；由 brightnessctl 采集）
     property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
     property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
-    readonly property var notificationGroups: {
-        const groups = []
-        const byApp = ({})
-        configRoot.activeNotifications.forEach(notice => {
-            const appName = configRoot.cleanNotificationText(notice.appName || "Notification")
-            const key = appName.toLowerCase()
-            if (byApp[key] === undefined) {
-                byApp[key] = groups.length
-                groups.push({ "appName": appName, "notifications": [], "critical": false })
+    property var notificationGroups: []           // 按 app 分组的通知（增量更新，避免 Repeater 全量重建闪烁）
+    function addNotificationToGroups(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：无返回值
+        // 副作用：把通知增量插入对应 app 分组（去重 by id；维护 critical 标记；触发一次属性变更通知）
+
+        const appName = configRoot.cleanNotificationText(notification.appName || "Notification")
+        const key = appName.toLowerCase()
+        const groups = configRoot.notificationGroups.slice()
+
+        let groupIndex = -1
+        for (let i = 0; i < groups.length; ++i) {
+            const group = groups[i]
+            if (String(group.appName || "").toLowerCase() === key) {
+                groupIndex = i
+                break
             }
-            const group = groups[byApp[key]]
-            group.notifications.push(notice)
-            group.critical = group.critical || notice.urgency === NotificationUrgency.Critical
-        })
-        return groups
+        }
+
+        if (groupIndex === -1) {
+            groups.push({
+                "appName": appName,
+                "notifications": [notification],
+                "critical": notification.urgency === NotificationUrgency.Critical
+            })
+        } else {
+            const oldGroup = groups[groupIndex]
+            let notices = oldGroup.notifications.filter(item => item.id !== notification.id)
+            notices.push(notification)
+            let critical = false
+            for (let i = 0; i < notices.length; ++i) {
+                if (notices[i].urgency === NotificationUrgency.Critical) {
+                    critical = true
+                    break
+                }
+            }
+            groups[groupIndex] = { "appName": oldGroup.appName, "notifications": notices, "critical": critical }
+        }
+
+        configRoot.notificationGroups = groups
+    }
+    function removeNotificationFromGroups(notification) {
+        // 输入：Quickshell Notification 对象
+        // 输出：无返回值
+        // 副作用：把通知从对应 app 分组增量移除（空组整体删除；重算 critical；触发一次属性变更通知）
+
+        const groups = configRoot.notificationGroups
+        let groupIndex = -1
+        let noticeIndex = -1
+        for (let i = 0; i < groups.length; ++i) {
+            const idx = groups[i].notifications.indexOf(notification)
+            if (idx !== -1) {
+                groupIndex = i
+                noticeIndex = idx
+                break
+            }
+        }
+        if (groupIndex === -1)
+            return
+
+        const oldGroup = groups[groupIndex]
+        const notices = oldGroup.notifications.filter(item => item !== notification)
+        const next = groups.slice()
+        if (notices.length === 0) {
+            next.splice(groupIndex, 1)
+        } else {
+            let critical = false
+            for (let i = 0; i < notices.length; ++i) {
+                if (notices[i].urgency === NotificationUrgency.Critical) {
+                    critical = true
+                    break
+                }
+            }
+            next[groupIndex] = { "appName": oldGroup.appName, "notifications": notices, "critical": critical }
+        }
+
+        configRoot.notificationGroups = next
     }
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
     property var lastActivePlayer: null                     // 上一次“正在播放”的播放器（用于在暂停时保持来源稳定）
@@ -228,6 +290,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         const visible = list.slice(0, configRoot.notificationMaxVisible)
         const dropped = replaced.concat(list.slice(configRoot.notificationMaxVisible))
         configRoot.activeNotifications = visible
+        configRoot.addNotificationToGroups(notification) // 增量更新分组（替代全量重算，避免卡片重建闪烁）
         dropped.forEach(item => {
             try {
                 item.expire()
@@ -240,9 +303,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     function untrackNotification(notification) {
         // 输入：Quickshell Notification 对象
         // 输出：无返回值
-        // 副作用：从临时浮窗队列移除通知
+        // 副作用：从临时浮窗队列移除通知（并增量移出对应分组）
 
         configRoot.activeNotifications = configRoot.activeNotifications.filter(item => item.id !== notification.id)
+        configRoot.removeNotificationFromGroups(notification)
     }
 
     function notificationIsActive(notification) {
@@ -808,12 +872,23 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     width: parent.width
                     spacing: configRoot.baseUnit * 0.35
 
+                    // 通知消失后下方分组平滑上移（替代瞬移）
+                    move: Transition {
+                        NumberAnimation {
+                            properties: "y"
+                            duration: Config.Theme.animNormal
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
                     Repeater {
+                        id: notificationGroupRepeater
                         model: configRoot.notificationGroups
 
                         NotificationPopupGroup {
                             id: notificationCard
                             required property var modelData
+                            required property int index
                             width: notificationColumn.width
                             group: modelData
                             unit: configRoot.baseUnit
@@ -825,7 +900,24 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                             snow: configRoot.zenSnow
                             onDismissRequested: notice => notice.dismiss()
                             onSourceRequested: notice => configRoot.focusNotificationSource(notice)
+
+                            // 退场动画期间先把对应通知从分组数据中移除（触发剩余分组重排），
+                            // 动画播放完后清掉占位计数，卡片真正销毁，避免闪烁/复用错位。
+                            onExitStarted: notification => {
+                                notificationColumn.exitCleanupPending += 1
+                                configRoot.removeNotificationFromGroups(notification)
+                            }
+                            onExitFinished: notificationColumn.exitCleanupPending -= 1
                         }
+                    }
+
+                    // 退场动画播放期间临时保留对应数量的已移除卡片（占位防闪）
+                    property int exitCleanupPending: 0
+                    onExitCleanupPendingChanged: cleanupRepeaterModel()
+                    Component.onCompleted: cleanupRepeaterModel()
+                    function cleanupRepeaterModel() {
+                        const keep = configRoot.notificationGroups.length + exitCleanupPending
+                        notificationGroupRepeater.model = keep
                     }
                 }
             }
