@@ -4,23 +4,29 @@ import Quickshell.Services.Pam
 import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick.Effects
+import "../config" as Config
 
 ShellRoot {
     id: root
     
     readonly property int u: 16
+
+    // reducedMotion 时：粒子静止、禁用进场与交互动画
+    readonly property bool reducedMotion: (Quickshell.env("QUICKSHELL_REDUCE_MOTION") || "").toLowerCase() === "1"
+        || (Quickshell.env("QUICKSHELL_REDUCE_MOTION") || "").toLowerCase() === "true"
+        || (Quickshell.env("QUICKSHELL_REDUCE_MOTION") || "").toLowerCase() === "yes"
     
     // 动态配色：读取 matugen 输出，让锁屏跟随壁纸变化
     readonly property string colorFilePath: "file:///home/shiyi/.cache/matugen/colors.json"
     property color bgGlass: Qt.rgba(0.078, 0.078, 0.098, 0.72)
-    property color accent: "#f3bd6e"
+    property color accent: Config.Theme.accent
     property color accentGlow: Qt.rgba(0.953, 0.741, 0.431, 0.3)
-    property color textPrimary: "#ede0d4"
-    property color textSecondary: "#9b8f80"
+    property color textPrimary: Config.Theme.textPrimary
+    property color textSecondary: Config.Theme.textSecondary
     property color tintColor: Qt.rgba(0.1, 0.08, 0.05, 0.4)
     property color fieldBg: Qt.rgba(0, 0, 0, 0.18)
     property color buttonText: "#141414"
-    property color errorColor: "#ff7a7a"
+    property color errorColor: Config.Theme.danger
     readonly property string idleFlagUrl: "file:///home/shiyi/.local/state/quickshell/idle_enabled"
     readonly property string debugLogPath: "/home/shiyi/.local/state/quickshell/lockscreen-debug.log"
     property bool idleEnabled: true
@@ -111,6 +117,7 @@ ShellRoot {
     }
 
     function triggerUnlockErrorWobble() {
+        if (root.reducedMotion) return
         if (typeof unlockErrorWobble === "undefined" || unlockErrorWobble === null) return
         unlockErrorWobble.restart()
     }
@@ -448,6 +455,16 @@ ShellRoot {
         
         WlSessionLockSurface {
             color: "#0f0f12"
+
+            // 锁屏进场淡入（reducedMotion 时直接显示）
+            opacity: 0
+            Component.onCompleted: opacity = 1
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.reducedMotion ? 0 : Config.Theme.animSlow
+                    easing.type: Easing.OutCubic
+                }
+            }
             
             // --- 背景渲染层 ---
             Item {
@@ -460,7 +477,8 @@ ShellRoot {
                     fillMode: Image.PreserveAspectCrop
                     visible: false
                 }
-                
+
+                // 静态壁纸只渲染一次并缓存到 GPU 纹理，MultiEffect blur 不再每帧采样源
                 MultiEffect {
                     source: wallpaperImage
                     anchors.fill: parent
@@ -468,6 +486,7 @@ ShellRoot {
                     blur: 1.0
                     blurMax: 64
                     brightness: -0.3
+                    layer.enabled: true
                 }
                 
                 Rectangle {
@@ -487,15 +506,15 @@ ShellRoot {
                     function initParticles() {
                         if (width <= 0 || height <= 0) return
                         particles = []
-                        for (var i = 0; i < 60; i++) {
+                        for (var i = 0; i < 30; i++) {
                             particles.push({
                                 x: Math.random() * width,
                                 y: Math.random() * height,
                                 size: Math.random() * 3 + 1.5,
-                                vx: (Math.random() - 0.5) * 0.8,
-                                vy: (Math.random() - 0.5) * 0.8,
+                                vx: (Math.random() - 0.5) * 1.7,
+                                vy: (Math.random() - 0.5) * 1.7,
                                 alpha: Math.random() * 0.6 + 0.2,
-                                color: Math.random() > 0.5 ? "#ffffff" : "#7c9a92"
+                                color: Math.random() > 0.5 ? Config.Theme.textPrimary : Config.Theme.accentSecondary
                             })
                         }
                         initialized = true
@@ -503,12 +522,17 @@ ShellRoot {
 
                     onWidthChanged: initParticles()
                     onHeightChanged: initParticles()
-                    
+
+                    // reducedMotion 时绘制一帧静态粒子，不启动重绘 Timer
+                    Component.onCompleted: {
+                        if (root.reducedMotion) requestPaint()
+                    }
+
                     onPaint: {
                         if (!initialized) initParticles()
                         var ctx = getContext("2d")
                         ctx.clearRect(0, 0, width, height)
-                        
+
                         for (var i = 0; i < particles.length; i++) {
                             var p = particles[i]
                             ctx.beginPath()
@@ -516,20 +540,23 @@ ShellRoot {
                             ctx.fillStyle = p.color
                             ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
                             ctx.fill()
-                            
-                            p.x += p.vx
-                            p.y += p.vy
-                            
-                            if (p.x < 0) p.x = width
-                            if (p.x > width) p.x = 0
-                            if (p.y < 0) p.y = height
-                            if (p.y > height) p.y = 0
+
+                            if (!root.reducedMotion) {
+                                p.x += p.vx
+                                p.y += p.vy
+
+                                if (p.x < 0) p.x = width
+                                if (p.x > width) p.x = 0
+                                if (p.y < 0) p.y = height
+                                if (p.y > height) p.y = 0
+                            }
                         }
                     }
-                    
+
+                    // 30fps 重绘（原为 16ms/60fps）；粒子速度已按 33ms 帧间隔补偿，避免跳变
                     Timer {
-                        interval: 16 
-                        running: true
+                        interval: 33
+                        running: !root.reducedMotion
                         repeat: true
                         onTriggered: particleCanvas.requestPaint()
                     }
@@ -580,6 +607,10 @@ ShellRoot {
                             : Qt.rgba(1, 1, 1, 0.05)
                         border.color: Qt.rgba(1, 1, 1, 0.1)
 
+                        Behavior on color {
+                            ColorAnimation { duration: Config.Theme.animFast }
+                        }
+
                         Text {
                             anchors.centerIn: parent
                             text: "⏻"
@@ -608,6 +639,10 @@ ShellRoot {
                             : Qt.rgba(1, 1, 1, 0.05)
                         border.color: Qt.rgba(1, 1, 1, 0.1)
                         opacity: root.idleToggleBusy ? 0.66 : 1.0
+
+                        Behavior on color {
+                            ColorAnimation { duration: Config.Theme.animFast }
+                        }
 
                         Item {
                             anchors.centerIn: parent
@@ -655,7 +690,7 @@ ShellRoot {
                     width: Math.max(topButtons.implicitWidth, contentColumn.implicitWidth)
                     implicitHeight: contentColumn.height + root.u * 2
                     height: root.powerMenuVisible ? implicitHeight : 0
-                    radius: root.u * 0.5
+                    radius: Config.Theme.radiusMedium
                     clip: true
                     color: root.bgGlass
                     border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -664,10 +699,10 @@ ShellRoot {
                     enabled: root.powerMenuVisible
 
                     Behavior on opacity {
-                        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                     }
                     Behavior on height {
-                        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                     }
 
                     Column {
@@ -687,10 +722,14 @@ ShellRoot {
                                 implicitWidth: itemRow.implicitWidth + root.u * 1.6
                                 width: implicitWidth
                                 height: root.u * 1.8
-                                radius: root.u * 0.4
+                                radius: Config.Theme.radiusSmall
                                 color: itemArea.containsMouse
                                     ? Qt.rgba(1, 1, 1, 0.05)
                                     : "transparent"
+
+                                Behavior on color {
+                                    ColorAnimation { duration: Config.Theme.animFast }
+                                }
 
                                 Row {
                                     id: itemRow
@@ -799,7 +838,7 @@ ShellRoot {
                                 Text {
                                     anchors.centerIn: parent
                                     font.pixelSize: root.u * 1.8
-                                    color: "white"
+                                    color: root.buttonText
                                     text: root.username.substring(0, 2).toUpperCase()
                                 }
                             }
@@ -834,13 +873,13 @@ ShellRoot {
                                 opacity: root.authFailed ? 1.0 : (passwordInput.activeFocus ? 0.98 : 0.48)
 
                                 Behavior on height {
-                                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                                 }
                                 Behavior on color {
-                                    ColorAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    ColorAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                                 }
                                 Behavior on opacity {
-                                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                                 }
                             }
 
@@ -916,13 +955,13 @@ ShellRoot {
                             scale: unlockArea.pressed ? 0.995 : 1.0
 
                             Behavior on fillColor {
-                                ColorAnimation { duration: 160; easing.type: Easing.OutCubic }
+                                ColorAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
                             }
                             Behavior on outlineColor {
-                                ColorAnimation { duration: 160; easing.type: Easing.OutCubic }
+                                ColorAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
                             }
                             Behavior on scale {
-                                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
                             }
 
                             SequentialAnimation {
