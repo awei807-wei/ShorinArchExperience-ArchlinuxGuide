@@ -901,7 +901,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         model: configRoot.notificationGroups
 
                         NotificationPopupGroup {
-                            id: notificationCard
                             required property var modelData
                             required property int index
                             width: notificationColumn.width
@@ -931,8 +930,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     onExitCleanupPendingChanged: cleanupRepeaterModel()
                     Component.onCompleted: cleanupRepeaterModel()
                     function cleanupRepeaterModel() {
-                        const keep = configRoot.notificationGroups.length + exitCleanupPending
-                        notificationGroupRepeater.model = keep
+                        notificationGroupRepeater.model = configRoot.notificationGroups.length + exitCleanupPending
                     }
                 }
             }
