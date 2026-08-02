@@ -11,18 +11,18 @@ Row {
     property int requestedTrayIconLimit: 3
     property int notificationHistoryCount: 0
     property bool trayPanelExpanded: false
-    property color metricsSurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.88)
-    property color utilitySurface: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
-    property color hoverSurface: Qt.rgba(18 / 255, 20 / 255, 21 / 255, 0.91)
-    property color borderColor: Qt.rgba(1, 1, 1, 0.085)
-    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
-    property color textSoft: "#a7abad"
-    property color textDim: "#6d7376"
-    property color lineSoft: Qt.rgba(1, 1, 1, 0.055)
-    property color accentColor: "#8fb3c5"
-    property color segmentOn: "#747b7f"
-    property color segmentOff: "#3c4143"
-    property color dangerColor: "#9a5555"
+    property color metricsSurface: Config.Theme.surface
+    property color utilitySurface: Config.Theme.surface
+    property color hoverSurface: Config.Theme.surfaceContainer
+    property color borderColor: Config.Theme.outline
+    property color highlightColor: Config.Theme.outlineVariant
+    property color textSoft: Config.Theme.textSecondary
+    property color textDim: Config.Theme.textMuted
+    property color lineSoft: Config.Theme.outlineVariant
+    property color accentColor: Config.Theme.accent
+    property color segmentOn: Config.Theme.textMuted
+    property color segmentOff: Config.Theme.surfaceContainer
+    property color dangerColor: Config.Theme.danger
     property string monoFont: "JetBrains Mono"
     readonly property bool reducedMotion: metricsState ? metricsState.reducedMotion : false
     readonly property bool showTray: responsiveLevel < 3
@@ -112,7 +112,7 @@ Row {
             height: Config.BarTuning.islandHeight
             reducedMotion: systemIsland.reducedMotion
             surfaceColor: systemIsland.utilitySurface
-            hoverColor: Qt.rgba(1, 1, 1, 0.035)
+            hoverColor: Config.Theme.surfaceContainer
             borderColor: systemIsland.borderColor
             highlightColor: systemIsland.highlightColor
             iconColor: systemIsland.textDim

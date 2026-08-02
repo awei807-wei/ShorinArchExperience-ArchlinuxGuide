@@ -6,12 +6,12 @@ Rectangle {
     id: power
 
     property bool reducedMotion: false
-    property color surfaceColor: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
-    property color hoverColor: Qt.rgba(1, 1, 1, 0.035)
-    property color borderColor: Qt.rgba(1, 1, 1, 0.085)
-    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
-    property color iconColor: "#6d7376"
-    property color iconHoverColor: "#a7abad"
+    property color surfaceColor: Config.Theme.surface
+    property color hoverColor: Config.Theme.surfaceContainer
+    property color borderColor: Config.Theme.outline
+    property color highlightColor: Config.Theme.outlineVariant
+    property color iconColor: Config.Theme.textMuted
+    property color iconHoverColor: Config.Theme.textSecondary
     readonly property bool hovered: pointerArea.containsMouse
 
     function activate() {
@@ -25,7 +25,7 @@ Rectangle {
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
-    radius: Config.BarTuning.islandRadius
+    radius: Config.Theme.radiusMedium
     activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: "Power menu"
@@ -101,7 +101,7 @@ Rectangle {
         enabled: !power.reducedMotion
 
         ColorAnimation {
-            duration: 130
+            duration: Config.Theme.animFast
         }
 
     }

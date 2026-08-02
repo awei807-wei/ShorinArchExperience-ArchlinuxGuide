@@ -9,14 +9,14 @@ Rectangle {
     id: trayIsland
 
     property real unit: Config.BarTuning.trayUnit
-    property color zenInk: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.86)
-    property color zenMist: Qt.rgba(1, 1, 1, 0.085)
-    property color zenStone: Qt.rgba(1, 1, 1, 0.025)
-    property color zenAsh: Qt.rgba(1, 1, 1, 0.055)
-    property color zenCloud: "#6d7376"
-    property color zenSnow: "#a7abad"
-    property color zenDanger: "#9a5555"
-    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
+    property color zenInk: Config.Theme.surface
+    property color zenMist: Config.Theme.outline
+    property color zenStone: Config.Theme.surfaceContainer
+    property color zenAsh: Config.Theme.outlineVariant
+    property color zenCloud: Config.Theme.textMuted
+    property color zenSnow: Config.Theme.textSecondary
+    property color zenDanger: Config.Theme.danger
+    property color highlightColor: Config.Theme.outlineVariant
     property string monoFont: "JetBrains Mono"
     property var panelWindow: null
     property var trayItems: SystemTray.items
@@ -60,7 +60,7 @@ Rectangle {
     color: zenInk
     border.color: zenMist
     border.width: Config.BarTuning.islandBorderWidth
-    radius: Config.BarTuning.islandRadius
+    radius: Config.Theme.radiusMedium
     clip: false
 
     onHasCompositeEntryChanged: {
@@ -87,8 +87,18 @@ Rectangle {
         color: trayIsland.zenInk
         border.color: trayIsland.zenMist
         border.width: Config.BarTuning.islandBorderWidth
-        radius: Config.BarTuning.islandRadius
+        radius: Config.Theme.radiusMedium
         opacity: visible ? 1 : 0
+
+        Behavior on x {
+            enabled: !trayIsland.reducedMotion
+            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
+        }
+
+        Behavior on width {
+            enabled: !trayIsland.reducedMotion
+            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
+        }
 
         Rectangle {
             anchors.top: parent.top
@@ -100,7 +110,7 @@ Rectangle {
 
         Behavior on opacity {
             enabled: !trayIsland.reducedMotion
-            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
         }
     }
 
@@ -140,20 +150,28 @@ Rectangle {
 
                 Behavior on width {
                     enabled: !trayIsland.reducedMotion
-                    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
                 }
                 Behavior on opacity {
                     enabled: !trayIsland.reducedMotion
-                    NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
                 }
 
                 Rectangle {
                     id: trayItemBackground
-                    anchors.fill: parent
-                    color: trayItemMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.025) : "transparent"
+                    anchors.centerIn: parent
+                    width: trayIsland.iconSize
+                    height: trayIsland.iconSize
+                    radius: Config.Theme.radiusSmall
+                    color: trayItemMouse.containsMouse ? Config.Theme.surfaceContainer : "transparent"
                     border.color: trayItemMouse.containsMouse
-                        ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
+                        ? Config.Theme.outline : Config.Theme.outlineVariant
                     border.width: 1
+
+                    Behavior on color {
+                        enabled: !trayIsland.reducedMotion
+                        ColorAnimation { duration: Config.Theme.animFast }
+                    }
 
                     Image {
                         id: trayIcon
@@ -239,24 +257,33 @@ Rectangle {
 
             Behavior on width {
                 enabled: !trayIsland.reducedMotion
-                NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
             }
             Behavior on opacity {
                 enabled: !trayIsland.reducedMotion
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
             }
 
             Rectangle {
-                anchors.fill: parent
-                color: compositeEntry.hovered ? Qt.rgba(1, 1, 1, 0.025) : "transparent"
+                id: compositeBackground
+                anchors.centerIn: parent
+                width: trayIsland.iconSize
+                height: trayIsland.iconSize
+                radius: Config.Theme.radiusSmall
+                color: compositeEntry.hovered ? Config.Theme.surfaceContainer : "transparent"
                 border.color: compositeEntry.hovered
-                    ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
+                    ? Config.Theme.outline : Config.Theme.outlineVariant
                 border.width: 1
+
+                Behavior on color {
+                    enabled: !trayIsland.reducedMotion
+                    ColorAnimation { duration: Config.Theme.animFast }
+                }
             }
 
             Text {
                 visible: trayIsland.hiddenTrayCount > 0
-                anchors.centerIn: parent
+                anchors.centerIn: compositeBackground
                 text: "+" + trayIsland.hiddenTrayCount
                 textFormat: Text.PlainText
                 font.pixelSize: Config.BarTuning.trayCompositeFontSize
@@ -266,7 +293,7 @@ Rectangle {
 
             Item {
                 visible: trayIsland.hiddenTrayCount === 0 && trayIsland.notificationCount > 0
-                anchors.centerIn: parent
+                anchors.centerIn: compositeBackground
                 width: 9
                 height: 9
 
@@ -308,7 +335,7 @@ Rectangle {
                     anchors.centerIn: parent
                     text: trayIsland.notificationCount > 99 ? "99+" : String(trayIsland.notificationCount)
                     textFormat: Text.PlainText
-                    font.pixelSize: Config.BarTuning.trayBadgeFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.weight: Font.DemiBold
                     font.family: trayIsland.monoFont
                     color: trayIsland.zenSnow
@@ -349,9 +376,14 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: "«"
-                font.pixelSize: Config.BarTuning.trayCollapseFontSize
+                font.pixelSize: Config.Theme.fontTiny
                 font.family: trayIsland.monoFont
                 color: collapseButton.hovered ? trayIsland.zenSnow : trayIsland.zenCloud
+
+                Behavior on color {
+                    enabled: !trayIsland.reducedMotion
+                    ColorAnimation { duration: Config.Theme.animFast }
+                }
             }
 
             MouseArea {
@@ -370,7 +402,7 @@ Rectangle {
                 && !trayIsland.expanded
             anchors.verticalCenter: parent.verticalCenter
             text: "···"
-            font.pixelSize: Config.BarTuning.trayEmptyFontSize
+            font.pixelSize: Config.Theme.fontTiny
             font.family: trayIsland.monoFont
             color: trayIsland.zenAsh
         }

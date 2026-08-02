@@ -9,8 +9,8 @@ Item {
     property string bars: "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁"
     property bool active: false
     property bool reducedMotion: false
-    property color barColor: "#767f84"
-    property color topLineColor: Qt.rgba(180 / 255, 194 / 255, 202 / 255, 0.08)
+    property color barColor: Config.Theme.textMuted
+    property color topLineColor: Config.Theme.outlineVariant
     readonly property int barCount: Config.BarTuning.spectrumBarCount
     readonly property int barGap: Config.BarTuning.spectrumBarGap
 
@@ -63,7 +63,7 @@ Item {
 
                     Behavior on height {
                         enabled: !spectrum.reducedMotion
-                        NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                        NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
                     }
                 }
             }
@@ -72,6 +72,6 @@ Item {
 
     Behavior on opacity {
         enabled: !spectrum.reducedMotion
-        NumberAnimation { duration: 180 }
+        NumberAnimation { duration: Config.Theme.animNormal }
     }
 }

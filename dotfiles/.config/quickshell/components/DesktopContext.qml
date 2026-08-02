@@ -25,7 +25,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: desktopContext.textDim
                     font.family: desktopContext.monoFont
-                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.9
                 }
 
@@ -35,7 +35,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: desktopContext.textColor
                     font.family: desktopContext.monoFont
-                    font.pixelSize: Config.BarTuning.desktopPrimaryFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.32
                 }
 
@@ -45,7 +45,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: desktopContext.textSoft
                     font.family: desktopContext.monoFont
-                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.36
                 }
 
@@ -75,7 +75,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: desktopContext.textDim
                     font.family: desktopContext.monoFont
-                    font.pixelSize: Config.BarTuning.desktopSecondaryFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.72
                 }
 
@@ -85,7 +85,7 @@ ContextContent {
                     elide: Text.ElideRight
                     color: desktopContext.textSoft
                     font.family: desktopContext.monoFont
-                    font.pixelSize: Config.BarTuning.desktopContextFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.2
                 }
 

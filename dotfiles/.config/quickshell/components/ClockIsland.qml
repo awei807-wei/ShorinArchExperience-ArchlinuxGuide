@@ -6,15 +6,15 @@ Rectangle {
 
     property int responsiveLevel: 0
     property bool reducedMotion: false
-    property color surfaceColor: Qt.rgba(10 / 255, 12 / 255, 13 / 255, 0.94)
-    property color hoverColor: Qt.rgba(18 / 255, 20 / 255, 21 / 255, 0.95)
-    property color borderColor: Qt.rgba(1, 1, 1, 0.085)
-    property color highlightColor: Qt.rgba(1, 1, 1, 0.045)
-    property color textColor: "#e7e9ea"
-    property color textSoft: "#a7abad"
-    property color textDim: "#6d7376"
-    property color lineColor: Qt.rgba(1, 1, 1, 0.1)
-    property color accentColor: "#8fb3c5"
+    property color surfaceColor: Config.Theme.surface
+    property color hoverColor: Config.Theme.surfaceContainer
+    property color borderColor: Config.Theme.outline
+    property color highlightColor: Config.Theme.outlineVariant
+    property color textColor: Config.Theme.textPrimary
+    property color textSoft: Config.Theme.textSecondary
+    property color textDim: Config.Theme.textMuted
+    property color lineColor: Config.Theme.outline
+    property color accentColor: Config.Theme.accent
     property string monoFont: "JetBrains Mono"
     property string timeText: "00:00"
     property string dateText: "2026.07.28"
@@ -48,7 +48,7 @@ Rectangle {
     color: hovered ? hoverColor : surfaceColor
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
-    radius: Config.BarTuning.islandRadius
+    radius: Config.Theme.radiusMedium
     clip: true
     Accessible.role: Accessible.StaticText
     Accessible.name: "Clock"
@@ -60,21 +60,21 @@ Rectangle {
             target: clockIsland
             property: "shakeOffset"
             to: 2
-            duration: 45
+            duration: Config.Theme.animFast
         }
 
         NumberAnimation {
             target: clockIsland
             property: "shakeOffset"
             to: -2
-            duration: 45
+            duration: Config.Theme.animFast
         }
 
         NumberAnimation {
             target: clockIsland
             property: "shakeOffset"
             to: 0
-            duration: 45
+            duration: Config.Theme.animFast
         }
 
     }
@@ -141,7 +141,7 @@ Rectangle {
                     elide: Text.ElideRight
                     color: clockIsland.textSoft
                     font.family: clockIsland.monoFont
-                    font.pixelSize: Config.BarTuning.clockDateFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: 0.385
                 }
 
@@ -151,14 +151,14 @@ Rectangle {
                     elide: Text.ElideRight
                     color: clockIsland.showVolume ? clockIsland.accentColor : clockIsland.textDim
                     font.family: clockIsland.monoFont
-                    font.pixelSize: Config.BarTuning.clockWeekdayFontSize
+                    font.pixelSize: Config.Theme.fontTiny
                     font.letterSpacing: clockIsland.showVolume ? 0.5 : 0.75
 
                     Behavior on color {
                         enabled: !clockIsland.reducedMotion
 
                         ColorAnimation {
-                            duration: 150
+                            duration: Config.Theme.animFast
                         }
 
                     }
@@ -187,7 +187,7 @@ Rectangle {
         enabled: !clockIsland.reducedMotion
 
         ColorAnimation {
-            duration: 180
+            duration: Config.Theme.animNormal
         }
 
     }
