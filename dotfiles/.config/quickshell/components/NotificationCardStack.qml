@@ -1,9 +1,13 @@
 // 两层静态轮廓与一张真实通知卡片。
 import "../config" as Config
 import QtQuick
+import "../config" as Config
 
 Item {
     id: cardStack
+
+    readonly property int animFast: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animFast : 120
+    readonly property int animNormal: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animNormal : 200
 
     property var entry: null
     property int entryCount: 0
@@ -22,8 +26,8 @@ Item {
     signal moveRequested(int delta)
 
     function animateSwitch() {
-        notificationCard.opacity = 0
-        cardReveal.restart()
+        // 切换历史卡片：旧内容滑出 + 淡出，随后新内容滑入 + 淡入
+        cardSwitchOut.restart()
     }
 
     function displayTime(timestamp) {
@@ -33,15 +37,57 @@ Item {
             : Qt.formatDateTime(date, "MM-dd HH:mm:ss")
     }
 
+    // 旧内容退场（淡出 + 轻微右移）
+    SequentialAnimation {
+        id: cardSwitchOut
+        ParallelAnimation {
+            NumberAnimation {
+                target: notificationCard
+                property: "opacity"
+                to: 0
+                duration: cardStack.animFast
+                easing.type: Easing.InCubic
+            }
+            NumberAnimation {
+                target: notificationCard
+                property: "x"
+                to: cardStack.unit * 0.8 + cardStack.unit * 0.5
+                duration: cardStack.animFast
+                easing.type: Easing.InCubic
+            }
+        }
+        ScriptAction { script: cardSwitchIn.restart() }
+    }
+
+    // 新内容入场（淡入 + 从右侧归位）
+    ParallelAnimation {
+        id: cardSwitchIn
+        NumberAnimation {
+            target: notificationCard
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: cardStack.animNormal
+            easing.type: Easing.OutQuad
+        }
+        NumberAnimation {
+            target: notificationCard
+            property: "x"
+            from: cardStack.unit * 0.8 + cardStack.unit * 0.5
+            to: cardStack.unit * 0.8
+            duration: cardStack.animNormal
+            easing.type: Easing.OutCubic
+        }
+    }
+
     NumberAnimation {
         id: cardReveal
         target: notificationCard
         property: "opacity"
         to: 1
-        duration: 150
+        duration: cardStack.animNormal
         easing.type: Easing.OutQuad
     }
-
     Rectangle {
         visible: cardStack.ready && cardStack.entryCount > 2
         x: cardStack.unit * 1.15
