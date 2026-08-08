@@ -36,6 +36,8 @@
 - `scripts/focus-tray-item.sh`、`scripts/test-focus-tray-item.sh`：托盘双击聚焦 helper 及 niri 窗口评分 fixture；`focus-notification-source.sh` 保持通知卡片原有语义。
 - `scripts/test-notification-history.py`、`notification-store-check.qml`、`tray-state-check.qml`、`bar-layout-check.qml`：存储、桥接、排序、角标和布局回归。
 - `lockscreen/shell.qml`：历史锁屏定向恢复与当前主题兼容。
+- `lockscreen/PowerControls.qml`：右上角电源/idle 控件的固定 hit target、确定性 glyph 与菜单锚定；只发出动作信号，不持有系统进程。
+- `lockscreen/power-controls-check.qml`：离屏布局门禁，覆盖圆按钮尺寸/中心线、图标文本框居中与菜单锚定稳定性。
 - `.helloagents/DESIGN.md`、`.helloagents/modules/bar.md`、`.helloagents/CHANGELOG.md`：最终集成后同步事实与验证结论。
 
 ## UI / 设计约束
@@ -52,6 +54,7 @@
 - 活动通知与磁盘历史语义混淆会导致角标消失或虚高：明确 `notificationGroups` 只表示临时弹窗，`historyCount/sourceCounts` 共同表示持久裁剪历史，禁止双来源聚合。
 - 角标可能被 `clip` 或菜单锚点遮挡：用布局状态检查和实际 Bar 加载检查图标边界、点击热区与 QsMenuAnchor。
 - 锁屏历史版本可能依赖已删除组件：以锁定/PAM最小闭环为证据，逐项移植，遇到媒体或视觉附属依赖时裁剪而非连带恢复。
+- 锁屏右上角原先的 `⏻` / `👁` 未指定字体，fallback 行框使视觉墨迹中心漂移；统一 Nerd Font glyph 和 `anchors.fill`/显式对齐解决几何问题。`shell.qml` 仍超过 400 行，抽取范围止于右上角控件，避免引入跨对象或 Process 风险。
 - 验证顺序为 Python 单测、QML 状态检查、Bar/锁屏实际加载日志、关键状态视觉检查、`git diff --check` 和工作区审计；锁屏真实密码成功解锁由人工烟测记录结论。
 
 ## 决策记录
@@ -59,3 +62,4 @@
 - [2026-08-08] 采用 `desktopEntry -> tray.id`、`appName -> tray.id/title/tooltipTitle` 的两阶段唯一精确匹配；歧义与未知来源宁可不计，不做猜测。
 - [2026-08-08] 排序固定为通知数降序、SystemTray 注册顺序升序，确保通知清零后可逆恢复。
 - [2026-08-08] 锁屏从历史做文件级恢复与当前兼容，不对仓库执行整提交回退。
+- [2026-08-08] 锁屏右上角采用 `PowerControls` 独立布局组件；电源/idle 命令仍由 `shell.qml` 处理，offscreen 门禁只验证布局和信号边界。

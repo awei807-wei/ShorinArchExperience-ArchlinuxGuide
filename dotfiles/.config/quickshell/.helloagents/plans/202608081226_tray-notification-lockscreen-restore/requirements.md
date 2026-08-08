@@ -16,6 +16,7 @@
 - 托盘排序按应用通知数降序，其次按 SystemTray 注册顺序升序。通知计数清零后恢复注册顺序；示例顺序必须满足 `1/2/3/4 -> 4/1/2/3 -> 3/4/1/2`。
 - 匹配成功且计数大于 0 时，在对应托盘图标上显示数字角标；清空通知历史后角标和排序同步复位。
 - 锁屏入口保持用户现有 niri 绑定：`/usr/bin/quickshell -p ~/.config/quickshell/lockscreen/shell.qml`。恢复以 Git 历史中最后可工作的锁屏为依据，只做目标文件级恢复与兼容修正。
+- 锁屏右上角两个圆形 hit target 必须尺寸相等并共用垂直中心线；power/eye 图标使用确定性的 `JetBrainsMono Nerd Font` glyph，Text 填充按钮并显式水平/垂直居中，禁止 emoji fallback 或无实测 optical offset。电源菜单必须继续锚定在按钮组下方并保持右对齐。
 
 ## 非目标
 - 不引入第二套通知存储、未读状态或独立托盘计数数据库。
@@ -35,4 +36,5 @@
 - Python 回归覆盖历史追加、裁剪、来源归一化、清空、损坏恢复和响应兼容；QML 状态检查覆盖单击/双击/右键消歧、Fcitx/VCP/飞书/QQ 精确与受限匹配、QQ 候选歧义拒绝、排序稳定性、实际 `TrayItem.notificationCount` 角标及 0/1/2/3/溢出布局矩阵；独立 fixture 覆盖托盘聚焦脚本评分。
 - 通过 `scripts/test-notification-history.py`、`notification-store-check.qml`、`tray-state-check.qml`、`bar-layout-check.qml`、QML 静态/实际加载检查与 `git diff --check`。
 - 锁屏需验证历史来源、QML 可加载、niri 命令路径可达、锁定层创建、PAM 输入/失败/成功解锁链路；无法自动完成的真实输入验收必须明确记录。
+- `lockscreen/power-controls-check.qml` 以隔离组件完成布局门禁，不创建 `WlSessionLock`、不执行 `systemctl`、不调用 idle-control；`lockscreen/shell.qml` 仍超过 400 行，本轮仅按职责抽取右上角控件，避免扩展为无关重构。
 - 延续 `.helloagents/DESIGN.md` 的 Bar 几何、暗色 token、危险色角标、键盘焦点、减弱动效与多宽度响应式要求。

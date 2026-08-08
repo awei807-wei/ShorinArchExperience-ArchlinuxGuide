@@ -599,194 +599,31 @@ ShellRoot {
                 }
             }
 
-            Item {
+            PowerControls {
                 id: powerArea
                 z: 20
-                width: Math.max(topButtons.implicitWidth, powerMenu.width)
-                height: topButtons.height + (root.powerMenuVisible ? (powerMenu.implicitHeight + root.u * 0.75) : 0)
                 anchors.top: parent.top
                 anchors.right: parent.right
                 anchors.topMargin: root.u * 1
                 anchors.rightMargin: root.u * 4
+                unit: root.u
+                powerMenuVisible: root.powerMenuVisible
+                idleEnabled: root.idleEnabled
+                idleToggleBusy: root.idleToggleBusy
+                reducedMotion: root.reducedMotion
+                textPrimary: root.textPrimary
+                textSecondary: root.textSecondary
+                bgGlass: root.bgGlass
 
-                Row {
-                    id: topButtons
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    spacing: root.u * 0.55
-
-                    // 电源按钮
-                    Rectangle {
-                        id: powerButton
-                        width: root.u * 2.8
-                        height: root.u * 2.8
-                        radius: width / 2
-                        color: powerButtonArea.containsMouse
-                            ? Qt.rgba(1, 1, 1, 0.1)
-                            : Qt.rgba(1, 1, 1, 0.05)
-                        border.color: Qt.rgba(1, 1, 1, 0.1)
-
-                        Behavior on color {
-                            ColorAnimation { duration: Config.Theme.animFast }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "⏻"
-                            color: root.textSecondary
-                            font.pixelSize: root.u * 1.2
-                        }
-
-                        MouseArea {
-                            id: powerButtonArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: function(mouse) {
-                                root.powerMenuVisible = !root.powerMenuVisible
-                                mouse.accepted = true
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        id: idleToggleButton
-                        width: root.u * 2.8
-                        height: root.u * 2.8
-                        radius: width / 2
-                        color: idleToggleArea.containsMouse
-                            ? Qt.rgba(1, 1, 1, 0.1)
-                            : Qt.rgba(1, 1, 1, 0.05)
-                        border.color: Qt.rgba(1, 1, 1, 0.1)
-                        opacity: root.idleToggleBusy ? 0.66 : 1.0
-
-                        Behavior on color {
-                            ColorAnimation { duration: Config.Theme.animFast }
-                        }
-
-                        Item {
-                            anchors.centerIn: parent
-                            width: root.u * 1.4
-                            height: root.u * 1.4
-
-                            Text {
-                                id: idleToggleButtonIcon
-                                anchors.centerIn: parent
-                                text: "👁"
-                                color: root.textSecondary
-                                font.pixelSize: root.u * 1.05
-                                opacity: root.idleEnabled ? 0.72 : 0.98
-                            }
-
-                            Rectangle {
-                                visible: root.idleEnabled
-                                width: root.u * 1.15
-                                height: root.u * 0.11
-                                radius: height / 2
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.verticalCenterOffset: 1
-                                rotation: -34
-                                color: Qt.rgba(0.98, 0.96, 0.92, 0.56)
-                            }
-                        }
-
-                        MouseArea {
-                            id: idleToggleArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            enabled: !root.idleToggleBusy
-                            onClicked: root.setIdleEnabled(!root.idleEnabled)
-                        }
-                    }
+                onPowerMenuToggleRequested: root.powerMenuVisible = !root.powerMenuVisible
+                onIdleToggleRequested: function(enabled) {
+                    root.setIdleEnabled(enabled)
                 }
-
-                // 电源菜单
-                Rectangle {
-                    id: powerMenu
-                    anchors.top: topButtons.bottom
-                    anchors.topMargin: root.u * 0.75
-                    anchors.right: parent.right
-                    width: Math.max(topButtons.implicitWidth, contentColumn.implicitWidth)
-                    implicitHeight: contentColumn.height + root.u * 2
-                    height: root.powerMenuVisible ? implicitHeight : 0
-                    radius: Config.Theme.radiusMedium
-                    clip: true
-                    color: root.bgGlass
-                    border.color: Qt.rgba(1, 1, 1, 0.08)
-                    opacity: root.powerMenuVisible ? 1 : 0
-                    visible: root.powerMenuVisible || opacity > 0
-                    enabled: root.powerMenuVisible
-
-                    Behavior on opacity {
-                        NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                    }
-                    Behavior on height {
-                        NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                    }
-
-                    Column {
-                        id: contentColumn
-                        anchors.top: parent.top
-                        anchors.topMargin: root.u
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: root.u * 0.5
-
-                        Repeater {
-                            model: [
-                                { text: "关机", icon: "ⵚ", proc: powerOffProc },
-                                { text: "休眠", icon: "⯕", proc: suspendProc },
-                                { text: "重启", icon: "↺", proc: rebootProc }
-                            ]
-                            delegate: Rectangle {
-                                implicitWidth: itemRow.implicitWidth + root.u * 1.6
-                                width: implicitWidth
-                                height: root.u * 1.8
-                                radius: Config.Theme.radiusSmall
-                                color: itemArea.containsMouse
-                                    ? Qt.rgba(1, 1, 1, 0.05)
-                                    : "transparent"
-
-                                Behavior on color {
-                                    ColorAnimation { duration: Config.Theme.animFast }
-                                }
-
-                                Row {
-                                    id: itemRow
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: root.u * 0.8
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    height: root.u * 1.5
-                                    spacing: root.u * 0.6
-
-                                    Text {
-                                        text: modelData.icon
-                                        font.pixelSize: root.u
-                                        color: root.textSecondary
-                                        height: parent.height
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                    Text {
-                                        text: modelData.text
-                                        font.pixelSize: root.u * 0.9
-                                        font.family: "Source Han Sans CN"
-                                        color: root.textPrimary
-                                        height: parent.height
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: itemArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    onClicked: {
-                                        root.powerMenuVisible = false
-                                        modelData.proc.running = true
-                                    }
-                                }
-                            }
-                        }
-                    }
+                onPowerActionRequested: function(action) {
+                    root.powerMenuVisible = false
+                    if (action === "poweroff") powerOffProc.running = true
+                    else if (action === "suspend") suspendProc.running = true
+                    else if (action === "reboot") rebootProc.running = true
                 }
             }
 

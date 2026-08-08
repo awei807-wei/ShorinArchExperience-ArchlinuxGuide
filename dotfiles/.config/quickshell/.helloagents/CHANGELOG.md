@@ -4,6 +4,7 @@
 ### 新增
 - **[Tray]**: 新增基于持久通知历史来源计数的托盘稳定排序与每应用危险色角标，计数相同时保持 SystemTray 注册顺序；历史总计与应用角标共享同一裁剪后来源池。
 - **[锁屏]**: 恢复独立 Wayland 锁屏入口，改用 `lockscreen/config` 共享主题，并支持按 `HOME` 编码动态读取用户状态文件。
+- **[锁屏]**: 抽取右上角 `PowerControls` 布局组件，统一使用 `JetBrainsMono Nerd Font` 的 power/eye glyph 与填充式居中对齐，修复 emoji/font fallback 导致的图标视觉垂直漂移。
 
 ### 变更
 - **[Tray]**: 折叠宽度按实际应用数动态收缩，最多显示 3 个直接应用图标；身份字段延迟更新时通过 revision 触发重新排序。
@@ -15,6 +16,7 @@
 
 ### 验证
 - 自动门禁通过：Python 通知历史 11 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
+- 锁屏布局门禁通过：`power-controls-check.qml` 在不启动 `WlSessionLock`、`Process` 或系统命令的前提下验证两个圆按钮尺寸/垂直中心、确定性 glyph 字体、图标填充对齐和展开菜单锚定；高 DPI/真实锁屏墨迹中心仍需人工视觉复验。
 - 真实托盘双击聚焦、通知角标/排序、右键菜单、键盘焦点以及错误密码/正确密码解锁仍待人工验收。
 
 ## [0.1.0] - 2026-07-28
