@@ -19,6 +19,7 @@
 ## 进度
 - 通知数据链研究已完成：已确认活动 `notificationGroups` 来源计数、磁盘历史总数独立语义、唯一匹配规则、排序规则与贯穿路径。
 - 回归修复已补充：同 ID 替换通知的旧对象关闭/过期按 QObject identity 清理，生产 helper 与 `tray-state-check.qml` replacement fixture 共用 `TrayNotificationModel.removeNotificationByIdentity`。
+- 跨应用替换和托盘计时器边界已补充：生产 helper 先清理旧分组再加入新应用；旧关闭/新关闭、键盘激活、隐藏项取消延迟单击均由门禁覆盖。
 - 托盘布局与锁屏恢复由独立子代理并行施工；主代理负责方案协调、通知实现、集成与最终验证。
 - 自动门禁已通过：`python3 scripts/test-notification-history.py`（10 项）、offscreen `tray-interaction-check.qml`、`tray-state-check.qml`（含替换通知关闭竞态）、`notification-store-check.qml`、`bar-layout-check.qml`、托盘聚焦 helper fixture、`qmllint lockscreen/shell.qml`、`git diff --check`。
 - 任务 1-5 已完成；方案包保持活跃，不归档。任务 6 仍等待真实托盘交互、错误密码反馈与 PAM 成功解锁人工验收。

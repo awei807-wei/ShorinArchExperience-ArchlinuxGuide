@@ -177,6 +177,22 @@ ShellRoot {
         expectEqual(activeSources[0].count, 1, "active source count");
         tray.trayItems = identityModel;
         tray.notificationSourceCounts = activeSources;
+        expectEqual(tray.notificationCountsForItems(realItems, [{
+            "desktopEntry": "",
+            "appName": "Fcitx",
+            "count": 1
+        }]).join(","), "1,0,0", "Fcitx appName matches exact tray item");
+        expectEqual(tray.notificationCountsForItems(realItems, [{
+            "desktopEntry": "",
+            "appName": "VCP AI 聊天客户端",
+            "count": 1
+        }]).join(","), "0,1,0",
+                    "Chrome tooltip appName matches exact tray item");
+        expectEqual(tray.notificationCountsForItems(realItems, [{
+            "desktopEntry": "",
+            "appName": "飞书",
+            "count": 1
+        }]).join(","), "0,0,1", "Lark tooltip appName matches exact tray item");
         expectEqual(itemIds(tray.sortedItems(realItems, activeSources)),
                     "lark_status_icon_1,Fcitx,chrome_status_icon_1",
                     "active Feishu source promotes matching tray item");
@@ -184,6 +200,12 @@ ShellRoot {
                     "QtObject tray item receives active notification count");
         expectEqual(larkDelegate.notificationCount, 1,
                     "TrayItem delegate exposes active notification badge count");
+        tray.notificationSourceCounts = [];
+        expectEqual(itemIds(tray.sortedItems(realItems, [])),
+                    "Fcitx,chrome_status_icon_1,lark_status_icon_1",
+                    "clearing active source counts restores registration order");
+        expectEqual(larkDelegate.notificationCount, 0,
+                    "clearing active source counts clears TrayItem badge");
 
         const replacementActive = [oldNotification, currentNotification];
         const afterOldClose = TrayModel.removeNotificationByIdentity(
@@ -196,6 +218,34 @@ ShellRoot {
             afterOldClose, currentNotification);
         expectEqual(afterCurrentClose.length, 0,
                     "current replacement close removes itself");
+
+        const oldGroupedNotification = {"id": 700, "appName": "旧应用", "urgency": 1};
+        const newGroupedNotification = {"id": 700, "appName": "新应用", "urgency": 1};
+        const groupsWithReplacement = [{
+            "appName": "旧应用",
+            "notifications": [oldGroupedNotification],
+            "critical": false
+        }, {
+            "appName": "新应用",
+            "notifications": [newGroupedNotification],
+            "critical": false
+        }];
+        const groupsAfterReplacement = TrayModel.removeReplacedNotificationFromGroups(
+            groupsWithReplacement, newGroupedNotification);
+        expectEqual(groupsAfterReplacement.length, 1,
+                    "replacement removes old app group by notification id");
+        expectEqual(groupsAfterReplacement[0].appName, "新应用",
+                    "replacement keeps new app group");
+        expect(groupsAfterReplacement[0].notifications[0] === newGroupedNotification,
+               "replacement keeps current notification object in groups");
+        const groupsAfterOldClose = TrayModel.removeNotificationFromGroupsByIdentity(
+            groupsAfterReplacement, oldGroupedNotification);
+        expectEqual(groupsAfterOldClose[0].notifications.length, 1,
+                    "old replacement close keeps new app group");
+        const groupsAfterNewClose = TrayModel.removeNotificationFromGroupsByIdentity(
+            groupsAfterOldClose, newGroupedNotification);
+        expectEqual(groupsAfterNewClose.length, 0,
+                    "current replacement close clears new app group");
 
         tray.directIconLimit = 0;
         setState(6, 1);

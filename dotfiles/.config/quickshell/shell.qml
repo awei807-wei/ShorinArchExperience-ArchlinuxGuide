@@ -114,7 +114,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
         const appName = configRoot.cleanNotificationText(notification.appName || "Notification")
         const key = appName.toLowerCase()
-        const groups = configRoot.notificationGroups.slice()
+        const groups = TrayModel.removeReplacedNotificationFromGroups(
+            configRoot.notificationGroups, notification)
 
         let groupIndex = -1
         for (let i = 0; i < groups.length; ++i) {
@@ -152,37 +153,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 输出：无返回值
         // 副作用：把通知从对应 app 分组增量移除（空组整体删除；重算 critical；触发一次属性变更通知）
 
-        const groups = configRoot.notificationGroups
-        let groupIndex = -1
-        let noticeIndex = -1
-        for (let i = 0; i < groups.length; ++i) {
-            const idx = groups[i].notifications.indexOf(notification)
-            if (idx !== -1) {
-                groupIndex = i
-                noticeIndex = idx
-                break
-            }
-        }
-        if (groupIndex === -1)
-            return
-
-        const oldGroup = groups[groupIndex]
-        const notices = oldGroup.notifications.filter(item => item !== notification)
-        const next = groups.slice()
-        if (notices.length === 0) {
-            next.splice(groupIndex, 1)
-        } else {
-            let critical = false
-            for (let i = 0; i < notices.length; ++i) {
-                if (notices[i].urgency === NotificationUrgency.Critical) {
-                    critical = true
-                    break
-                }
-            }
-            next[groupIndex] = { "appName": oldGroup.appName, "notifications": notices, "critical": critical }
-        }
-
-        configRoot.notificationGroups = next
+        configRoot.notificationGroups = TrayModel.removeNotificationFromGroupsByIdentity(
+            configRoot.notificationGroups, notification)
     }
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
     property var lastActivePlayer: null                     // 上一次“正在播放”的播放器（用于在暂停时保持来源稳定）

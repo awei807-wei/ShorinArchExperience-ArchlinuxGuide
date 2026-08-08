@@ -57,10 +57,17 @@ Item {
     }
 
     function activateTrayItem() {
+        cancelPendingSingleClick()
         if (trayItem && trayItem.activate) {
             trayItem.activate()
             closeRequested()
         }
+    }
+
+    function cancelAllClickTimers() {
+        cancelPendingSingleClick()
+        suppressNextSingleClick = false
+        doubleClickGuardReset.stop()
     }
 
     visible: shown
@@ -74,6 +81,13 @@ Item {
         return notificationCount > 0
             ? title + ", " + notificationCount + " notifications" : title
     }
+
+    onVisibleChanged: {
+        if (!visible)
+            cancelAllClickTimers()
+    }
+
+    Component.onDestruction: cancelAllClickTimers()
 
     Keys.onReturnPressed: activateTrayItem()
     Keys.onSpacePressed: activateTrayItem()

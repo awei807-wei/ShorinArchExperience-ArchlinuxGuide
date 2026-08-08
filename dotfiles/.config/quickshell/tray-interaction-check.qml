@@ -57,9 +57,36 @@ ShellRoot {
             return
         }
 
-        expectEqual(fakeTray.activationCount, 0, "right-click cancellation does not activate")
-        expectEqual(focusCount, 1, "right-click cancellation does not focus")
-        finish()
+        if (stage === 3) {
+            expectEqual(fakeTray.activationCount, 0,
+                        "right-click cancellation does not activate")
+            expectEqual(focusCount, 1,
+                        "right-click cancellation does not focus")
+            fakeTray.activationCount = 0
+            tray.scheduleSingleClick()
+            tray.activateTrayItem()
+            stage = 4
+            waitTimer.start()
+            return
+        }
+
+        if (stage === 4) {
+            expectEqual(fakeTray.activationCount, 1,
+                        "keyboard activation cancels pending single click")
+            fakeTray.activationCount = 0
+            tray.scheduleSingleClick()
+            tray.shown = false
+            stage = 5
+            waitTimer.start()
+            return
+        }
+
+        if (stage === 5) {
+            expectEqual(fakeTray.activationCount, 0,
+                        "hidden tray item cancels pending single click")
+            tray.shown = true
+            finish()
+        }
     }
 
     QtObject {
