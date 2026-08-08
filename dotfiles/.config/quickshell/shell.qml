@@ -104,9 +104,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
     property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
     property var notificationGroups: []           // 按 app 分组的通知（增量更新，避免 Repeater 全量重建闪烁）
-    // 托盘角标与排序只读取当前活动通知分组；磁盘历史仅用于历史面板总数。
-    readonly property var activeNotificationSourceCounts:
-        TrayModel.sourceCountsFromNotificationGroups(notificationGroups)
     function addNotificationToGroups(notification) {
         // 输入：Quickshell Notification 对象
         // 输出：无返回值
@@ -794,7 +791,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
                     notificationHistoryCount: notificationHistoryStore.historyCount
-                    notificationSourceCounts: configRoot.activeNotificationSourceCounts
+                    notificationSourceCounts: notificationHistoryStore.sourceCounts
                     trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
                     onSystemClicked: {

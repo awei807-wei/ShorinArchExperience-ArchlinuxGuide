@@ -146,6 +146,43 @@ def trim_notifications(
     return trimmed
 
 
+def normalized_identity(value: Any) -> str:
+    normalized = "" if value is None else str(value).strip().lower()
+    if not normalized:
+        return ""
+    normalized = normalized.replace("\\", "/")
+    normalized = normalized.rsplit("/", 1)[-1]
+    if normalized.endswith(".desktop"):
+        normalized = normalized[:-8]
+    return normalized
+
+
+def notification_source_counts(
+    notifications: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """按规范化来源聚合裁剪后的最终历史，保留首条原始标签。"""
+
+    buckets: list[dict[str, Any]] = []
+    indexes: dict[tuple[str, str], int] = {}
+    for notification in notifications:
+        desktop_entry = notification["desktopEntry"]
+        app_name = notification["appName"]
+        key = (normalized_identity(desktop_entry), normalized_identity(app_name))
+        bucket_index = indexes.get(key)
+        if bucket_index is None:
+            indexes[key] = len(buckets)
+            buckets.append(
+                {
+                    "desktopEntry": desktop_entry,
+                    "appName": app_name,
+                    "count": 1,
+                }
+            )
+        else:
+            buckets[bucket_index]["count"] += 1
+    return buckets
+
+
 def corrupt_backup_path(path: Path) -> Path:
     stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
     candidate = path.with_name(f"{path.stem}.corrupt-{stamp}.json")
@@ -283,6 +320,7 @@ def execute(command: str) -> dict[str, Any]:
             "ok": True,
             "operation": command,
             "count": len(normalized),
+            "sourceCounts": notification_source_counts(normalized),
             "recovered": recovered,
             "warning": warning,
         }

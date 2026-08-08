@@ -4,14 +4,14 @@
 
 ## 核心目标
 - 修复顶部 Bar 的托盘交互与布局：鼠标点击应用图标后不再残留浅灰方框，托盘基础宽度随实际应用数量收缩，直接展示的应用图标最多 3 个。
-- 复用整个 Bar 的活动通知暂存池（`notificationGroups`），为托盘应用提供通知计数、按计数动态排序和图标角标；通知越多越靠前，计数相同保持 SystemTray 注册顺序。磁盘历史仅用于历史面板总数，不参与每应用角标。
+- 复用持久通知历史裁剪池（`NotificationHistoryStore.sourceCounts`），为托盘应用提供通知计数、按计数动态排序和图标角标；通知越多越靠前，计数相同保持 SystemTray 注册顺序。临时 `notificationGroups` 仅服务弹窗生命周期。
 - 从 Git 历史核对并恢复可由 niri `Mod+Alt+L` 调起的 Quickshell 锁屏，不破坏当前主题和其他 Bar 功能。
 
 ## 功能边界
 - 托盘在 0 个应用时保留 1 个槽位的最小表面；1、2、3 个应用时分别按 1、2、3 个应用槽位展开，直接应用图标上限为 3。
 - 超过 3 个应用时沿用现有溢出/展开入口；通知历史入口与隐藏应用计数继续保持独立语义，不把应用通知数并入 `+N`。
 - 鼠标点击应用后不得留下覆盖图标的浅灰选择框；hover 反馈和键盘可见焦点仍需保留，但焦点反馈不能表现为持久的整块浅灰方框。
-- 每应用计数取自活动 `notificationGroups` 中仍在临时浮窗生命周期内的通知；新增、替换、关闭、退场和过期必须实时同步到 Bar。磁盘存储响应只保留 `ok/count/notifications/warning` 等历史字段。
+- 每应用计数取自持久历史最终裁剪结果；`append/count/list/clear` 均返回 `sourceCounts` 并在 Store 成功操作后更新，清空后角标和排序归零。临时通知新增、替换、关闭、退场和过期只影响弹窗分组。
 - 通知源先用规范化后的 `desktopEntry` 唯一精确匹配托盘 `id`；未命中时再用规范化后的 `appName` 唯一精确匹配托盘 `id`、`title`、`tooltipTitle`。规范化包括去首尾空白、转小写、取 basename、去 `.desktop` 后缀；歧义或未知来源不计入任何托盘图标。
 - 托盘排序按应用通知数降序，其次按 SystemTray 注册顺序升序。通知计数清零后恢复注册顺序；示例顺序必须满足 `1/2/3/4 -> 4/1/2/3 -> 3/4/1/2`。
 - 匹配成功且计数大于 0 时，在对应托盘图标上显示数字角标；清空通知历史后角标和排序同步复位。
@@ -26,13 +26,13 @@
 
 ## 技术约束
 - 兼容当前 Quickshell、QtQuick、Wayland/niri 与现有 `SystemTray.items` 数据结构；托盘项没有可依赖的 `desktopEntry` 属性。
-- 通知角标唯一来源为 `shell.qml` 的活动 `notificationGroups`，由纯函数派生来源计数，经 `shell.qml -> Bar.qml -> SystemIsland.qml -> TrayIsland.qml` 单向贯穿；历史总数仍由 `NotificationHistoryStore.qml` 提供。
+- 通知角标唯一来源为 `NotificationHistoryStore.qml` 的持久 `sourceCounts`，经 `shell.qml -> Bar.qml -> SystemIsland.qml -> TrayIsland.qml` 单向贯穿；`notificationGroups` 不再参与角标计算。
 - 保持通知历史文件的 200 条、2 MiB、原子写入、0600 权限和损坏恢复约束；计数必须基于裁剪后的最终历史。
 - Bar 尺寸继续由 `config/BarTuning.qml` 集中管理，组件与状态检查消费同一配置。
 - 锁屏继续以独立 Quickshell 配置运行，不直接复制或硬编码主配置中的运行时对象。
 
 ## 质量要求
-- Python 回归覆盖历史追加、裁剪、清空、损坏恢复和响应兼容；QML 状态检查覆盖单击/双击/右键消歧、活动分组来源派生、Fcitx/Chrome/Lark 精确匹配、歧义拒绝、排序稳定性、实际 `TrayItem.notificationCount` 角标及 0/1/2/3/溢出布局矩阵；独立 fixture 覆盖托盘聚焦脚本评分。
+- Python 回归覆盖历史追加、裁剪、来源归一化、清空、损坏恢复和响应兼容；QML 状态检查覆盖单击/双击/右键消歧、Fcitx/VCP/飞书/QQ 精确与受限匹配、QQ 候选歧义拒绝、排序稳定性、实际 `TrayItem.notificationCount` 角标及 0/1/2/3/溢出布局矩阵；独立 fixture 覆盖托盘聚焦脚本评分。
 - 通过 `scripts/test-notification-history.py`、`notification-store-check.qml`、`tray-state-check.qml`、`bar-layout-check.qml`、QML 静态/实际加载检查与 `git diff --check`。
 - 锁屏需验证历史来源、QML 可加载、niri 命令路径可达、锁定层创建、PAM 输入/失败/成功解锁链路；无法自动完成的真实输入验收必须明确记录。
 - 延续 `.helloagents/DESIGN.md` 的 Bar 几何、暗色 token、危险色角标、键盘焦点、减弱动效与多宽度响应式要求。

@@ -40,6 +40,7 @@ ShellRoot {
 
         onHistoryCleared: {
             testRoot.expectEqual(store.historyCount, 0, "count after clear")
+            testRoot.expectEqual(store.sourceCounts.length, 0, "source counts after clear")
             testRoot.finish()
         }
 
@@ -89,6 +90,8 @@ ShellRoot {
                 }
             } else if (testRoot.stage === 1) {
                 testRoot.expectEqual(store.historyCount, 4, "count after bounded appends")
+                testRoot.expectEqual(store.sourceCounts.length, 4,
+                    "source counts after bounded appends")
                 testRoot.stage = 2
                 store.loadHistory()
             }

@@ -39,10 +39,6 @@ Rectangle {
         return TrayModel.sortedItems(items, sources)
     }
 
-    function sourceCountsFromNotificationGroups(groups) {
-        return TrayModel.sourceCountsFromNotificationGroups(groups)
-    }
-
     function notificationCountForItem(item) {
         const items = TrayModel.itemArray(trayItems)
         const index = items.indexOf(item)

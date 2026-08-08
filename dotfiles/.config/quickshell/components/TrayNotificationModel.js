@@ -66,6 +66,30 @@ function uniqueApplicationMatch(items, appName) {
     return matches.length === 1 ? matches[0] : -1
 }
 
+function emptyIdentityField(value) {
+    return String(value || "").trim() === ""
+}
+
+function uniqueQqFallbackMatch(items, desktopEntry, appName) {
+    const desktopIdentity = normalizedIdentity(desktopEntry)
+    const appIdentity = normalizedIdentity(appName)
+    if (desktopIdentity !== "qq" && appIdentity !== "qq")
+        return -1
+
+    const matches = []
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index]
+        if (normalizedIdentity(itemIdentity(item)) !== "chrome_status_icon_1")
+            continue
+        if (!emptyIdentityField(item && item.title)
+                || !emptyIdentityField(item && item.tooltipTitle)
+                || !emptyIdentityField(item && item.tooltipDescription))
+            continue
+        matches.push(index)
+    }
+    return matches.length === 1 ? matches[0] : -1
+}
+
 function notificationCountsForItems(items, sources) {
     const counts = items.map(() => 0)
     const sourceList = Array.isArray(sources) ? sources : []
@@ -92,6 +116,8 @@ function notificationCountsForItems(items, sources) {
         }
         if (matchedIndex < 0)
             matchedIndex = uniqueApplicationMatch(items, appName)
+        if (matchedIndex < 0)
+            matchedIndex = uniqueQqFallbackMatch(items, desktopEntry, appName)
         if (matchedIndex >= 0)
             counts[matchedIndex] += count
     }
@@ -157,38 +183,6 @@ function removeReplacedNotificationFromGroups(groups, replacement) {
             return false
         return notificationIdentifier(notification) === replacementId
     })
-}
-
-function sourceCountsFromNotificationGroups(groups) {
-    const buckets = []
-    const indexes = Object.create(null)
-    const groupList = Array.isArray(groups) ? groups : []
-
-    for (const group of groupList) {
-        const notices = group && Array.isArray(group.notifications)
-            ? group.notifications : []
-        for (const notice of notices) {
-            const desktopEntry = String(notice && notice.desktopEntry || "").trim()
-            const appName = String(notice && notice.appName || group && group.appName || "").trim()
-            if (!validSourceIdentity(desktopEntry) && !validSourceIdentity(appName))
-                continue
-
-            const key = normalizedIdentity(desktopEntry) + "\u001f"
-                + normalizedIdentity(appName)
-            if (indexes[key] === undefined) {
-                indexes[key] = buckets.length
-                buckets.push({
-                    "desktopEntry": desktopEntry,
-                    "appName": appName,
-                    "count": 1
-                })
-            } else {
-                buckets[indexes[key]].count += 1
-            }
-        }
-    }
-
-    return buckets
 }
 
 function sortedItems(items, sources) {

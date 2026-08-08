@@ -68,6 +68,40 @@ class NotificationHistoryTest(unittest.TestCase):
         self.assertEqual(len(entries[1]["summary"]), 256)
         self.assertEqual(len(entries[1]["body"]), 2048)
 
+    def test_source_counts_follow_final_history_for_all_operations(self) -> None:
+        first = self.snapshot(1)
+        first["appName"] = "QQ"
+        first["desktopEntry"] = "QQ.desktop"
+        second = self.snapshot(2)
+        second["appName"] = "QQ"
+        second["desktopEntry"] = "/usr/share/applications/qq.desktop"
+        unknown = self.snapshot(3)
+        unknown["appName"] = "Notification"
+        unknown["desktopEntry"] = "Unknown.desktop"
+
+        append_result = self.run_command("append", first)
+        self.assertEqual(append_result["sourceCounts"][0]["count"], 1)
+        self.run_command("append", second)
+        self.run_command("append", unknown)
+
+        count_result = self.run_command("count")
+        self.assertEqual(count_result["count"], 3)
+        self.assertEqual(len(count_result["sourceCounts"]), 2)
+        qq_source = next(
+            item for item in count_result["sourceCounts"] if item["appName"] == "QQ"
+        )
+        self.assertEqual(qq_source["count"], 2)
+        self.assertEqual(
+            qq_source["desktopEntry"], "/usr/share/applications/qq.desktop"
+        )
+
+        list_result = self.run_command("list")
+        self.assertEqual(list_result["sourceCounts"], count_result["sourceCounts"])
+
+        clear_result = self.run_command("clear")
+        self.assertEqual(clear_result["count"], 0)
+        self.assertEqual(clear_result["sourceCounts"], [])
+
     def test_entry_limit_keeps_newest_items(self) -> None:
         environment = self.environment | {
             "QUICKSHELL_NOTIFICATION_HISTORY_MAX_ENTRIES": "3",

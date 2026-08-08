@@ -161,51 +161,81 @@ ShellRoot {
                     "multiple buckets accumulate on one tray item");
         expectEqual(tray.badgeText(100), "99+", "badge count cap");
 
-        const realItems = [fcitxItem, chromeItem, larkItem];
-        const activeGroups = [{
-            "appName": "飞书",
-            "notifications": [{
-                "id": 101,
-                "appName": "飞书",
-                "desktopEntry": "",
-                "summary": "消息"
-            }]
-        }];
-        const activeSources = tray.sourceCountsFromNotificationGroups(activeGroups);
-        expectEqual(activeSources.length, 1, "active groups expose only active source");
-        expectEqual(activeSources[0].appName, "飞书", "active source app name");
-        expectEqual(activeSources[0].count, 1, "active source count");
+        const realItems = [fcitxItem, chromeItem, larkItem, qqItem];
         tray.trayItems = identityModel;
-        tray.notificationSourceCounts = activeSources;
         expectEqual(tray.notificationCountsForItems(realItems, [{
             "desktopEntry": "",
             "appName": "Fcitx",
             "count": 1
-        }]).join(","), "1,0,0", "Fcitx appName matches exact tray item");
+        }]).join(","), "1,0,0,0", "Fcitx appName matches exact tray item");
         expectEqual(tray.notificationCountsForItems(realItems, [{
             "desktopEntry": "",
             "appName": "VCP AI 聊天客户端",
             "count": 1
-        }]).join(","), "0,1,0",
-                    "Chrome tooltip appName matches exact tray item");
+        }]).join(","), "0,1,0,0",
+                    "VCP tooltip appName matches exact tray item");
         expectEqual(tray.notificationCountsForItems(realItems, [{
             "desktopEntry": "",
             "appName": "飞书",
             "count": 1
-        }]).join(","), "0,0,1", "Lark tooltip appName matches exact tray item");
-        expectEqual(itemIds(tray.sortedItems(realItems, activeSources)),
-                    "lark_status_icon_1,Fcitx,chrome_status_icon_1",
-                    "active Feishu source promotes matching tray item");
-        expectEqual(tray.notificationCountForItem(larkItem), 1,
-                    "QtObject tray item receives active notification count");
-        expectEqual(larkDelegate.notificationCount, 1,
-                    "TrayItem delegate exposes active notification badge count");
+        }]).join(","), "0,0,1,0", "Lark tooltip appName matches exact tray item");
+        const historySources = [{
+            "desktopEntry": "QQ",
+            "appName": "QQ",
+            "count": 4
+        }, {
+            "desktopEntry": "",
+            "appName": "Fcitx",
+            "count": 2
+        }, {
+            "desktopEntry": "",
+            "appName": "飞书",
+            "count": 2
+        }, {
+            "desktopEntry": "",
+            "appName": "VCP AI 聊天客户端",
+            "count": 1
+        }];
+        expectEqual(tray.notificationCountsForItems(realItems, historySources).join(","),
+                    "2,1,2,4", "history source counts map QQ without VCP crossover");
+        expectEqual(itemIds(tray.sortedItems(realItems, historySources)),
+                    "chrome_status_icon_1,Fcitx,lark_status_icon_1,chrome_status_icon_1",
+                    "QQ count promotes only blank-label chrome item");
+        expectEqual(tray.notificationCountsForItems(realItems, [{
+            "desktopEntry": "QQ.desktop",
+            "appName": "QQ",
+            "count": 3
+        }]).join(","), "0,0,0,3",
+                    "QQ source maps to fallback item only");
+        tray.notificationSourceCounts = historySources;
+        expectEqual(tray.notificationCountForItem(larkItem), 2,
+                    "QtObject tray item receives history notification count");
+        expectEqual(larkDelegate.notificationCount, 2,
+                    "TrayItem delegate exposes history notification badge count");
+        expectEqual(tray.notificationCountForItem(qqItem), 4,
+                    "QQ delegate receives history badge count");
+        expectEqual(qqDelegate.notificationCount, 4,
+                    "QQ TrayItem delegate exposes history badge count");
         tray.notificationSourceCounts = [];
         expectEqual(itemIds(tray.sortedItems(realItems, [])),
-                    "Fcitx,chrome_status_icon_1,lark_status_icon_1",
-                    "clearing active source counts restores registration order");
+                    "Fcitx,chrome_status_icon_1,lark_status_icon_1,chrome_status_icon_1",
+                    "clearing history source counts restores registration order");
         expectEqual(larkDelegate.notificationCount, 0,
-                    "clearing active source counts clears TrayItem badge");
+                    "clearing history source counts clears TrayItem badge");
+        expectEqual(qqDelegate.notificationCount, 0,
+                    "clearing history source counts clears QQ badge");
+        const duplicateQqItems = [qqItem, {
+            "trayId": "chrome_status_icon_1",
+            "title": "",
+            "tooltipTitle": "",
+            "tooltipDescription": ""
+        }];
+        expectEqual(tray.notificationCountsForItems(duplicateQqItems, [{
+            "desktopEntry": "QQ",
+            "appName": "QQ",
+            "count": 5
+        }]).join(","), "0,0",
+                    "ambiguous blank-label QQ candidates are ignored");
 
         const replacementActive = [oldNotification, currentNotification];
         const afterOldClose = TrayModel.removeNotificationByIdentity(
@@ -282,7 +312,7 @@ ShellRoot {
 
     QtObject {
         id: identityModel
-        property var values: [fcitxItem, chromeItem, larkItem]
+        property var values: [fcitxItem, chromeItem, larkItem, qqItem]
     }
 
     QtObject {
@@ -337,10 +367,31 @@ ShellRoot {
         }
     }
 
+    QtObject {
+        id: qqItem
+        property string trayId: "chrome_status_icon_1"
+        property string title: ""
+        property string tooltipTitle: ""
+        property string tooltipDescription: ""
+        property string icon: ""
+        property bool hasMenu: false
+        property var menu: null
+
+        function activate() {
+        }
+    }
+
     TrayItem {
         id: larkDelegate
         trayItem: larkItem
         notificationCount: tray.notificationCountForItem(larkItem)
+        shown: true
+    }
+
+    TrayItem {
+        id: qqDelegate
+        trayItem: qqItem
+        notificationCount: tray.notificationCountForItem(qqItem)
         shown: true
     }
 

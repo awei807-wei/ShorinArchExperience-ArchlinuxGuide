@@ -12,9 +12,9 @@
 - `components/ContextIsland.qml`：桌面环境路由与 Context 内容契约。
 - `components/ClockIsland.qml`：时间、日期与轻量音量反馈；不再占用顶栏宽度显示天气。
 - `components/SystemIsland.qml`：Metrics、Tray 与 Power 的右侧系统集群。
-- `components/TrayIsland.qml`：从活动通知分组派生来源计数，稳定排序托盘应用，维护动态槽位、复合入口和总数角标，并通过单个进程调用托盘窗口聚焦脚本。
+- `components/TrayIsland.qml`：消费持久通知历史来源计数，稳定排序托盘应用，维护动态槽位、复合入口和总数角标，并通过单个进程调用托盘窗口聚焦脚本。
 - `components/TrayItem.qml`：单个托盘图标的 hover、右键菜单、键盘焦点、单击/双击消歧、激活行为与每应用通知角标。
-- `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名，派生活动来源计数并执行唯一匹配与稳定排序。
+- `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名，执行唯一匹配、受限 QQ 归属与稳定排序。
 - `scripts/focus-tray-item.sh`：按托盘 `id/title/tooltipTitle` 对 niri 窗口进行确定性评分和最近聚焦；通知卡片继续使用 `focus-notification-source.sh`。回归 fixture 位于 `scripts/test-focus-tray-item.sh`。
 - `bar-layout-check.qml`：2048/1280/1024/980/979/800/660 宽度的几何、阈值与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
@@ -29,7 +29,8 @@
 - [2026-07-28] 紧凑 Bar 应同时调整外框宽度、内部列宽、字体和溢出约束；只压缩 `implicitWidth` 会导致 Workspace 标记、指标值或 Tray 槽位越界。Tray 与 Power 保持独立表面，但可用 `4px` 二级间距形成统一工具组。
 - [2026-07-28] 位置与尺寸常量必须集中在 `config/BarTuning.qml`；组件和测试共同消费该配置，避免手动微调后出现实现、响应式门禁与文档三处数值漂移。
 - [2026-07-30] 中岛只承担时间与音量反馈，不再创建点击子面板；右岛仅保留当前控制中心，删除被替代的旧面板实现与无用采集链路。
-- [2026-08-08] 托盘折叠宽度按实际应用数收缩，溢出仅占用复合入口；活动通知来源按 `desktopEntry`、`appName` 两阶段唯一匹配，计数降序且同数保持注册顺序，关闭/过期后实时恢复原序；磁盘历史不参与每应用角标。
+- [2026-08-08] 托盘折叠宽度按实际应用数收缩，溢出仅占用复合入口；持久历史来源按 `desktopEntry`、`appName` 两阶段唯一匹配，计数降序且同数保持注册顺序，清空后实时恢复原序；临时通知分组不参与角标。
 - [2026-08-08] `TrayItem` 的身份字段延迟更新通过显式 revision 触发重排；测试夹具使用 `values` 数组对象模型，避免在 Qt 6.11 下直接创建 `ObjectModel`。
 - [2026-08-08] `TrayItem` 左键单击延迟消歧，双击调用独立托盘聚焦脚本，避免破坏通知卡片既有聚焦语义。
+- [2026-08-08] 托盘来源计数恢复为持久历史裁剪池；`append/count/list/clear` 均返回并更新 `sourceCounts`，QQ 仅匹配唯一空标签 `chrome_status_icon_1`，VCP tooltip 非空时不会串号。
 - [2026-08-08] 自动门禁通过：Python 通知历史、offscreen 托盘/存储/布局检查、托盘聚焦 fixture、锁屏 `qmllint` 与 `git diff --check`；真实托盘与锁屏认证仍需人工验收。
