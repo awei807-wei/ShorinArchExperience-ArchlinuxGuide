@@ -309,7 +309,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 输出：无返回值
         // 副作用：从临时浮窗队列移除通知（并增量移出对应分组）
 
-        configRoot.activeNotifications = configRoot.activeNotifications.filter(item => item.id !== notification.id)
+        // 替换通知可能复用同一个 id；旧对象稍后 closed/expire 时只能移除自身，
+        // 不能按 id 删除当前仍在活动队列中的新对象。
+        configRoot.activeNotifications = TrayModel.removeNotificationByIdentity(
+            configRoot.activeNotifications, notification)
         configRoot.removeNotificationFromGroups(notification)
     }
 

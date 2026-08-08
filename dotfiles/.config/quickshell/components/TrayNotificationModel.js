@@ -98,6 +98,11 @@ function notificationCountsForItems(items, sources) {
     return counts
 }
 
+function removeNotificationByIdentity(notifications, target) {
+    const list = Array.isArray(notifications) ? notifications : []
+    return list.filter(notification => notification !== target)
+}
+
 function sourceCountsFromNotificationGroups(groups) {
     const buckets = []
     const indexes = Object.create(null)

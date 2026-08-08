@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import "components"
 import "config" as Config
+import "components/TrayNotificationModel.js" as TrayModel
 
 ShellRoot {
     id: testRoot
@@ -184,6 +185,18 @@ ShellRoot {
         expectEqual(larkDelegate.notificationCount, 1,
                     "TrayItem delegate exposes active notification badge count");
 
+        const replacementActive = [oldNotification, currentNotification];
+        const afterOldClose = TrayModel.removeNotificationByIdentity(
+            replacementActive, oldNotification);
+        expectEqual(afterOldClose.length, 1,
+                    "replacement close removes one object by identity");
+        expect(afterOldClose[0] === currentNotification,
+               "old replacement close keeps current notification object");
+        const afterCurrentClose = TrayModel.removeNotificationByIdentity(
+            afterOldClose, currentNotification);
+        expectEqual(afterCurrentClose.length, 0,
+                    "current replacement close removes itself");
+
         tray.directIconLimit = 0;
         setState(6, 1);
         expectEqual(tray.collapsedSlots, 1, "collapsed tray keeps one composite slot");
@@ -225,6 +238,14 @@ ShellRoot {
     QtObject {
         id: lateIdentityModel
         property var values: [lateItem]
+    }
+
+    QtObject {
+        id: oldNotification
+    }
+
+    QtObject {
+        id: currentNotification
     }
 
     QtObject {
