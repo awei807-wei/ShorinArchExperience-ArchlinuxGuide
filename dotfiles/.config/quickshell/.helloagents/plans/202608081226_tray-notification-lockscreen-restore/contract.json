@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "托盘在 0/1/2/3/溢出应用数下的动态宽度、最多 3 个直接应用图标与复合入口边界",
+    "鼠标点击后不残留浅灰方框，同时保留 hover、右键菜单和键盘可见焦点",
+    "裁剪后 sourceCounts 的存储一致性、旧响应兼容、清空同步和通知生命周期",
+    "desktopEntry/appName 两阶段唯一精确匹配、歧义拒绝、计数排序稳定性与角标准确性",
+    "锁屏历史恢复来源、独立配置可加载、Wayland 锁定层和 PAM 失败/成功/退出生命周期"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202608081226_tray-notification-lockscreen-restore/plan.md",
+      ".helloagents/DESIGN.md",
+      "项目现有 Quickshell 组件与 Theme/BarTuning token"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "Bar 与锁屏视觉方向均已由现有设计契约和历史实现确定，本次是行为修复与定向恢复。",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "动态托盘宽度、点击反馈、通知角标和锁屏恢复都包含无法仅靠静态测试证明的真实界面状态。",
+      "screens": [
+        "当前 niri 顶部 Bar 的 System/Tray 区域",
+        "Mod+Alt+L 启动的独立锁屏"
+      ],
+      "states": [
+        "0/1/2/3/4+ 个托盘应用以及无通知状态",
+        "单应用有通知、多应用不同通知数、同数并列、通知清空复位",
+        "托盘 hover、鼠标点击后、键盘焦点、右键菜单与减弱动效",
+        "锁屏初始、空密码、错误密码、认证中、成功解锁"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "通知关联算法已独立研究并形成确定施工图，其余范围由并行实施子代理和 deep QA 交叉验证。",
+    "focus": [],
+    "preferredSources": []
+  }
+}

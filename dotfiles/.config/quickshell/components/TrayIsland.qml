@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 import "../config" as Config
+import "TrayNotificationModel.js" as TrayModel
 
 Rectangle {
     id: trayIsland
@@ -22,23 +23,46 @@ Rectangle {
     property var trayItems: SystemTray.items
     property int directIconLimit: 3
     property int notificationCount: 0
+    property var notificationSourceCounts: []
     property bool expanded: false
     property bool reducedMotion: false
-    property real preferredWidth: 0
+    // QAbstractItemModel/UntypedObjectModel 保持同一个对象引用，单靠
+    // `trayItems` 绑定不会在注册/注销时重算排序；该版本号显式驱动重排。
+    property int modelRevision: 0
+
+    function notificationCountsForItems(items, sources) {
+        return TrayModel.notificationCountsForItems(items, sources)
+    }
+
+    function sortedItems(items, sources) {
+        return TrayModel.sortedItems(items, sources)
+    }
+
+    function notificationCountForItem(item) {
+        const items = TrayModel.itemArray(trayItems)
+        const index = items.indexOf(item)
+        if (index < 0)
+            return 0
+        return notificationCountsForItems(items, notificationSourceCounts)[index]
+    }
+
+    function badgeText(count) {
+        return count > 99 ? "99+" : String(count)
+    }
+
+    readonly property var orderedTrayItems: {
+        // 读取 revision 建立 QML 依赖，确保 SystemTray 模型变更后生成新数组。
+        const revision = modelRevision
+        return TrayModel.sortedItems(trayItems, notificationSourceCounts)
+    }
 
     readonly property int trayCount: {
-        if (Array.isArray(trayItems))
-            return trayItems.length
-        if (trayItems && trayItems.values)
-            return trayItems.values.length
-        if (trayItems && trayItems.count !== undefined)
-            return trayItems.count
-        return 0
+        return orderedTrayItems.length
     }
     readonly property int hiddenTrayCount: Math.max(0, trayCount - directIconLimit)
     readonly property bool hasCompositeEntry: hiddenTrayCount > 0 || notificationCount > 0
-    readonly property int collapsedSlots: Math.min(trayCount, directIconLimit)
-        + (hasCompositeEntry ? 1 : 0)
+    readonly property int collapsedSlots: Math.max(1,
+        Math.min(trayCount, directIconLimit) + (hasCompositeEntry ? 1 : 0))
     readonly property real itemWidth: Config.BarTuning.trayItemWidth
     readonly property real iconSize: Config.BarTuning.trayIconSize
     readonly property real itemGap: Config.BarTuning.trayItemGap
@@ -51,12 +75,11 @@ Rectangle {
     signal toggleRequested(real panelWidth)
     signal closeRequested()
 
-    implicitWidth: collapsedSlots === 0 ? Config.BarTuning.trayEmptyWidth
-        : collapsedSlots * itemWidth
-            + Math.max(0, collapsedSlots - 1) * itemGap
-            + horizontalPadding
+    implicitWidth: collapsedSlots * itemWidth
+        + Math.max(0, collapsedSlots - 1) * itemGap
+        + horizontalPadding
     implicitHeight: Config.BarTuning.islandHeight
-    width: preferredWidth > 0 ? preferredWidth : implicitWidth
+    width: implicitWidth
     color: zenInk
     border.color: zenMist
     border.width: Config.BarTuning.islandBorderWidth
@@ -66,6 +89,25 @@ Rectangle {
     onHasCompositeEntryChanged: {
         if (!hasCompositeEntry && expanded)
             closeRequested()
+    }
+
+    Connections {
+        // SystemTray.items 是稳定的 UntypedObjectModel 引用；监听其内容
+        // 变化，而不是只监听 trayItems 属性本身。
+        target: SystemTray.items
+        ignoreUnknownSignals: true
+
+        function onValuesChanged() {
+            trayIsland.modelRevision += 1
+        }
+
+        function onObjectInsertedPost() {
+            trayIsland.modelRevision += 1
+        }
+
+        function onObjectRemovedPost() {
+            trayIsland.modelRevision += 1
+        }
     }
 
     Rectangle {
@@ -129,120 +171,25 @@ Rectangle {
         spacing: trayIsland.itemGap
 
         Repeater {
-            model: trayIsland.trayItems
+            model: trayIsland.orderedTrayItems
 
-            Item {
-                id: trayItemContainer
-
+            TrayItem {
                 required property int index
                 required property var modelData
-                visible: trayIsland.expanded || index < trayIsland.directIconLimit
-                width: visible ? trayIsland.itemWidth : 0
-                height: trayIsland.itemWidth
-                opacity: visible ? 1 : 0
-                activeFocusOnTab: visible
-                Accessible.role: Accessible.Button
-                Accessible.name: modelData && modelData.title ? modelData.title : "System tray item"
-
-                Keys.onReturnPressed: activateTrayItem()
-                Keys.onSpacePressed: activateTrayItem()
-
-                function activateTrayItem() {
-                    if (modelData && modelData.activate) {
-                        modelData.activate()
-                        trayIsland.closeRequested()
-                    }
-                }
-
-                Behavior on width {
-                    enabled: !trayIsland.reducedMotion
-                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                }
-                Behavior on opacity {
-                    enabled: !trayIsland.reducedMotion
-                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutQuad }
-                }
-
-                Rectangle {
-                    id: trayItemBackground
-                    anchors.centerIn: parent
-                    width: trayIsland.iconSize
-                    height: trayIsland.iconSize
-                    radius: Config.Theme.radiusSmall
-                    color: trayItemMouse.containsMouse ? Config.Theme.surfaceContainer : "transparent"
-                    border.color: trayItemMouse.containsMouse
-                        ? Config.Theme.outline : Config.Theme.outlineVariant
-                    border.width: 1
-
-                    Behavior on color {
-                        enabled: !trayIsland.reducedMotion
-                        ColorAnimation { duration: Config.Theme.animFast }
-                    }
-
-                    Image {
-                        id: trayIcon
-                        anchors.centerIn: parent
-                        width: trayIsland.iconSize
-                        height: trayIsland.iconSize
-                        source: trayItemContainer.modelData ? trayItemContainer.modelData.icon : ""
-                        sourceSize.width: width
-                        sourceSize.height: height
-                    }
-
-                    Item {
-                        visible: trayIcon.status === Image.Error || trayIcon.source === ""
-                        anchors.centerIn: parent
-                        width: 7
-                        height: 7
-
-                        Rectangle {
-                            width: 1
-                            height: parent.height
-                            anchors.centerIn: parent
-                            rotation: 45
-                            color: trayIsland.zenCloud
-                        }
-                        Rectangle {
-                            width: 1
-                            height: parent.height
-                            anchors.centerIn: parent
-                            rotation: -45
-                            color: trayIsland.zenCloud
-                        }
-                    }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: -2
-                    color: "transparent"
-                    border.width: trayItemContainer.activeFocus ? 1 : 0
-                    border.color: trayIsland.zenCloud
-                }
-
-                MouseArea {
-                    id: trayItemMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: mouse => {
-                        trayItemContainer.forceActiveFocus()
-                        if (mouse.button === Qt.RightButton) {
-                            if (trayItemContainer.modelData && trayItemContainer.modelData.hasMenu)
-                                menuAnchor.open()
-                        } else {
-                            trayItemContainer.activateTrayItem()
-                        }
-                    }
-                }
-
-                QsMenuAnchor {
-                    id: menuAnchor
-                    menu: trayItemContainer.modelData ? trayItemContainer.modelData.menu : null
-                    anchor.window: trayIsland.panelWindow
-                    anchor.item: trayItemBackground
-                }
+                trayItem: modelData
+                shown: trayIsland.expanded || index < trayIsland.directIconLimit
+                itemWidth: trayIsland.itemWidth
+                iconSize: trayIsland.iconSize
+                notificationCount: trayIsland.notificationCountForItem(modelData)
+                panelWindow: trayIsland.panelWindow
+                reducedMotion: trayIsland.reducedMotion
+                surfaceColor: trayIsland.zenInk
+                textColor: trayIsland.zenCloud
+                badgeColor: trayIsland.zenDanger
+                badgeTextColor: trayIsland.zenSnow
+                monoFont: trayIsland.monoFont
+                onIdentityChanged: trayIsland.modelRevision += 1
+                onCloseRequested: trayIsland.closeRequested()
             }
         }
 
@@ -339,7 +286,7 @@ Rectangle {
                 Text {
                     id: notificationBadgeText
                     anchors.centerIn: parent
-                    text: trayIsland.notificationCount > 99 ? "99+" : String(trayIsland.notificationCount)
+                    text: trayIsland.badgeText(trayIsland.notificationCount)
                     textFormat: Text.PlainText
                     font.pixelSize: Config.Theme.fontTiny
                     font.weight: Font.DemiBold

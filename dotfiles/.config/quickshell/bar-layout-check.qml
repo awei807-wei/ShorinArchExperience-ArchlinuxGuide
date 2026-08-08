@@ -62,12 +62,11 @@ ShellRoot {
         return mode >= 4 ? Config.BarTuning.metricsUltraWidth : (mode >= 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsWidth);
     }
 
-    function expectedSystemWidth(mode) {
-        if (mode <= 1)
-            return Config.BarTuning.systemWideWidth;
-
-        if (mode === 2)
-            return Config.BarTuning.systemCollapsedTrayWidth;
+    function expectedSystemWidth(target, mode) {
+        if (mode <= 2)
+            return expectedMetricsWidth(mode) + Config.BarTuning.metricsUtilityGap
+                + target.trayWidth + Config.BarTuning.trayPowerGap
+                + Config.BarTuning.powerIslandWidth;
 
         if (mode === 3)
             return Config.BarTuning.systemCompactWidth;
@@ -85,7 +84,13 @@ ShellRoot {
         expectEqual(target.contextWidth, expectedContextWidth(mode), label + " context width");
         expectEqual(target.clockWidth, expectedClockWidth(mode), label + " clock width");
         expectEqual(target.metricsWidth, expectedMetricsWidth(mode), label + " metrics width");
-        expectEqual(target.systemWidth, expectedSystemWidth(mode), label + " system width");
+        expectEqual(target.systemWidth, expectedSystemWidth(target, mode), label + " system width");
+        if (mode <= 1) {
+            expect(target.trayWidth >= Config.BarTuning.trayMinimumWidth,
+                   label + " dynamic tray minimum width");
+            expect(target.trayWidth <= Config.BarTuning.trayMaximumCollapsedWidth,
+                   label + " dynamic tray maximum width");
+        }
         expectEqual(target.systemSpacing, Config.BarTuning.metricsUtilityGap, label + " metrics/utility gap");
         expectEqual(target.utilitySpacing, Config.BarTuning.trayPowerGap, label + " tray/power gap");
         expectNoOverlap(target, label);

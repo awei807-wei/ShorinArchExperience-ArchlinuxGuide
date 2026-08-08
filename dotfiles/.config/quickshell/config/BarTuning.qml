@@ -284,8 +284,6 @@ QtObject {
     property int trayItemGap: 4
     // 控制：Tray 左右内边距总和。
     property int trayHorizontalPadding: 20
-    // 控制：Tray 无图标、无通知时的最小宽度。
-    property int trayEmptyWidth: 20
     // 控制：Tray 展开最小宽度的单位倍数。
     property int trayExpandedMinUnits: 18
     // 控制：“+2”复合入口字号。
@@ -312,12 +310,15 @@ QtObject {
     property int powerFocusInset: 3
 
     // 以下宽度由上面的槽位参数自动计算，一般不需要修改。
-    readonly property int trayCompositeWidth: trayItemWidth + trayHorizontalPadding
-    readonly property int trayPreferredWidth: 4 * trayItemWidth
+    readonly property int trayMinimumWidth: trayItemWidth + trayHorizontalPadding
+    readonly property int trayCompositeWidth: trayMinimumWidth
+    readonly property int trayMaximumCollapsedWidth: 4 * trayItemWidth
         + 3 * trayItemGap + trayHorizontalPadding
     readonly property int trayExpandedMinWidth: trayUnit * trayExpandedMinUnits
+    // 宽屏布局以最坏情况（3 个软件图标 + 复合入口）预留防重叠预算；
+    // Tray 实际宽度仍由当前项目数动态决定。
     readonly property int systemWideWidth: metricsWidth + metricsUtilityGap
-        + trayPreferredWidth + trayPowerGap + powerIslandWidth
+        + trayMaximumCollapsedWidth + trayPowerGap + powerIslandWidth
     readonly property int systemCollapsedTrayWidth: metricsWidth + metricsUtilityGap
         + trayCompositeWidth + trayPowerGap + powerIslandWidth
     readonly property int systemCompactWidth: metricsCompactWidth

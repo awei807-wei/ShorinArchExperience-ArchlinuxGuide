@@ -77,6 +77,45 @@ class NotificationHistoryTest(unittest.TestCase):
 
         result = self.run_command("list", environment=environment)
         self.assertEqual([item["id"] for item in result["notifications"]], [5, 4, 3])
+        self.assertEqual(
+            {(item["desktopEntry"], item["appName"], item["count"]) for item in result["sourceCounts"]},
+            {
+                ("app-5.desktop", "应用-5", 1),
+                ("app-4.desktop", "应用-4", 1),
+                ("app-3.desktop", "应用-3", 1),
+            },
+        )
+
+    def test_source_counts_group_retained_history(self) -> None:
+        firefox = self.snapshot(1)
+        firefox["appName"] = "Firefox"
+        firefox["desktopEntry"] = "firefox.desktop"
+        second_firefox = self.snapshot(2)
+        second_firefox["appName"] = "Firefox"
+        second_firefox["desktopEntry"] = "firefox.desktop"
+        terminal = self.snapshot(3)
+        terminal["appName"] = "Terminal"
+        terminal["desktopEntry"] = "org.example.Terminal.desktop"
+
+        append_result = self.run_command("append", firefox)
+        self.assertEqual(
+            append_result["sourceCounts"],
+            [{"desktopEntry": "firefox.desktop", "appName": "Firefox", "count": 1}],
+        )
+        self.run_command("append", terminal)
+        count_result = self.run_command("append", second_firefox)
+        self.assertEqual(
+            count_result["sourceCounts"],
+            [
+                {"desktopEntry": "firefox.desktop", "appName": "Firefox", "count": 2},
+                {
+                    "desktopEntry": "org.example.Terminal.desktop",
+                    "appName": "Terminal",
+                    "count": 1,
+                },
+            ],
+        )
+        self.assertEqual(self.run_command("count")["sourceCounts"], count_result["sourceCounts"])
 
     def test_byte_limit_never_exceeds_file_cap(self) -> None:
         environment = self.environment | {
@@ -98,6 +137,7 @@ class NotificationHistoryTest(unittest.TestCase):
 
         result = self.run_command("count")
         self.assertEqual(result["count"], 0)
+        self.assertEqual(result["sourceCounts"], [])
         self.assertTrue(result["recovered"])
         self.assertEqual(json.loads(self.history_path.read_text(encoding="utf-8"))["notifications"], [])
         backups = list(self.history_path.parent.glob("history.corrupt-*.json"))
@@ -130,6 +170,7 @@ class NotificationHistoryTest(unittest.TestCase):
         result = self.run_command("clear")
 
         self.assertEqual(result["count"], 0)
+        self.assertEqual(result["sourceCounts"], [])
         self.assertEqual(self.run_command("list")["notifications"], [])
         self.assertTrue(self.history_path.exists())
 

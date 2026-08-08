@@ -7,6 +7,7 @@ Item {
     id: historyStore
 
     property int historyCount: 0
+    property var sourceCounts: []
     property int maxPendingAppends: 200
     property string historyPathOverride: ""
     property string errorMessage: ""
@@ -116,6 +117,7 @@ Item {
             errorMessage = ""
             warningMessage = response.warning || ""
             historyCount = Number(response.count) || 0
+            sourceCounts = Array.isArray(response.sourceCounts) ? response.sourceCounts : []
             if (operation === "list") {
                 const entries = Array.isArray(response.notifications) ? response.notifications : []
                 historyLoaded(entries, response.recovered === true, warningMessage)

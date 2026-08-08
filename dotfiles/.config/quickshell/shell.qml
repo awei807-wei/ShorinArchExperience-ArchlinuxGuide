@@ -815,6 +815,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     panelWindow: barWindow // 把窗口引用传给 Bar（供托盘菜单锚点使用）
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
                     notificationHistoryCount: notificationHistoryStore.historyCount
+                    notificationSourceCounts: notificationHistoryStore.sourceCounts
                     trayPanelExpanded: configRoot.trayPanelVisible
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
                     onSystemClicked: {

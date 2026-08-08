@@ -10,6 +10,7 @@ Row {
     property int volumePercent: 0
     property int requestedTrayIconLimit: 3
     property int notificationHistoryCount: 0
+    property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property color metricsSurface: Config.Theme.surface
     property color utilitySurface: Config.Theme.surface
@@ -29,13 +30,18 @@ Row {
     readonly property bool showSegments: responsiveLevel < 3
     readonly property int metricsWidth: responsiveLevel <= 2 ? Config.BarTuning.metricsWidth : (responsiveLevel === 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsUltraWidth)
     readonly property int trayIconLimit: responsiveLevel <= 1 ? requestedTrayIconLimit : 0
+    readonly property real trayWidth: trayItem.width
     readonly property int utilityGap: Config.BarTuning.trayPowerGap
+    readonly property real contentWidth: metricsWidth + spacing
+        + Config.BarTuning.powerIslandWidth
+        + (showTray ? trayWidth + utilityGap : 0)
 
     signal toggleSystemPanel()
     signal toggleTrayPanel(real panelWidth)
     signal resizeTrayPanel(real panelWidth)
     signal closeTrayPanel()
 
+    width: contentWidth
     spacing: Config.BarTuning.metricsUtilityGap
 
     Metrics {
@@ -76,10 +82,9 @@ Row {
             id: trayItem
 
             visible: systemIsland.showTray
-            width: visible ? (preferredWidth > 0 ? preferredWidth : implicitWidth) : 0
+            width: visible ? implicitWidth : 0
             height: Config.BarTuning.islandHeight
             unit: Config.BarTuning.trayUnit
-            preferredWidth: systemIsland.responsiveLevel <= 1 ? Config.BarTuning.trayPreferredWidth : 0
             zenInk: systemIsland.utilitySurface
             zenMist: systemIsland.borderColor
             zenStone: systemIsland.hoverSurface
@@ -90,6 +95,7 @@ Row {
             panelWindow: systemIsland.panelWindow
             directIconLimit: systemIsland.trayIconLimit
             notificationCount: systemIsland.notificationHistoryCount
+            notificationSourceCounts: systemIsland.notificationSourceCounts
             expanded: systemIsland.trayPanelExpanded
             reducedMotion: systemIsland.reducedMotion
             highlightColor: systemIsland.highlightColor

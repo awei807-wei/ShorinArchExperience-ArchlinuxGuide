@@ -22,6 +22,7 @@ Rectangle {
     property var panelWindow: null
     property int trayDirectIconLimit: 3
     property int notificationHistoryCount: 0
+    property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     readonly property int trayPowerGap: Config.BarTuning.trayPowerGap
     readonly property int leftIslandOffsetX: Config.BarTuning.leftIslandOffsetX
@@ -58,6 +59,7 @@ Rectangle {
     readonly property real systemLeft: systemIslandItem.x
     readonly property real systemWidth: systemIslandItem.width
     readonly property int metricsWidth: systemIslandItem.metricsWidth
+    readonly property real trayWidth: systemIslandItem.trayWidth
     readonly property int systemSpacing: systemIslandItem.spacing
     readonly property int utilitySpacing: systemIslandItem.utilityGap
     readonly property bool trayVisible: systemIslandItem.showTray
@@ -123,7 +125,7 @@ Rectangle {
     SystemIsland {
         id: systemIslandItem
 
-        width: implicitWidth
+        width: contentWidth
         height: bar.islandHeight
         anchors.top: parent.top
         anchors.right: parent.right
@@ -134,6 +136,7 @@ Rectangle {
         volumePercent: bar.currentVolume
         requestedTrayIconLimit: bar.responsiveTrayIconLimit
         notificationHistoryCount: bar.notificationHistoryCount
+        notificationSourceCounts: bar.notificationSourceCounts
         trayPanelExpanded: bar.trayPanelExpanded
         metricsSurface: bar.secondarySurface
         utilitySurface: bar.utilitySurface

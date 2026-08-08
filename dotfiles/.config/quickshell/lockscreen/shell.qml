@@ -4,7 +4,8 @@ import Quickshell.Services.Pam
 import Quickshell.Wayland
 import Quickshell.Io
 import QtQuick.Effects
-import "../config" as Config
+// 锁屏作为独立 QuickShell 配置启动，通过 lockscreen/config 访问共享主题。
+import "config" as Config
 
 ShellRoot {
     id: root
@@ -17,7 +18,8 @@ ShellRoot {
         || (Quickshell.env("QUICKSHELL_REDUCE_MOTION") || "").toLowerCase() === "yes"
     
     // 动态配色：读取 matugen 输出，让锁屏跟随壁纸变化
-    readonly property string colorFilePath: "file:///home/shiyi/.cache/matugen/colors.json"
+    readonly property string homeDir: Quickshell.env("HOME") || "/home/shiyi"
+    readonly property string colorFilePath: root.fileUrl(homeDir + "/.cache/matugen/colors.json")
     property color bgGlass: Qt.rgba(0.078, 0.078, 0.098, 0.72)
     property color accent: Config.Theme.accent
     property color accentGlow: Qt.rgba(0.953, 0.741, 0.431, 0.3)
@@ -27,14 +29,35 @@ ShellRoot {
     property color fieldBg: Qt.rgba(0, 0, 0, 0.18)
     property color buttonText: "#141414"
     property color errorColor: Config.Theme.danger
-    readonly property string idleFlagUrl: "file:///home/shiyi/.local/state/quickshell/idle_enabled"
-    readonly property string debugLogPath: "/home/shiyi/.local/state/quickshell/lockscreen-debug.log"
+    readonly property string idleFlagUrl: root.fileUrl(homeDir + "/.local/state/quickshell/idle_enabled")
+    readonly property string debugLogPath: homeDir + "/.local/state/quickshell/lockscreen-debug.log"
     property bool idleEnabled: true
     property bool idleToggleBusy: false
     property bool authFailed: false
     property string authStatusText: ""
     property string lastPamPromptKey: ""
     property string passwordText: ""
+
+    readonly property string pamUser: {
+        const candidates = [
+            root.username,
+            Quickshell.env("USER"),
+            Quickshell.env("LOGNAME")
+        ]
+        for (const candidate of candidates) {
+            const value = String(candidate || "").trim()
+            if (value.length > 0)
+                return value
+        }
+        return ""
+    }
+
+    function fileUrl(path) {
+        const rawPath = String(path || "")
+        const absolutePath = rawPath.startsWith("/") ? rawPath : "/" + rawPath
+        const encodedPath = absolutePath.split("/").map(segment => encodeURIComponent(segment)).join("/")
+        return "file://" + encodedPath
+    }
 
     function colorFromHex(hex, alpha) {
         if (!hex || typeof hex !== "string" || hex.length < 7) return Qt.rgba(1, 1, 1, alpha)
@@ -219,6 +242,12 @@ ShellRoot {
 
         if (pam.active) return
 
+        if (!root.pamUser.length) {
+            root.appendDebugLog("[pam] user unavailable")
+            root.triggerAuthFailure("无法确定当前用户", true)
+            return
+        }
+
         if (!root.passwordText.length) {
             root.triggerAuthFailure("请输入密码", true)
             return
@@ -377,7 +406,7 @@ ShellRoot {
     PamContext {
         id: pam
         config: "swaylock"
-        user: root.username || "shiyi"
+        user: root.pamUser
 
         onCompleted: function(result) {
             console.log("[lockscreen] pam completed:", PamResult.toString(result))
@@ -456,16 +485,6 @@ ShellRoot {
         WlSessionLockSurface {
             color: "#0f0f12"
 
-            // 锁屏进场淡入（reducedMotion 时直接显示）
-            opacity: 0
-            Component.onCompleted: opacity = 1
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: root.reducedMotion ? 0 : Config.Theme.animSlow
-                    easing.type: Easing.OutCubic
-                }
-            }
-            
             // --- 背景渲染层 ---
             Item {
                 anchors.fill: parent

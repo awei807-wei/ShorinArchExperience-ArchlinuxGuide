@@ -12,6 +12,9 @@
 - `components/ContextIsland.qml`：桌面环境路由与 Context 内容契约。
 - `components/ClockIsland.qml`：时间、日期与轻量音量反馈；不再占用顶栏宽度显示天气。
 - `components/SystemIsland.qml`：Metrics、Tray 与 Power 的右侧系统集群。
+- `components/TrayIsland.qml`：按通知来源计数稳定排序托盘应用，维护动态槽位、复合入口和总数角标。
+- `components/TrayItem.qml`：单个托盘图标的 hover、菜单、键盘焦点、激活行为与每应用通知角标。
+- `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名并执行唯一匹配与稳定排序。
 - `bar-layout-check.qml`：2048/1280/1024/980/979/800/660 宽度的几何、阈值与退让顺序门禁。
 
 ## 依赖
@@ -24,3 +27,6 @@
 - [2026-07-28] 紧凑 Bar 应同时调整外框宽度、内部列宽、字体和溢出约束；只压缩 `implicitWidth` 会导致 Workspace 标记、指标值或 Tray 槽位越界。Tray 与 Power 保持独立表面，但可用 `4px` 二级间距形成统一工具组。
 - [2026-07-28] 位置与尺寸常量必须集中在 `config/BarTuning.qml`；组件和测试共同消费该配置，避免手动微调后出现实现、响应式门禁与文档三处数值漂移。
 - [2026-07-30] 中岛只承担时间与音量反馈，不再创建点击子面板；右岛仅保留当前控制中心，删除被替代的旧面板实现与无用采集链路。
+- [2026-08-08] 托盘折叠宽度按实际应用数收缩，溢出仅占用复合入口；通知来源按 `desktopEntry`、`appName` 两阶段唯一匹配，计数降序且同数保持注册顺序，清空后恢复原序。
+- [2026-08-08] `TrayItem` 的身份字段延迟更新通过显式 revision 触发重排；测试夹具使用 `values` 数组对象模型，避免在 Qt 6.11 下直接创建 `ObjectModel`。
+- [2026-08-08] 自动门禁通过：Python 通知历史、offscreen 托盘/存储/布局检查、锁屏 `qmllint` 与 `git diff --check`；真实托盘与锁屏认证仍需人工验收。
