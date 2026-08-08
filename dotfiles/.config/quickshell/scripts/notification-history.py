@@ -146,24 +146,6 @@ def trim_notifications(
     return trimmed
 
 
-def notification_source_counts(
-    notifications: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """按历史中保留的原始来源字段聚合通知数量。"""
-    counts: dict[tuple[str, str], int] = {}
-    for notification in notifications:
-        key = (notification["desktopEntry"], notification["appName"])
-        counts[key] = counts.get(key, 0) + 1
-    return [
-        {
-            "desktopEntry": desktop_entry,
-            "appName": app_name,
-            "count": count,
-        }
-        for (desktop_entry, app_name), count in counts.items()
-    ]
-
-
 def corrupt_backup_path(path: Path) -> Path:
     stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
     candidate = path.with_name(f"{path.stem}.corrupt-{stamp}.json")
@@ -301,7 +283,6 @@ def execute(command: str) -> dict[str, Any]:
             "ok": True,
             "operation": command,
             "count": len(normalized),
-            "sourceCounts": notification_source_counts(normalized),
             "recovered": recovered,
             "warning": warning,
         }

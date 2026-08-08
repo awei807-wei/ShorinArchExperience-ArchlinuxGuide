@@ -34,14 +34,12 @@ ShellRoot {
             testRoot.expectEqual(entries[1].id, 8, "second newest entry")
             testRoot.expectEqual(entries[2].id, 7, "third newest entry")
             testRoot.expectEqual(entries[3].id, 0, "active append is retained")
-            testRoot.expectEqual(store.sourceCounts.length, 4, "loaded source bucket count")
             testRoot.stage = 3
             store.clearHistory()
         }
 
         onHistoryCleared: {
             testRoot.expectEqual(store.historyCount, 0, "count after clear")
-            testRoot.expectEqual(store.sourceCounts.length, 0, "source counts after clear")
             testRoot.finish()
         }
 
@@ -62,7 +60,6 @@ ShellRoot {
 
             if (testRoot.stage === 0) {
                 testRoot.expectEqual(store.historyCount, 0, "initial count")
-                testRoot.expectEqual(store.sourceCounts.length, 0, "initial source counts")
                 const copyText = store.entryText({
                     "id": 42,
                     "appName": "Copy Source",
@@ -92,7 +89,6 @@ ShellRoot {
                 }
             } else if (testRoot.stage === 1) {
                 testRoot.expectEqual(store.historyCount, 4, "count after bounded appends")
-                testRoot.expectEqual(store.sourceCounts.length, 4, "source counts after bounded appends")
                 testRoot.stage = 2
                 store.loadHistory()
             }

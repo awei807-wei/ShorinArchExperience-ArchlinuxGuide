@@ -30,13 +30,23 @@ function validSourceIdentity(value) {
         && normalized !== "notification"
 }
 
+function itemIdentity(item) {
+    if (!item)
+        return ""
+    if (item.id !== undefined)
+        return item.id
+    if (item.trayId !== undefined)
+        return item.trayId
+    return ""
+}
+
 function uniqueDesktopMatch(items, desktopEntry) {
     if (!validSourceIdentity(desktopEntry))
         return -1
     const sourceIdentity = normalizedIdentity(desktopEntry)
     const matches = []
     for (let index = 0; index < items.length; index++) {
-        if (normalizedIdentity(items[index] && items[index].id) === sourceIdentity)
+        if (normalizedIdentity(itemIdentity(items[index])) === sourceIdentity)
             matches.push(index)
     }
     return matches.length === 1 ? matches[0] : -1
@@ -49,7 +59,7 @@ function uniqueApplicationMatch(items, appName) {
     const matches = []
     for (let index = 0; index < items.length; index++) {
         const item = items[index]
-        const identities = [item && item.id, item && item.title, item && item.tooltipTitle]
+        const identities = [itemIdentity(item), item && item.title, item && item.tooltipTitle]
         if (identities.some(value => normalizedIdentity(value) === sourceIdentity))
             matches.push(index)
     }
@@ -76,7 +86,7 @@ function notificationCountsForItems(items, sources) {
         if (hasDesktopEntry && desktopMatch < 0) {
             const desktopIdentity = normalizedIdentity(desktopEntry)
             const desktopMatches = items.filter(item =>
-                normalizedIdentity(item && item.id) === desktopIdentity)
+                normalizedIdentity(itemIdentity(item)) === desktopIdentity)
             if (desktopMatches.length > 1)
                 continue
         }
@@ -86,6 +96,38 @@ function notificationCountsForItems(items, sources) {
             counts[matchedIndex] += count
     }
     return counts
+}
+
+function sourceCountsFromNotificationGroups(groups) {
+    const buckets = []
+    const indexes = Object.create(null)
+    const groupList = Array.isArray(groups) ? groups : []
+
+    for (const group of groupList) {
+        const notices = group && Array.isArray(group.notifications)
+            ? group.notifications : []
+        for (const notice of notices) {
+            const desktopEntry = String(notice && notice.desktopEntry || "").trim()
+            const appName = String(notice && notice.appName || group && group.appName || "").trim()
+            if (!validSourceIdentity(desktopEntry) && !validSourceIdentity(appName))
+                continue
+
+            const key = normalizedIdentity(desktopEntry) + "\u001f"
+                + normalizedIdentity(appName)
+            if (indexes[key] === undefined) {
+                indexes[key] = buckets.length
+                buckets.push({
+                    "desktopEntry": desktopEntry,
+                    "appName": appName,
+                    "count": 1
+                })
+            } else {
+                buckets[indexes[key]].count += 1
+            }
+        }
+    }
+
+    return buckets
 }
 
 function sortedItems(items, sources) {

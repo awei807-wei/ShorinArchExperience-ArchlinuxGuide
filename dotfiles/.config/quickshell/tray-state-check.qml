@@ -26,7 +26,7 @@ ShellRoot {
     }
 
     function itemIds(items) {
-        return items.map(item => item.id).join(",");
+        return items.map(item => item.id !== undefined ? item.id : item.trayId).join(",");
     }
 
     function expectEqual(actual, expected, label) {
@@ -159,12 +159,37 @@ ShellRoot {
         expectEqual(tray.notificationCountsForItems(orderedItems, sources)[2], 5,
                     "multiple buckets accumulate on one tray item");
         expectEqual(tray.badgeText(100), "99+", "badge count cap");
+
+        const realItems = [fcitxItem, chromeItem, larkItem];
+        const activeGroups = [{
+            "appName": "飞书",
+            "notifications": [{
+                "id": 101,
+                "appName": "飞书",
+                "desktopEntry": "",
+                "summary": "消息"
+            }]
+        }];
+        const activeSources = tray.sourceCountsFromNotificationGroups(activeGroups);
+        expectEqual(activeSources.length, 1, "active groups expose only active source");
+        expectEqual(activeSources[0].appName, "飞书", "active source app name");
+        expectEqual(activeSources[0].count, 1, "active source count");
+        tray.trayItems = identityModel;
+        tray.notificationSourceCounts = activeSources;
+        expectEqual(itemIds(tray.sortedItems(realItems, activeSources)),
+                    "lark_status_icon_1,Fcitx,chrome_status_icon_1",
+                    "active Feishu source promotes matching tray item");
+        expectEqual(tray.notificationCountForItem(larkItem), 1,
+                    "QtObject tray item receives active notification count");
+        expectEqual(larkDelegate.notificationCount, 1,
+                    "TrayItem delegate exposes active notification badge count");
+
         tray.directIconLimit = 0;
         setState(6, 1);
         expectEqual(tray.collapsedSlots, 1, "collapsed tray keeps one composite slot");
         expectEqual(tray.implicitWidth, Config.BarTuning.trayCompositeWidth, "collapsed tray configured width");
         tray.directIconLimit = 3;
-        tray.trayItems = identityModel;
+        tray.trayItems = lateIdentityModel;
         tray.notificationSourceCounts = [{
             "desktopEntry": "",
             "appName": "Late Application",
@@ -194,7 +219,58 @@ ShellRoot {
 
     QtObject {
         id: identityModel
+        property var values: [fcitxItem, chromeItem, larkItem]
+    }
+
+    QtObject {
+        id: lateIdentityModel
         property var values: [lateItem]
+    }
+
+    QtObject {
+        id: fcitxItem
+        property string trayId: "Fcitx"
+        property string title: "Fcitx"
+        property string tooltipTitle: "Fcitx"
+        property string icon: ""
+        property bool hasMenu: false
+        property var menu: null
+
+        function activate() {
+        }
+    }
+
+    QtObject {
+        id: chromeItem
+        property string trayId: "chrome_status_icon_1"
+        property string title: "Chrome"
+        property string tooltipTitle: "VCP AI 聊天客户端"
+        property string icon: ""
+        property bool hasMenu: false
+        property var menu: null
+
+        function activate() {
+        }
+    }
+
+    QtObject {
+        id: larkItem
+        property string trayId: "lark_status_icon_1"
+        property string title: "Lark"
+        property string tooltipTitle: "飞书"
+        property string icon: ""
+        property bool hasMenu: false
+        property var menu: null
+
+        function activate() {
+        }
+    }
+
+    TrayItem {
+        id: larkDelegate
+        trayItem: larkItem
+        notificationCount: tray.notificationCountForItem(larkItem)
+        shown: true
     }
 
     QtObject {

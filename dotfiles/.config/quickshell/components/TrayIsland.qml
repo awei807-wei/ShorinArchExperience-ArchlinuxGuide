@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.SystemTray
 import "../config" as Config
 import "TrayNotificationModel.js" as TrayModel
@@ -36,6 +37,10 @@ Rectangle {
 
     function sortedItems(items, sources) {
         return TrayModel.sortedItems(items, sources)
+    }
+
+    function sourceCountsFromNotificationGroups(groups) {
+        return TrayModel.sourceCountsFromNotificationGroups(groups)
     }
 
     function notificationCountForItem(item) {
@@ -74,6 +79,26 @@ Rectangle {
 
     signal toggleRequested(real panelWidth)
     signal closeRequested()
+
+    function focusTrayItem(item) {
+        if (!item || focusProcess.running)
+            return
+
+        focusProcess.command = [
+            "bash",
+            Quickshell.shellPath("scripts/focus-tray-item.sh"),
+            item.id || item.trayId || "",
+            item.title || "",
+            item.tooltipTitle || ""
+        ]
+        focusProcess.running = true
+    }
+
+    // 所有托盘 delegate 共用一个短生命周期进程，避免每个图标常驻 Process。
+    Process {
+        id: focusProcess
+        command: ["true"]
+    }
 
     implicitWidth: collapsedSlots * itemWidth
         + Math.max(0, collapsedSlots - 1) * itemGap
@@ -190,6 +215,7 @@ Rectangle {
                 monoFont: trayIsland.monoFont
                 onIdentityChanged: trayIsland.modelRevision += 1
                 onCloseRequested: trayIsland.closeRequested()
+                onFocusRequested: item => trayIsland.focusTrayItem(item)
             }
         }
 

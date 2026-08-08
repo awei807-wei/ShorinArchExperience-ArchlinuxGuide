@@ -19,9 +19,42 @@ Item {
     property color badgeColor: Config.Theme.danger
     property color badgeTextColor: Config.Theme.textSecondary
     property string monoFont: "JetBrains Mono"
+    // 延迟左键单击，给双击留出系统双击间隔；这样双击不会先触发一次 activate。
+    readonly property int clickDisambiguationInterval: Qt.styleHints.mouseDoubleClickInterval
+    property bool suppressNextSingleClick: false
 
     signal closeRequested()
     signal identityChanged()
+    signal focusRequested(var trayItem)
+
+    function scheduleSingleClick() {
+        if (suppressNextSingleClick) {
+            suppressNextSingleClick = false
+            doubleClickGuardReset.stop()
+            return
+        }
+        delayedSingleClick.restart()
+    }
+
+    function cancelPendingSingleClick() {
+        delayedSingleClick.stop()
+    }
+
+    function openTrayMenu() {
+        cancelPendingSingleClick()
+        suppressNextSingleClick = false
+        doubleClickGuardReset.stop()
+        if (trayItem && trayItem.hasMenu)
+            menuAnchor.open()
+    }
+
+    function focusTrayItemOnDoubleClick() {
+        cancelPendingSingleClick()
+        suppressNextSingleClick = true
+        doubleClickGuardReset.restart()
+        focusRequested(trayItem)
+        closeRequested()
+    }
 
     function activateTrayItem() {
         if (trayItem && trayItem.activate) {
@@ -44,6 +77,20 @@ Item {
 
     Keys.onReturnPressed: activateTrayItem()
     Keys.onSpacePressed: activateTrayItem()
+
+    Timer {
+        id: delayedSingleClick
+        interval: root.clickDisambiguationInterval
+        repeat: false
+        onTriggered: root.activateTrayItem()
+    }
+
+    Timer {
+        id: doubleClickGuardReset
+        interval: root.clickDisambiguationInterval
+        repeat: false
+        onTriggered: root.suppressNextSingleClick = false
+    }
 
     Connections {
         // StatusNotifierItem may publish identity fields after registration.
@@ -164,11 +211,17 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
-                if (root.trayItem && root.trayItem.hasMenu)
-                    menuAnchor.open()
+                root.openTrayMenu()
             } else {
-                root.activateTrayItem()
+                root.scheduleSingleClick()
             }
+        }
+
+        onDoubleClicked: mouse => {
+            if (mouse.button !== Qt.LeftButton)
+                return
+
+            root.focusTrayItemOnDoubleClick()
         }
     }
 
