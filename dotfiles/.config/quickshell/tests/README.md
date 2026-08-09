@@ -30,17 +30,17 @@ QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic \
   tests/run-layout-check.sh
 ```
 
-布局检查覆盖 2048、1600、1280、800 宽度，并验证左右边界、主舱之间至少 10px 安全间距，以及右侧 Metrics、Tray、Power 独立舱的内容不溢出。
+布局检查覆盖 2048、1600、1280、800 宽度，并验证左右边界、主舱之间至少 10px 安全间距，以及右侧统一轮廓岛的三段内部内容不溢出。右岛顶部从屏幕 y=0 开始，左侧楔形与主体共用同一填充、描边和阴影路径。
 
 ## 文件结构
 
 - `edge-integrated-preview.qml`：隔离预览入口，仅负责 `ShellRoot`、屏幕遍历和 `PanelWindow`。
 - `shell.qml`：目录启动兼容入口，指向 `edge-integrated-preview.qml`。
-- `EdgeIntegratedBar.qml`：连续 rail 与三舱的响应式定位编排。
-- `ContourPod.qml`：顶部平直、底部圆角的共用舱体轮廓和阴影。
+- `EdgeIntegratedBar.qml`：连续 rail、左右主舱与统一右岛的响应式定位编排。
+- `ContourPod.qml`：顶部平直、底部圆角的共用舱体轮廓和阴影；支持无缝左侧直角楔形。
 - `WorkspacePod.qml`：工作区范围与 01–05 工作区选择器。
 - `ClockPod.qml`：时间、日期与星期信息。
-- `SystemPod.qml`：右侧系统集群编排，包含独立的 Metrics、Tray、Power 三个下伸轮廓舱。
+- `SystemPod.qml`：右侧系统集群单体轮廓，内部以细分隔线组织 Metrics、Tray、Power 三段内容。
 - `UtilityIcon.qml`：Discord、Telegram、邮件的隔离矢量图标。
 - `edge-integrated-layout-check.qml`：无窗口布局断言，供离屏检查使用。
 - `run-layout-check.sh`：等待 `PASS` 并传递检查退出状态的包装脚本。

@@ -13,6 +13,11 @@ Item {
     property color highlightColor: "#ae7c39"
     property real shoulder: 24
     property real sideInset: 18
+    // Optional top-edge wedge used by the unified right island.  The item
+    // bounds include the wedge; the body itself is shifted right by this
+    // amount so its content width remains stable when the wedge is added.
+    property real leadingTriangleWidth: 0
+    property real leadingTriangleHeight: 26
     property real topInset: 12
     property real bottomInset: 10
     property real shadowReserve: 10
@@ -29,30 +34,50 @@ Item {
             const h = root.height
             const r = Math.min(root.shoulder, Math.max(14, h * 0.28))
             const side = Math.min(9, Math.max(5, w * 0.012))
-            const top = 7 + offsetY
+            const top = offsetY
+            const triangleWidth = Math.max(0, root.leadingTriangleWidth)
+            const bodyLeft = root.sideInset + triangleWidth
+            const bodyRight = w - root.sideInset
+            const triangleTip = root.sideInset
+            const triangleHeight = Math.min(root.leadingTriangleHeight,
+                                            Math.max(16, h * 0.42)) + offsetY
             // Keep the body compact while reserving a lower strip for the
             // offset silhouette, so the shadow is not clipped by Canvas.
             const bottom = h - root.shadowReserve - 2 + offsetY
             const lower = Math.max(top + 22, bottom - r)
 
             ctx.beginPath()
-            ctx.moveTo(root.sideInset + r, top)
-            ctx.lineTo(w - root.sideInset - r, top)
-            ctx.bezierCurveTo(w - root.sideInset - side, top,
-                              w - root.sideInset, top + 6,
-                              w - root.sideInset, top + 15)
-            ctx.lineTo(w - root.sideInset, lower)
-            ctx.bezierCurveTo(w - root.sideInset, bottom - 2,
-                              w - root.sideInset - r * 0.55, bottom,
-                              w - root.sideInset - r, bottom)
-            ctx.lineTo(root.sideInset + r, bottom)
-            ctx.bezierCurveTo(root.sideInset + r * 0.55, bottom,
-                              root.sideInset, bottom - 2,
-                              root.sideInset, lower)
-            ctx.lineTo(root.sideInset, top + 15)
-            ctx.bezierCurveTo(root.sideInset, top + 6,
-                              root.sideInset + side, top,
-                              root.sideInset + r, top)
+            if (triangleWidth > 0) {
+                // The wedge is part of the same path as the body.  Its top
+                // edge starts at the left tip and runs continuously into the
+                // island; the return edge is the diagonal that meets the
+                // body's left wall at triangleHeight.
+                ctx.moveTo(triangleTip, top)
+                ctx.lineTo(bodyRight - r, top)
+            } else {
+                ctx.moveTo(bodyLeft + r, top)
+                ctx.lineTo(bodyRight - r, top)
+            }
+            ctx.bezierCurveTo(bodyRight - side, top,
+                              bodyRight, top + 6,
+                              bodyRight, top + 15)
+            ctx.lineTo(bodyRight, lower)
+            ctx.bezierCurveTo(bodyRight, bottom - 2,
+                              bodyRight - r * 0.55, bottom,
+                              bodyRight - r, bottom)
+            ctx.lineTo(bodyLeft + r, bottom)
+            ctx.bezierCurveTo(bodyLeft + r * 0.55, bottom,
+                              bodyLeft, bottom - 2,
+                              bodyLeft, lower)
+            if (triangleWidth > 0) {
+                ctx.lineTo(bodyLeft, triangleHeight)
+                ctx.lineTo(triangleTip, top)
+            } else {
+                ctx.lineTo(bodyLeft, top + 15)
+                ctx.bezierCurveTo(bodyLeft, top + 6,
+                                  bodyLeft + side, top,
+                                  bodyLeft + r, top)
+            }
             ctx.closePath()
         }
 
@@ -67,7 +92,7 @@ Item {
             ctx.fill()
 
             drawContour(ctx, 0)
-            const fill = ctx.createLinearGradient(0, 7, 0, root.height)
+            const fill = ctx.createLinearGradient(0, 0, 0, root.height)
             fill.addColorStop(0, root.surfaceTop)
             fill.addColorStop(0.44, "#111416")
             fill.addColorStop(1, root.surfaceBottom)
@@ -80,8 +105,12 @@ Item {
 
             // A short warm edge catches the light along the otherwise flat top.
             ctx.beginPath()
-            ctx.moveTo(root.sideInset + root.shoulder, 7.7)
-            ctx.lineTo(root.width - root.sideInset - root.shoulder, 7.7)
+            const triangleWidth = Math.max(0, root.leadingTriangleWidth)
+            const topStart = triangleWidth > 0
+                            ? root.sideInset
+                            : root.sideInset + root.shoulder
+            ctx.moveTo(topStart, 0.7)
+            ctx.lineTo(root.width - root.sideInset - root.shoulder, 0.7)
             ctx.strokeStyle = root.highlightColor
             ctx.globalAlpha = 0.58
             ctx.lineWidth = 1
@@ -91,12 +120,19 @@ Item {
 
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
+        Connections {
+            target: root
+            function onLeadingTriangleWidthChanged() { contourCanvas.requestPaint() }
+            function onLeadingTriangleHeightChanged() { contourCanvas.requestPaint() }
+            function onSideInsetChanged() { contourCanvas.requestPaint() }
+            function onShoulderChanged() { contourCanvas.requestPaint() }
+        }
     }
 
     Item {
         id: contentHost
         anchors.fill: parent
-        anchors.leftMargin: root.sideInset + 8
+        anchors.leftMargin: root.sideInset + root.leadingTriangleWidth + 8
         anchors.rightMargin: root.sideInset + 8
         anchors.topMargin: root.topInset + 2
         anchors.bottomMargin: root.bottomInset + root.shadowReserve

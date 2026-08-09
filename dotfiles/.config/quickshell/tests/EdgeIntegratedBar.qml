@@ -18,15 +18,23 @@ Item {
     readonly property bool balanced: width < 1500
     readonly property real sideMargin: Math.max(14, width * 0.014)
     readonly property real leftWidth: Math.max(210, Math.min(390, width * 0.235))
-    readonly property real centerWidth: Math.max(220, Math.min(340, width * 0.22))
+    readonly property real centerWidth: width < 1000
+                                        ? 200
+                                        : Math.max(220, Math.min(340, width * 0.22))
     readonly property real rightWidth: width < 1000
                                        ? Math.max(288, Math.min(360, width * 0.28))
                                        : Math.max(390, Math.min(500, width * 0.31))
+    // The right island owns one continuous top-edge wedge.  The original
+    // rightWidth remains the body width; only the item's left bound expands.
+    readonly property real rightTriangleWidth: width < 1000
+                                               ? 42
+                                               : (width < 1400 ? 54 : 68)
     readonly property real leftEnd: sideMargin + leftWidth
     readonly property real rightStart: width - sideMargin - rightWidth
+    readonly property real rightIslandStart: rightStart - rightTriangleWidth
     readonly property real centerX: Math.max(leftEnd + 12,
                                              Math.min((width - centerWidth) / 2,
-                                                      rightStart - centerWidth - 12))
+                                                      rightIslandStart - centerWidth - 12))
 
     implicitHeight: 88
 
@@ -66,7 +74,7 @@ Item {
         model: [root.leftEnd + 16,
                 root.centerX - 22,
                 root.centerX + root.centerWidth + 6,
-                root.rightStart - 22]
+                root.rightIslandStart - 22]
         delegate: Rectangle {
             required property real modelData
             x: modelData
@@ -106,10 +114,11 @@ Item {
     }
 
     SystemPod {
-        x: root.rightStart
+        x: root.rightIslandStart
         y: 0
-        width: root.rightWidth
+        width: root.rightWidth + root.rightTriangleWidth
         height: 78
+        leadingTriangleWidth: root.rightTriangleWidth
         compact: root.compact
         narrow: root.narrow
         balanced: root.balanced
