@@ -18,7 +18,7 @@
 - `scripts/focus-tray-item.sh`：按托盘 `id/title/tooltipTitle` 对 niri 窗口进行确定性评分和最近聚焦；通知卡片继续使用 `focus-notification-source.sh`。回归 fixture 位于 `scripts/test-focus-tray-item.sh`。
 - `bar-layout-check.qml`：2048/1280/1024/980/979/800/660 宽度的几何、阈值与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
-- `tests/EdgeIntegratedBar.qml`、`tests/edge-integrated-preview.qml`、`tests/edge-integrated-layout-check.qml`：与生产 Bar 完全隔离的 Edge-Integrated Contoured Bar 视觉原型、固定 mock 预览与 2048/1600/1280/800 布局门禁，呈现左/中/右三功能区，右侧含 Metrics/Tray/Power 三个相邻下伸子舱；仅用于测试和设计验证，不是现行生产视觉契约。
+- `tests/EdgeIntegratedBar.qml`、`tests/edge-integrated-preview.qml`、`tests/shell.qml`、`tests/edge-integrated-layout-check.qml`：与生产 Bar 完全隔离的 Edge-Integrated Contoured Bar 视觉原型、固定 mock 预览与 2048/1600/1280/800 布局门禁，呈现左/中/右三功能区，右侧含 Metrics/Tray/Power 三个相邻下伸子舱；`tests/shell.qml` 是目录启动入口，指向预览文件；仅用于测试和设计验证，不是现行生产视觉契约。
 
 ## 依赖
 依赖 Quickshell 0.3、QtQuick、SystemTray；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，频谱使用 Cava，天气沿用 Waybar weather 脚本。

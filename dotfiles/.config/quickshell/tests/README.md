@@ -7,6 +7,12 @@
 在有 Wayland 会话的环境中运行：
 
 ```bash
+quickshell -p tests/
+```
+
+目录启动方式会自动加载 `tests/shell.qml`，它是指向预览入口的相对符号链接。也可直接指定入口文件：
+
+```bash
 quickshell -p tests/edge-integrated-preview.qml
 ```
 
@@ -29,6 +35,7 @@ QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic \
 ## 文件结构
 
 - `edge-integrated-preview.qml`：隔离预览入口，仅负责 `ShellRoot`、屏幕遍历和 `PanelWindow`。
+- `shell.qml`：目录启动兼容入口，指向 `edge-integrated-preview.qml`。
 - `EdgeIntegratedBar.qml`：连续 rail 与三舱的响应式定位编排。
 - `ContourPod.qml`：顶部平直、底部圆角的共用舱体轮廓和阴影。
 - `WorkspacePod.qml`：工作区范围与 01–05 工作区选择器。

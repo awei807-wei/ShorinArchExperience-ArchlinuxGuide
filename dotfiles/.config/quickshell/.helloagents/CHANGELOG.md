@@ -15,6 +15,9 @@
 - **[通知]**: 替换通知进入时先跨应用清理旧分组，旧对象关闭不会删除新应用分组；键盘激活、隐藏和销毁托盘项会取消待执行单击计时器。
 - **[通知]**: 恢复历史存储 `append/count/list/clear` 的 `sourceCounts` 响应并贯穿 Bar；来源按规范化身份聚合，QQ 仅在唯一空标签 `chrome_status_icon_1` 候选下归属，避免与 VCP 串号。
 
+### 修复
+- **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
+
 ### 验证
 - 自动门禁通过：Python 通知历史 11 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
 - 锁屏布局门禁通过：`power-controls-check.qml` 在不启动 `WlSessionLock`、`Process` 或系统命令的前提下验证两个圆按钮尺寸/垂直中心、确定性 glyph 字体、图标填充对齐和展开菜单锚定；高 DPI/真实锁屏墨迹中心仍需人工视觉复验。
