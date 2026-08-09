@@ -9,7 +9,7 @@ Item {
     property bool compact: false
     property bool narrow: false
     property bool balanced: false
-    property real joinRadius: 20
+    property real joinWidth: 20
     property real railHeight: 9
     property color ink: "#d9d3c9"
     property color muted: "#8e8d89"
@@ -31,7 +31,7 @@ Item {
                                       : (root.compact ? 4 : (root.balanced ? 4 : 6))
     readonly property real contentWidth: Math.max(0,
                                                   root.width
-                                                  - root.joinRadius
+                                                  - root.joinWidth
                                                   - 2 * (root.outerInset + 8))
     readonly property real trayContentWidth: Math.max(
                                                 root.trayWidth
@@ -55,7 +55,7 @@ Item {
         id: unifiedContour
         anchors.fill: parent
         sideInset: root.outerInset
-        joinRadius: root.joinRadius
+        joinWidth: root.joinWidth
         railHeight: root.railHeight
         flushLeft: false
         flushRight: true

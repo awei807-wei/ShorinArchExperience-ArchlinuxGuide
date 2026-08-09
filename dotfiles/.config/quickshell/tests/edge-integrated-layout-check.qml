@@ -14,7 +14,10 @@ ShellRoot {
     }
 
     function checkWidth(width) {
-        const joinRadius = width < 1000 ? 18 : 20
+        const joinWidth = width < 1000 ? 18 : 20
+        const railHeight = 9
+        const visibleBottom = 78 - 5 - 2
+        const curveHeight = visibleBottom - railHeight
         const leftWidth = Math.max(210, Math.min(390, width * 0.235))
         const centerWidth = width < 1000
                           ? 200
@@ -31,16 +34,18 @@ ShellRoot {
         expect(leftEnd + 10 <= centerX, width + " left/center contour gap")
         expect(centerX + centerWidth + 10 <= rightStart,
                width + " center/right island body gap")
-        expect(leftWidth + joinRadius <= width,
+        expect(leftWidth + joinWidth <= width,
                width + " left rail-attached item stays inside viewport")
-        expect(centerX - joinRadius >= 0,
+        expect(centerX - joinWidth >= 0,
                width + " center rail-attached item stays inside viewport")
-        expect(rightStart - joinRadius >= 0,
+        expect(rightStart - joinWidth >= 0,
                width + " right rail-attached item stays inside viewport")
         expect(rightStart + rightWidth === width,
                width + " right island body flushes to viewport edge")
-        expect(joinRadius >= 18 && joinRadius <= 22,
-               width + " quarter-circle join radius")
+        expect(joinWidth >= 18 && joinWidth <= 22,
+               width + " horizontal join width")
+        expect(curveHeight === visibleBottom - railHeight && curveHeight > joinWidth,
+               width + " full-height corner reaches visible island bottom")
 
         // The right cluster is one contour; these values describe only its
         // internal regions and separators, not separate outer pods.

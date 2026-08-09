@@ -17,7 +17,7 @@ Item {
     readonly property bool narrow: width < 1000
     readonly property bool balanced: width < 1500
     readonly property real railHeight: 9
-    readonly property real joinRadius: width < 1000 ? 18 : 20
+    readonly property real joinWidth: width < 1000 ? 18 : 20
     readonly property real leftWidth: Math.max(210, Math.min(390, width * 0.235))
     readonly property real centerWidth: width < 1000
                                         ? 200
@@ -26,7 +26,7 @@ Item {
                                        ? Math.max(288, Math.min(360, width * 0.28))
                                        : Math.max(390, Math.min(500, width * 0.31))
     // Width values describe the vertical body. Each item grows outward by
-    // joinRadius only to carry the rail-to-body quarter-circle transition.
+    // joinWidth only carries the rail-to-body full-height quarter ellipse.
     readonly property real leftEnd: leftWidth
     readonly property real rightStart: width - rightWidth
     readonly property real centerX: Math.max(leftEnd + 12,
@@ -45,9 +45,9 @@ Item {
     WorkspacePod {
         x: 0
         y: 0
-        width: root.leftWidth + root.joinRadius
+        width: root.leftWidth + root.joinWidth
         height: 78
-        joinRadius: root.joinRadius
+        joinWidth: root.joinWidth
         railHeight: root.railHeight
         compact: root.compact
         narrow: root.narrow
@@ -59,11 +59,11 @@ Item {
     }
 
     ClockPod {
-        x: root.centerX - root.joinRadius
+        x: root.centerX - root.joinWidth
         y: 0
-        width: root.centerWidth + 2 * root.joinRadius
+        width: root.centerWidth + 2 * root.joinWidth
         height: 78
-        joinRadius: root.joinRadius
+        joinWidth: root.joinWidth
         railHeight: root.railHeight
         compact: root.compact
         narrow: root.narrow
@@ -74,11 +74,11 @@ Item {
     }
 
     SystemPod {
-        x: root.rightStart - root.joinRadius
+        x: root.rightStart - root.joinWidth
         y: 0
-        width: root.rightWidth + root.joinRadius
+        width: root.rightWidth + root.joinWidth
         height: 78
-        joinRadius: root.joinRadius
+        joinWidth: root.joinWidth
         railHeight: root.railHeight
         compact: root.compact
         narrow: root.narrow

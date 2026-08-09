@@ -13,7 +13,9 @@ Item {
     property color borderColor: "#67543b"
     property color highlightColor: "#ae7c39"
     property real sideInset: 18
-    property real joinRadius: 20
+    // Horizontal width of the rail-to-body quarter ellipse. Its vertical
+    // height is always derived from railHeight to the visible island bottom.
+    property real joinWidth: 20
     property bool flushLeft: false
     property bool flushRight: false
     property real railHeight: 9
@@ -23,8 +25,8 @@ Item {
 
     implicitHeight: 78
 
-    readonly property real leftJoin: root.flushLeft ? 0 : root.joinRadius
-    readonly property real rightJoin: root.flushRight ? 0 : root.joinRadius
+    readonly property real leftJoinWidth: root.flushLeft ? 0 : root.joinWidth
+    readonly property real rightJoinWidth: root.flushRight ? 0 : root.joinWidth
 
     Canvas {
         id: contourCanvas
@@ -34,18 +36,15 @@ Item {
         function drawContour(ctx, offsetY) {
             const w = root.width
             const h = root.height
-            const join = Math.min(root.joinRadius,
-                                 Math.max(12, h - root.railHeight - 24))
-            const leftJoin = root.flushLeft ? 0 : join
-            const rightJoin = root.flushRight ? 0 : join
+            const leftJoinWidth = Math.max(0, root.leftJoinWidth)
+            const rightJoinWidth = Math.max(0, root.rightJoinWidth)
             const top = Math.max(0, offsetY)
             const railBottom = root.railHeight + offsetY
             const bottom = h - root.shadowReserve - 2 + offsetY
-            const bottomRadius = Math.min(14, Math.max(10, h * 0.2))
-            const lower = Math.max(railBottom + Math.max(leftJoin, rightJoin),
-                                   bottom - bottomRadius)
-            const leftBody = leftJoin
-            const rightBody = w - rightJoin
+            const curveHeight = Math.max(1, bottom - railBottom)
+            const kappa = 0.55228475
+            const leftBody = leftJoinWidth
+            const rightBody = w - rightJoinWidth
 
             ctx.beginPath()
             // The top edge belongs to the rail and is deliberately not
@@ -54,24 +53,30 @@ Item {
             ctx.lineTo(w, top)
             ctx.lineTo(w, railBottom)
 
-            if (rightJoin > 0) {
-                // Outer top-right point -> body right edge, clockwise quarter.
-                ctx.arc(w - rightJoin, root.railHeight + offsetY,
-                        rightJoin, 0, Math.PI / 2)
+            if (rightJoinWidth > 0) {
+                // Full-height quarter ellipse: the curve runs directly from
+                // the rail bottom to the body's flat bottom, with no vertical
+                // segment after it.
+                ctx.bezierCurveTo(w,
+                                  railBottom + curveHeight * kappa,
+                                  rightBody + rightJoinWidth * kappa,
+                                  bottom,
+                                  rightBody,
+                                  bottom)
+            } else {
+                // A flush edge is allowed to remain vertically clipped.
+                ctx.lineTo(w, bottom)
             }
 
-            ctx.lineTo(rightBody, lower)
-            ctx.quadraticCurveTo(rightBody, bottom,
-                                 Math.max(leftBody + bottomRadius, rightBody - bottomRadius),
-                                 bottom)
-            ctx.lineTo(Math.min(rightBody - bottomRadius, leftBody + bottomRadius), bottom)
-            ctx.quadraticCurveTo(leftBody, bottom,
-                                 leftBody, lower)
-
-            if (leftJoin > 0) {
-                // Body left edge -> outer top-left point, counter-clockwise quarter.
-                ctx.arc(leftJoin, root.railHeight + offsetY,
-                        leftJoin, Math.PI / 2, Math.PI)
+            ctx.lineTo(leftBody, bottom)
+            if (leftJoinWidth > 0) {
+                // Mirror of the right full-height quarter ellipse.
+                ctx.bezierCurveTo(leftBody - leftJoinWidth * kappa,
+                                  bottom,
+                                  0,
+                                  railBottom + curveHeight * kappa,
+                                  0,
+                                  railBottom)
             } else {
                 ctx.lineTo(0, railBottom)
             }
@@ -101,21 +106,38 @@ Item {
             // Only a very low-contrast lower/side edge is retained.  There is
             // intentionally no top stroke or highlight: the rail is one surface.
             ctx.beginPath()
-            const leftBody = root.leftJoin
-            const rightBody = root.width - root.rightJoin
+            const leftJoinWidth = Math.max(0, root.leftJoinWidth)
+            const rightJoinWidth = Math.max(0, root.rightJoinWidth)
+            const leftBody = leftJoinWidth
+            const rightBody = root.width - rightJoinWidth
             const bottom = root.height - root.shadowReserve - 2
-            const bottomRadius = Math.min(14, Math.max(10, root.height * 0.2))
-            const lower = Math.max(root.railHeight
-                                   + Math.max(root.leftJoin, root.rightJoin),
-                                   bottom - bottomRadius)
-            ctx.moveTo(leftBody, lower)
-            ctx.lineTo(leftBody, bottom - 2)
-            ctx.quadraticCurveTo(leftBody, bottom,
-                                 Math.min(rightBody - bottomRadius, leftBody + bottomRadius),
-                                 bottom)
-            ctx.lineTo(Math.max(leftBody + bottomRadius, rightBody - bottomRadius), bottom)
-            ctx.quadraticCurveTo(rightBody, bottom,
-                                 rightBody, lower)
+            const railBottom = root.railHeight
+            const curveHeight = Math.max(1, bottom - railBottom)
+            const kappa = 0.55228475
+            ctx.moveTo(leftBody, bottom)
+            if (leftJoinWidth > 0) {
+                ctx.bezierCurveTo(leftBody - leftJoinWidth * kappa,
+                                  bottom,
+                                  0,
+                                  railBottom + curveHeight * kappa,
+                                  0,
+                                  railBottom)
+            } else {
+                ctx.lineTo(0, railBottom)
+            }
+            ctx.moveTo(rightBody, bottom)
+            if (rightJoinWidth > 0) {
+                ctx.bezierCurveTo(rightBody + rightJoinWidth * kappa,
+                                  bottom,
+                                  root.width,
+                                  railBottom + curveHeight * kappa,
+                                  root.width,
+                                  railBottom)
+            } else {
+                ctx.lineTo(root.width, railBottom)
+            }
+            ctx.moveTo(leftBody, bottom)
+            ctx.lineTo(rightBody, bottom)
             ctx.strokeStyle = root.borderColor
             ctx.globalAlpha = 0.22
             ctx.lineWidth = 1
@@ -127,7 +149,7 @@ Item {
         onHeightChanged: requestPaint()
         Connections {
             target: root
-            function onJoinRadiusChanged() { contourCanvas.requestPaint() }
+            function onJoinWidthChanged() { contourCanvas.requestPaint() }
             function onFlushLeftChanged() { contourCanvas.requestPaint() }
             function onFlushRightChanged() { contourCanvas.requestPaint() }
             function onRailHeightChanged() { contourCanvas.requestPaint() }
@@ -139,8 +161,8 @@ Item {
     Item {
         id: contentHost
         anchors.fill: parent
-        anchors.leftMargin: root.leftJoin + root.sideInset + 8
-        anchors.rightMargin: root.rightJoin + root.sideInset + 8
+        anchors.leftMargin: root.leftJoinWidth + root.sideInset + 8
+        anchors.rightMargin: root.rightJoinWidth + root.sideInset + 8
         anchors.topMargin: root.topInset + 2
         anchors.bottomMargin: root.bottomInset + root.shadowReserve
     }

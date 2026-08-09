@@ -30,14 +30,14 @@ QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic \
   tests/run-layout-check.sh
 ```
 
-布局检查覆盖 2048、1600、1280、800 宽度，并验证左右边界、主舱之间至少 10px 安全间距，以及右侧统一轮廓岛的三段内部内容不溢出。顶部只有约 9px 的连续深色 rail；功能区从 rail 下方直接长出，转角使用约 18–20px 的内切四分之一圆弧，透明间隙只出现在 rail 下方。
+布局检查覆盖 2048、1600、1280、800 宽度，并验证左右边界、主舱之间至少 10px 安全间距，以及右侧统一轮廓岛的三段内部内容不溢出。顶部只有约 9px 的连续深色 rail；功能区从 rail 下方直接长出，转角水平宽度约 18–20px，垂直高度完整延伸到可见岛体底边，透明间隙只出现在 rail 下方。
 
 ## 文件结构
 
 - `edge-integrated-preview.qml`：隔离预览入口，仅负责 `ShellRoot`、屏幕遍历和 `PanelWindow`。
 - `shell.qml`：目录启动兼容入口，指向 `edge-integrated-preview.qml`。
 - `EdgeIntegratedBar.qml`：连续窄 rail、左右边缘贴合主舱与统一右岛的响应式定位编排。
-- `ContourPod.qml`：rail-attached 下伸轮廓，支持左右 flush 与内切四分之一圆弧。
+- `ContourPod.qml`：rail-attached 下伸轮廓，支持左右 flush 与全高四分之一椭圆转角（`joinWidth` 仅表示水平宽度）。
 - `WorkspacePod.qml`：工作区范围与 01–05 工作区选择器。
 - `ClockPod.qml`：时间、日期与星期信息。
 - `SystemPod.qml`：右侧系统集群单体轮廓，内部以细分隔线组织 Metrics、Tray、Power 三段内容。
