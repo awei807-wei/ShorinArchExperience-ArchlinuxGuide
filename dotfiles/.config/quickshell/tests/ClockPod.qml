@@ -11,6 +11,8 @@ ContourPod {
     property color amber: "#dca651"
 
     sideInset: compact ? 14 : 18
+    flushLeft: false
+    flushRight: false
     borderColor: copper
     highlightColor: amber
 

@@ -18,7 +18,7 @@
 - `scripts/focus-tray-item.sh`：按托盘 `id/title/tooltipTitle` 对 niri 窗口进行确定性评分和最近聚焦；通知卡片继续使用 `focus-notification-source.sh`。回归 fixture 位于 `scripts/test-focus-tray-item.sh`。
 - `bar-layout-check.qml`：2048/1280/1024/980/979/800/660 宽度的几何、阈值与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
-- `tests/EdgeIntegratedBar.qml`、`tests/edge-integrated-preview.qml`、`tests/shell.qml`、`tests/edge-integrated-layout-check.qml`：与生产 Bar 完全隔离的 Edge-Integrated Contoured Bar 视觉原型、固定 mock 预览与 2048/1600/1280/800 布局门禁，呈现左/中/右三功能区；右侧以单一连续右岛承载 Metrics/Tray/Power，仅保留细铜色内部分隔，顶部贴住屏幕边缘并在左侧带直角三角楔形；`tests/shell.qml` 是目录启动入口，指向预览文件；仅用于测试和设计验证，不是现行生产视觉契约。
+- `tests/EdgeIntegratedBar.qml`、`tests/edge-integrated-preview.qml`、`tests/shell.qml`、`tests/edge-integrated-layout-check.qml`：与生产 Bar 完全隔离的 Edge-Integrated Contoured Bar 视觉原型、固定 mock 预览与 2048/1600/1280/800 布局门禁，呈现左/中/右三功能区；右侧以单一连续右岛承载 Metrics/Tray/Power，仅保留细铜色内部分隔。三岛均采用 rail-attached 下伸轮廓：约 9px 连续深色 rail，rail 下方以 18–20px 四分之一内切圆角过渡到主体；左岛贴左边仅右转角，中岛双侧转角，右岛贴右边仅左转角，不含独立胶囊顶边、金色顶部描边或 literal triangle。`tests/shell.qml` 是目录启动入口，指向预览文件；仅用于测试和设计验证，不是现行生产视觉契约。
 
 ## 依赖
 依赖 Quickshell 0.3、QtQuick、SystemTray；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，频谱使用 Cava，天气沿用 Waybar weather 脚本。
@@ -35,5 +35,5 @@
 - [2026-08-08] `TrayItem` 左键单击延迟消歧，双击调用独立托盘聚焦脚本，避免破坏通知卡片既有聚焦语义。
 - [2026-08-08] 托盘来源计数恢复为持久历史裁剪池；`append/count/list/clear` 均返回并更新 `sourceCounts`，QQ 仅匹配唯一空标签 `chrome_status_icon_1`，VCP tooltip 非空时不会串号。
 - [2026-08-08] 自动门禁通过：Python 通知历史、offscreen 托盘/存储/布局检查、托盘聚焦 fixture、锁屏 `qmllint` 与 `git diff --check`；真实托盘与锁屏认证仍需人工验收。
-- [2026-08-09] `tests/` Edge-Integrated Contoured Bar 原型使用固定 mock 呈现左/中/右三功能区，右侧含 Metrics/Tray/Power 三个相邻下伸子舱，并以 2048/1600/1280/800 布局门禁验证边界和内容安全区；它与生产 Bar 隔离，不应被视为现行生产视觉契约。
-- [2026-08-09] `tests/` Edge-Integrated Contoured Bar 原型将右侧收敛为单一连续右岛，顶部贴住屏幕边缘，左侧以直角三角楔形向外延展，内部仅保留细铜色分隔；楔形不压缩主体内容，响应式边界继续由 2048/1600/1280/800 门禁覆盖。
+- [2026-08-09] `tests/` Edge-Integrated Contoured Bar 原型使用固定 mock 呈现左/中/右三功能区，右侧统一为单一连续右岛并以细铜色分隔内部；它与生产 Bar 隔离，不应被视为现行生产视觉契约。
+- [2026-08-09] `tests/` 原型轮廓改为 rail-attached 下伸结构：约 9px 连续深色 rail，rail 下方通过 18–20px 四分之一内切圆角过渡到主体；左岛贴屏幕左边且只保留右转角，中岛双侧转角，右岛贴屏幕右边且只保留左转角。已删除独立胶囊顶边、金色顶部描边与 literal triangle，响应式边界继续由 2048/1600/1280/800 门禁覆盖，实机截图为 `/tmp/tests-rail-attached-islands.png`。

@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 
-// 无窗口布局检查：覆盖 2048 / 1600 / 1280 / 800，并验证统一右岛边界。
+// 无窗口布局检查：覆盖 2048 / 1600 / 1280 / 800，并验证 rail-attached 岛体边界。
 ShellRoot {
     id: checkRoot
     property int failures: 0
@@ -14,7 +14,7 @@ ShellRoot {
     }
 
     function checkWidth(width) {
-        const margin = Math.max(14, width * 0.014)
+        const joinRadius = width < 1000 ? 18 : 20
         const leftWidth = Math.max(210, Math.min(390, width * 0.235))
         const centerWidth = width < 1000
                           ? 200
@@ -22,22 +22,25 @@ ShellRoot {
         const rightWidth = width < 1000
                          ? Math.max(288, Math.min(360, width * 0.28))
                          : Math.max(390, Math.min(500, width * 0.31))
-        const rightTriangleWidth = width < 1000
-                                 ? 42
-                                 : (width < 1400 ? 54 : 68)
-        const leftEnd = margin + leftWidth
-        const rightStart = width - margin - rightWidth
-        const rightIslandStart = rightStart - rightTriangleWidth
+        const leftEnd = leftWidth
+        const rightStart = width - rightWidth
         const centerX = Math.max(leftEnd + 12,
                                  Math.min((width - centerWidth) / 2,
-                                         rightIslandStart - centerWidth - 12))
+                                         rightStart - centerWidth - 12))
 
         expect(leftEnd + 10 <= centerX, width + " left/center contour gap")
-        expect(centerX + centerWidth + 10 <= rightIslandStart,
-               width + " center/right island gap")
-        expect(rightStart + rightWidth <= width, width + " right pod ends inside viewport")
-        expect(rightTriangleWidth > 0, width + " right island triangle width")
-        expect(rightIslandStart >= 0, width + " right island triangle stays inside viewport")
+        expect(centerX + centerWidth + 10 <= rightStart,
+               width + " center/right island body gap")
+        expect(leftWidth + joinRadius <= width,
+               width + " left rail-attached item stays inside viewport")
+        expect(centerX - joinRadius >= 0,
+               width + " center rail-attached item stays inside viewport")
+        expect(rightStart - joinRadius >= 0,
+               width + " right rail-attached item stays inside viewport")
+        expect(rightStart + rightWidth === width,
+               width + " right island body flushes to viewport edge")
+        expect(joinRadius >= 18 && joinRadius <= 22,
+               width + " quarter-circle join radius")
 
         // The right cluster is one contour; these values describe only its
         // internal regions and separators, not separate outer pods.

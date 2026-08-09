@@ -1,15 +1,16 @@
 import QtQuick
 import "."
 
-// 右侧系统集群：Metrics、Tray、Power 共用一条连续轮廓。
-// leadingTriangleWidth 只扩展顶部左侧楔形，不改变主体内容的起始位置。
+// 右侧系统集群：Metrics、Tray、Power 共用一条连续 rail-attached 轮廓。
+// 右侧主体 flush 到屏幕边缘，只在左侧保留 rail 到主体的内切转角。
 Item {
     id: root
 
     property bool compact: false
     property bool narrow: false
     property bool balanced: false
-    property real leadingTriangleWidth: 0
+    property real joinRadius: 20
+    property real railHeight: 9
     property color ink: "#d9d3c9"
     property color muted: "#8e8d89"
     property color copper: "#7b6240"
@@ -30,7 +31,7 @@ Item {
                                       : (root.compact ? 4 : (root.balanced ? 4 : 6))
     readonly property real contentWidth: Math.max(0,
                                                   root.width
-                                                  - root.leadingTriangleWidth
+                                                  - root.joinRadius
                                                   - 2 * (root.outerInset + 8))
     readonly property real trayContentWidth: Math.max(
                                                 root.trayWidth
@@ -54,8 +55,10 @@ Item {
         id: unifiedContour
         anchors.fill: parent
         sideInset: root.outerInset
-        leadingTriangleWidth: root.leadingTriangleWidth
-        leadingTriangleHeight: root.narrow ? 24 : (root.compact ? 28 : 32)
+        joinRadius: root.joinRadius
+        railHeight: root.railHeight
+        flushLeft: false
+        flushRight: true
         borderColor: root.copper
         highlightColor: root.amber
 
