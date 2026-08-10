@@ -1,0 +1,16 @@
+# Verify commands for HelloAGENTS qa-review
+# Auto-detected or manually configured
+# Format: simple list only (one command per line, no YAML advanced syntax)
+
+commands:
+  - qmllint -I /usr/lib/qt6/qml components/ControlCenterOutputSelector.qml
+  - qmllint -I /usr/lib/qt6/qml components/ControlCenterOutputList.qml
+  - qmllint -I /usr/lib/qt6/qml components/ControlCenterSlider.qml
+  - qmllint -I /usr/lib/qt6/qml components/ImportedControlCenterPanel.qml
+  - quickshell --no-color -p audio-output-model-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p audio-output-selector-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p bar-layout-check.qml
+  - python3 scripts/test-notification-history.py
+  - bash scripts/test-focus-tray-item.sh
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic bash tests/run-layout-check.sh
+  - git diff --check

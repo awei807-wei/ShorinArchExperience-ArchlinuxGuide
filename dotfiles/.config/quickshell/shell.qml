@@ -20,10 +20,12 @@ import Quickshell // ShellRoot/PanelWindow/Variants/screen 枚举等
 import Quickshell.Io // Process/SplitParser/FileView：命令执行、流式解析、文件监听
 import Quickshell.Services.Mpris // MPRIS：播放器列表与播放状态
 import Quickshell.Services.Notifications // Freedesktop 通知接收服务（后续用于接管 mako）
+import Quickshell.Services.Pipewire // PipeWire：输出设备枚举与默认 sink 切换
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
 import QtMultimedia // QML 原生音频播放（通知音效，无需外部二进制依赖）
 import "components"
 import "config" as Config
+import "components/AudioOutputModel.js" as AudioOutputModel
 import "components/TrayNotificationModel.js" as TrayModel
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
@@ -100,6 +102,14 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property string btStatus: "OFF"                         // 蓝牙电源状态（ON/OFF；由 bluetoothctl 采集）
     property real volumePercent: 70                         // 音量百分比（保留小数以支持连续拖动）
     property bool volumeMuted: false                        // 默认输出设备静音状态
+    readonly property bool audioOutputsReady: Pipewire.ready
+    readonly property var audioOutputOptions: AudioOutputModel.options(Pipewire.nodes.values)
+    readonly property var activeAudioOutput: Pipewire.defaultAudioSink
+        || Pipewire.preferredDefaultAudioSink
+    readonly property int audioOutputCurrentIndex: AudioOutputModel.currentIndex(
+        audioOutputOptions, activeAudioOutput)
+    readonly property string audioOutputPlaceholder: !Pipewire.ready
+        ? "SYNCING AUDIO" : audioOutputOptions.length === 0 ? "NO OUTPUT" : "SELECT OUTPUT"
     property int brightnessPercent: 50                      // 亮度百分比（0-100；由 brightnessctl 采集）
     property int notificationCount: 0                       // 已接收到的通知数量（用于验证通知接入链路）
     property var activeNotifications: []                    // 当前正在临时浮窗中展示的通知对象队列
@@ -571,6 +581,21 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         configRoot.volumeMuted = !configRoot.volumeMuted
         volDebounceTimer.restart()
     }
+    function selectAudioOutput(index) {
+        // 输入：audioOutputOptions 中的索引
+        // 输出：无返回值
+        // 副作用：更新 PipeWire 首选默认输出，并刷新该默认 sink 的音量/静音状态
+
+        const option = configRoot.audioOutputOptions[index]
+        if (!option || !AudioOutputModel.isOutputNode(option.node)) {
+            console.warn("[Audio] ignored invalid output selection index=" + index)
+            return
+        }
+
+        Pipewire.preferredDefaultAudioSink = option.node
+        console.log("[Audio] preferred output=" + option.label + " id=" + option.id)
+        volDebounceTimer.restart()
+    }
     function toggleWifi() {
         if (!configRoot.wifiAvailable || configRoot.networkType === "ethernet")
             return
@@ -737,6 +762,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             configRoot.lastVolume = volumePercent // 记录上一次音量（可用于后续差分/调试）
         }
     }
+
+    onActiveAudioOutputChanged: volDebounceTimer.restart()
 
     // 监听到顶信号文件（事件驱动版：基于 inotify）
     FileView {

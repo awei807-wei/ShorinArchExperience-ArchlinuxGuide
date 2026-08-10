@@ -55,6 +55,11 @@ Rectangle {
     scale: open ? 1 : 0.94
     transformOrigin: Item.TopRight
 
+    onOpenChanged: {
+        if (!open)
+            volumeSlider.collapseSelector()
+    }
+
     Behavior on y {
         enabled: !root.reducedMotion
         NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
@@ -245,6 +250,8 @@ Rectangle {
                 }
 
                 ControlCenterSlider {
+                    id: volumeSlider
+
                     icon: root.shellRoot.volumeMuted
                         ? "󰝟"
                         : root.shellRoot.volumePercent > 66 ? "󰕾"
@@ -257,8 +264,14 @@ Rectangle {
                     textColor: root.textColor
                     mutedColor: root.mutedColor
                     reducedMotion: root.reducedMotion
+                    selectorVisible: true
+                    selectorModel: root.shellRoot.audioOutputOptions
+                    selectorCurrentIndex: root.shellRoot.audioOutputCurrentIndex
+                    selectorPlaceholder: root.shellRoot.audioOutputPlaceholder
+                    selectorEnabled: root.shellRoot.audioOutputsReady
                     onValueRequested: value => root.shellRoot.setVolume(value)
                     onIconClicked: root.shellRoot.toggleMute()
+                    onSelectorRequested: index => root.shellRoot.selectAudioOutput(index)
                 }
 
                 ControlCenterSlider {

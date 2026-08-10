@@ -14,12 +14,70 @@ Item {
     property color textColor: "#d0d0d0"
     property color mutedColor: "#707070"
     property bool reducedMotion: false
+    property bool selectorVisible: false
+    property var selectorModel: []
+    property int selectorCurrentIndex: -1
+    property string selectorTextRole: "label"
+    property string selectorPlaceholder: "NO OUTPUT"
+    property bool selectorEnabled: true
+    property real selectorWidth: 34
+    property bool selectorExpanded: false
+    property real selectorRevealHeight: selectorExpanded ? outputList.implicitHeight : 0
+
+    readonly property int selectorCount: selectorModel && selectorModel.length
+        ? selectorModel.length : 0
+    readonly property string selectorSelectedLabel: selectorEntryLabel(selectorCurrentIndex)
 
     signal valueRequested(real value)
     signal iconClicked()
+    signal selectorRequested(int index)
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 62
+    Layout.preferredHeight: 62 + selectorRevealHeight
+    clip: true
+
+    Behavior on selectorRevealHeight {
+        enabled: !root.reducedMotion
+        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+    }
+
+    function selectorEntryLabel(index) {
+        if (index < 0 || index >= selectorCount)
+            return selectorPlaceholder
+
+        const entry = selectorModel[index]
+        if (entry === null || entry === undefined)
+            return selectorPlaceholder
+        if (typeof entry === "string")
+            return entry
+
+        return String(entry[selectorTextRole] || selectorPlaceholder)
+    }
+
+    function chooseSelectorIndex(index) {
+        if (index < 0 || index >= selectorCount)
+            return
+
+        root.selectorRequested(index)
+        root.selectorExpanded = false
+    }
+
+    function collapseSelector() {
+        root.selectorExpanded = false
+    }
+
+    onSelectorVisibleChanged: {
+        if (!selectorVisible)
+            collapseSelector()
+    }
+    onSelectorEnabledChanged: {
+        if (!selectorEnabled)
+            collapseSelector()
+    }
+    onSelectorModelChanged: {
+        if (selectorCount === 0)
+            collapseSelector()
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -29,9 +87,14 @@ Item {
     }
 
     RowLayout {
-        anchors.fill: parent
+        id: mainRow
+
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.leftMargin: 12
         anchors.rightMargin: 18
+        height: 62
         spacing: 12
 
         Rectangle {
@@ -141,6 +204,25 @@ Item {
             }
         }
 
+        ControlCenterOutputSelector {
+            id: selector
+
+            visible: root.selectorVisible
+            enabled: root.selectorEnabled && root.selectorCount > 0
+            Layout.minimumWidth: visible ? root.selectorWidth : 0
+            Layout.preferredWidth: visible ? root.selectorWidth : 0
+            Layout.maximumWidth: visible ? root.selectorWidth : 0
+            Layout.preferredHeight: 34
+            expanded: root.selectorExpanded
+            selectedLabel: root.selectorSelectedLabel
+            accentColor: root.accentColor
+            textColor: root.textColor
+            mutedColor: root.mutedColor
+            reducedMotion: root.reducedMotion
+
+            onClicked: root.selectorExpanded = !root.selectorExpanded
+        }
+
         Text {
             Layout.preferredWidth: 42
             text: Math.round(root.value) + "%"
@@ -149,6 +231,45 @@ Item {
             font.weight: Font.Bold
             horizontalAlignment: Text.AlignRight
             color: root.textColor
+        }
+    }
+
+    Item {
+        id: selectorReveal
+
+        anchors.top: mainRow.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: root.selectorRevealHeight
+        visible: height > 0
+        clip: true
+        opacity: outputList.implicitHeight > 0
+            ? Math.min(1, height / outputList.implicitHeight) : 0
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
+            height: 1
+            color: Config.Theme.outlineVariant
+        }
+
+        ControlCenterOutputList {
+            id: outputList
+
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            model: root.selectorModel
+            currentIndex: root.selectorCurrentIndex
+            textRole: root.selectorTextRole
+            accentColor: root.accentColor
+            textColor: root.textColor
+            mutedColor: root.mutedColor
+
+            onSelected: index => root.chooseSelectorIndex(index)
         }
     }
 }

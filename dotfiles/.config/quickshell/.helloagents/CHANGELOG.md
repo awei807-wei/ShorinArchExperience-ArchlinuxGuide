@@ -2,12 +2,15 @@
 
 ## [未发布] - 2026-08-09
 ### 新增
+- **[控制中心]**: 音量卡片新增 PipeWire 音频输出设备选择，可过滤硬件 sink、稳定显示当前默认输出并写入首选默认设备。
+- **[控制中心]**: 新增音频输出模型与卡片展开交互的隔离自动化检查。
 - **[Tray]**: 新增基于持久通知历史来源计数的托盘稳定排序与每应用危险色角标，计数相同时保持 SystemTray 注册顺序；历史总计与应用角标共享同一裁剪后来源池。
 - **[锁屏]**: 恢复独立 Wayland 锁屏入口，改用 `lockscreen/config` 共享主题，并支持按 `HOME` 编码动态读取用户状态文件。
 - **[锁屏]**: 抽取右上角 `PowerControls` 布局组件，统一使用 `JetBrainsMono Nerd Font` 的 power/eye glyph 与填充式居中对齐，修复 emoji/font fallback 导致的图标视觉垂直漂移。
 - **[Bar 测试原型]**: 新增与生产 Bar 隔离的 `tests/` Edge-Integrated Contoured Bar 预览，包含左/中/右三功能区，右侧以单一连续右岛承载 Metrics/Tray/Power，并通过细铜色分隔与固定 mock 保持信息层级，不接入生产服务。
 
 ### 变更
+- **[控制中心]**: 设备候选改为在音量卡片内部向下展开，文字整行居中、当前项勾选贴右，选择后自动收起且不覆盖亮度卡片。
 - **[Bar 测试原型]**: 将 Metrics/Tray/Power 收敛为单一连续右岛，并把三岛轮廓改为 rail-attached 下伸结构：约 9px 连续深色 rail，rail 下方连接曲线的水平 `joinWidth` 为 18–20px（仅表示水平宽度），使用四分之一椭圆 cubic 从 `railBottom` 延伸到 `visibleBottom`，垂直高度覆盖完整岛体下伸高度并直接接平底；已移除短圆角后的垂直侧边和独立 `bottomRadius`，不再使用独立胶囊顶边、金色顶部描边或 literal triangle。左岛贴屏幕左边且只保留右转角，中岛保留双侧转角，右岛贴屏幕右边且只保留左转角；本轮仅修改 `tests` 原型，不改生产 Bar。
 - **[Tray]**: 折叠宽度按实际应用数动态收缩，最多显示 3 个直接应用图标；身份字段延迟更新时通过 revision 触发重新排序。
 - **[锁屏]**: PAM 用户从运行时用户名和环境变量解析，缺少用户名时显式报告认证失败，不再回退到硬编码用户。
@@ -20,6 +23,7 @@
 - **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
 
 ### 验证
+- 音频输出模型、音量卡片展开/收起、相关 QML lint、Bar/Tray/通知/锁屏离屏门禁、通知历史 11 项、托盘聚焦 fixture、Edge-Integrated 布局与 `git diff --check` 通过；真实 Wayland 会话视觉验收通过。
 - 自动门禁通过：Python 通知历史 11 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
 - 锁屏布局门禁通过：`power-controls-check.qml` 在不启动 `WlSessionLock`、`Process` 或系统命令的前提下验证两个圆按钮尺寸/垂直中心、确定性 glyph 字体、图标填充对齐和展开菜单锚定；高 DPI/真实锁屏墨迹中心仍需人工视觉复验。
 - Edge-Integrated Bar 原型门禁通过：固定 mock 下覆盖 2048/1600/1280/800 宽度，验证左/中/右三功能区、连续右岛与 full-height rail-attached 下伸轮廓的边界及内容不溢出；全量 QML lint 与布局门禁通过，实机截图记录于 `/tmp/tests-full-height-corners.png`，预览不会连接生产采集链路。

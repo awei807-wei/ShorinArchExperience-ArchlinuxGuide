@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "source": "plan",
+  "originCommand": "plan",
+  "qaMode": "standard",
+  "qaFocus": [
+    "PipeWire 输出节点过滤、重复名称消歧与默认索引稳定性",
+    "设备列表在 Flickable 内的卡片展开、焦点、禁用和长文本状态",
+    "切换默认输出后原有音量与静音控制是否继续指向 @DEFAULT_AUDIO_SINK@"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202608101705_audio-output-selector/plan.md",
+      ".helloagents/DESIGN.md",
+      "hello-ui"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "既有控制中心视觉方向稳定，本次只做同一音量栏内的演进式附件。",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "下拉选择新增了卡片展开、长文本与紧凑行内布局，需要确认层级、裁剪和交互状态。",
+      "screens": [
+        "当前主屏右侧控制中心"
+      ],
+      "states": [
+        "当前设备",
+        "下拉展开",
+        "无设备或禁用",
+        "长设备名称"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "低风险本地 UI 与音频默认设备切换，不需要额外独立架构顾问。",
+    "focus": [],
+    "preferredSources": []
+  }
+}
