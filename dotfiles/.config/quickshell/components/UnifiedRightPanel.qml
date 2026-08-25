@@ -45,6 +45,7 @@ Item {
 
     readonly property Item inputRegion: inputMask
     readonly property Item sizerItem: sizer
+    readonly property Item shellItem: panelShape
     readonly property real controlPageOpacity:
         controlsPageWrapper.opacity
     readonly property real historyPageOpacity:
@@ -269,10 +270,11 @@ Item {
             enabled: root.open || root.widthProgress > 0.001
         }
 
-        // 外壳始终按最终几何绘制，sizer 只负责裁剪揭示。这样开合时
-        // Canvas 不再因宽高逐帧变化而重绘，4K/缩放屏上的主线程负担
-        // 只剩一个很小的 Bar 轮廓更新。
+        // 外壳顶部与 Canvas 纹理尺寸保持固定；页面高度变化只伸缩
+        // 同步主体并移动底部圆角，sizer 继续负责开合阶段的裁剪揭示。
         RightPanelShape {
+            id: panelShape
+
             anchors.top: parent.top
             anchors.right: parent.right
             width: root.width

@@ -12,6 +12,9 @@ ShellRoot {
     property real reverseWidth: 0
     property real reverseHeight: 0
     property real reverseContent: 0
+    property real historySettledHeight: 0
+    property real stableTopCanvasHeight: 0
+    property real stableBottomCanvasHeight: 0
 
     function expect(condition, label) {
         if (condition)
@@ -216,13 +219,75 @@ ShellRoot {
                                 "control page fades out")
                 testRoot.expect(panel.animatedOpenHeight <= 520,
                                 "single notification keeps History compact")
-                panel.open = false
+                testRoot.expect(panel.sizerItem.y === 0
+                                && panel.shellItem.y === 0,
+                                "History keeps sizer and shell top anchored")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.bodySectionTop,
+                    panel.shellItem.topSectionHeight, 0.001),
+                    "fixed top cap meets synchronous body")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.bodySectionBottom,
+                    panel.shellItem.bottomCanvasY, 0.001),
+                    "synchronous body meets fixed bottom cap")
+                testRoot.historySettledHeight = panel.animatedOpenHeight
+                testRoot.stableTopCanvasHeight =
+                    panel.shellItem.topCanvasHeight
+                testRoot.stableBottomCanvasHeight =
+                    panel.shellItem.bottomCanvasHeight
+                panel.page = 0
                 testRoot.phase = 8
-                testRoot.next(50)
+                testRoot.next(25)
                 return
             }
 
             if (testRoot.phase === 8) {
+                testRoot.expect(panel.open,
+                                "History-to-Control keeps shell open")
+                testRoot.expect(panel.animatedOpenHeight
+                                > testRoot.historySettledHeight,
+                                "History-to-Control grows from compact height")
+                testRoot.expect(panel.sizerItem.y === 0
+                                && panel.shellItem.y === 0
+                                && panel.shellItem.topCanvasY === 0,
+                                "History-to-Control keeps the shell top fixed")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.topCanvasHeight,
+                    testRoot.stableTopCanvasHeight, 0.001),
+                    "top Canvas texture does not resize across pages")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.bottomCanvasHeight,
+                    testRoot.stableBottomCanvasHeight, 0.001),
+                    "bottom Canvas texture does not resize across pages")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.bodySectionBottom,
+                    panel.shellItem.bottomCanvasY, 0.001),
+                    "growing body remains joined to the bottom cap")
+                testRoot.phase = 9
+                testRoot.next(230)
+                return
+            }
+
+            if (testRoot.phase === 9) {
+                testRoot.expect(testRoot.near(
+                    panel.animatedOpenHeight,
+                    panel.controlTargetHeight, 0.03),
+                    "Control height finishes without moving the top")
+                testRoot.expect(testRoot.near(panel.controlPageOpacity, 1, 0.03),
+                                "control page fades back in")
+                testRoot.expect(testRoot.near(panel.historyPageOpacity, 0, 0.03),
+                                "history page fades back out")
+                testRoot.expect(testRoot.near(
+                    panel.shellItem.topCanvasHeight,
+                    testRoot.stableTopCanvasHeight, 0.001),
+                    "top Canvas remains stable after height growth")
+                panel.open = false
+                testRoot.phase = 10
+                testRoot.next(50)
+                return
+            }
+
+            if (testRoot.phase === 10) {
                 testRoot.expect(panel.contentProgress < 1,
                                 "close removes content first")
                 testRoot.expect(panel.heightProgress < 1,
@@ -242,12 +307,12 @@ ShellRoot {
                 testRoot.expect(testRoot.near(panel.contentProgress,
                                              testRoot.reverseContent, 0.001),
                                 "reverse does not jump content")
-                testRoot.phase = 9
+                testRoot.phase = 11
                 testRoot.next(380)
                 return
             }
 
-            if (testRoot.phase === 9) {
+            if (testRoot.phase === 11) {
                 testRoot.expect(testRoot.near(panel.widthProgress, 1, 0.01),
                                 "reverse reopen completes width")
                 testRoot.expect(testRoot.near(panel.heightProgress, 1, 0.01),
@@ -255,12 +320,12 @@ ShellRoot {
                 testRoot.expect(testRoot.near(panel.contentProgress, 1, 0.01),
                                 "reverse reopen completes content")
                 panel.open = false
-                testRoot.phase = 10
+                testRoot.phase = 12
                 testRoot.next(260)
                 return
             }
 
-            if (testRoot.phase === 10) {
+            if (testRoot.phase === 12) {
                 testRoot.expect(testRoot.near(panel.widthProgress, 0, 0.01),
                                 "close completes width")
                 testRoot.expect(testRoot.near(panel.heightProgress, 0, 0.01),
@@ -276,7 +341,7 @@ ShellRoot {
                                 && panel.contentProgress === 1,
                                 "reduced motion opens immediately")
                 panel.open = false
-                testRoot.phase = 11
+                testRoot.phase = 13
                 testRoot.next(10)
                 return
             }

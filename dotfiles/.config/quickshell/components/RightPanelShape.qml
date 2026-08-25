@@ -1,10 +1,10 @@
 import "../config" as Config
 import QtQuick
 
-// 右侧面板的颈部/主体连接轮廓。主体固定贴右，顶部只保留
-// neckWidth 的平直连接段；flare 负责连续过渡到主体左上角。
+// 右侧面板的颈部/主体连接轮廓。页面切换只改变主体中段高度和
+// 底部圆角位置；顶部连接与两个 Canvas 的纹理尺寸始终保持稳定。
 // 几何实现参考 Brainitech/Brain_Shell 的 PopupShape（MIT）。
-Canvas {
+Item {
     id: root
 
     property color color: Config.Theme.surface
@@ -18,94 +18,170 @@ Canvas {
     property alias flareWidth: root.flare
     property alias flareHeight: root.flare
 
-    antialiasing: true
-    // 路径本身很小，但 4K/1.5× 下纹理面积较大；让 Canvas 在独立
-    // 渲染线程准备帧，避免阻塞 Control / History 内容的 GUI 帧。
-    renderStrategy: Canvas.Threaded
+    readonly property real effectiveWidth: Math.max(0, width)
+    readonly property real effectiveBodyWidth: Math.max(
+        0, Math.min(effectiveWidth, bodyWidth)
+    )
+    readonly property real bodyLeft:
+        effectiveWidth - effectiveBodyWidth
+    readonly property real effectiveNeckWidth: Math.max(
+        0, Math.min(neckWidth, effectiveBodyWidth)
+    )
+    readonly property real neckLeft: Math.max(
+        bodyLeft, effectiveWidth - effectiveNeckWidth
+    )
+    readonly property real effectiveFlare: Math.max(0, Math.min(
+        flare,
+        effectiveNeckWidth / 3,
+        effectiveWidth / 2,
+        height
+    ))
+    readonly property real effectiveRadius: Math.max(0, Math.min(
+        radius,
+        effectiveBodyWidth / 2,
+        Math.max(0, neckLeft - bodyLeft),
+        Math.max(0, (height - effectiveFlare) / 2)
+    ))
 
-    onWidthChanged: requestPaint()
-    onHeightChanged: requestPaint()
-    onColorChanged: requestPaint()
-    onNeckWidthChanged: requestPaint()
-    onBodyWidthChanged: requestPaint()
-    onRadiusChanged: requestPaint()
-    onFlareChanged: requestPaint()
+    // 这些几何属性同时作为动画门禁的观测点：跨页时顶部和两个
+    // Canvas 的高度不变，只有同步 Rectangle 与底部 Canvas 的位置变化。
+    readonly property real topSectionHeight:
+        effectiveFlare + effectiveRadius
+    readonly property real bottomSectionHeight: effectiveRadius
+    readonly property real topCanvasY: topCap.y
+    readonly property real topCanvasHeight: topCap.height
+    readonly property real bottomCanvasY: bottomCap.y
+    readonly property real bottomCanvasHeight: bottomCap.height
+    readonly property real bodySectionTop: bodyFill.y
+    readonly property real bodySectionBottom:
+        bodyFill.y + bodyFill.height
 
-    onPaint: {
-        const ctx = getContext("2d")
-        ctx.reset()
+    clip: true
 
-        // bodyWidth 通常跟随 Canvas 宽度；调用方传入更小主体时仍贴紧
-        // 右边缘，保证颈部与面板始终连成一体而不会向左漂移。
-        const w = Math.max(0, root.width)
-        const body = Math.max(0, Math.min(w, root.bodyWidth))
-        const bodyLeft = w - body
-        const h = Math.max(0, root.height)
+    // 主体中段使用场景图原生矩形同步伸缩，不依赖线程化 Canvas
+    // 的异步纹理重建；它与上下两段首尾相接，因此动画期间不会透底。
+    Rectangle {
+        id: bodyFill
 
-        if (body <= 0 || h <= 0)
-            return
+        x: root.bodyLeft
+        y: root.topSectionHeight
+        width: root.effectiveBodyWidth
+        height: Math.max(0, root.height
+            - root.effectiveFlare
+            - 2 * root.effectiveRadius)
+        color: root.color
+    }
 
-        const neck = Math.max(0, Math.min(root.neckWidth, body))
-        const neckLeft = Math.max(bodyLeft, w - neck)
-        const f = Math.max(0, Math.min(
-            root.flare,
-            neck / 3,
-            w / 2,
-            h
-        ))
-        // 动画最初几帧的可用高度可能小于目标圆角；按实际高度收缩半径，
-        // 避免 arcTo 发生路径翻折或产生尖角。
-        const r = Math.max(0, Math.min(
-            root.radius,
-            body / 2,
-            Math.max(0, neckLeft - bodyLeft),
-            Math.max(0, (h - f) / 2)
-        ))
+    // 顶部连接、左上圆角与 flare 的纹理尺寸不再绑定页面高度。
+    Canvas {
+        id: topCap
 
-        ctx.beginPath()
-        ctx.fillStyle = root.color
+        anchors.top: parent.top
+        anchors.right: parent.right
+        width: root.effectiveWidth
+        height: root.topSectionHeight
+        antialiasing: true
+        renderStrategy: Canvas.Threaded
 
-        // 主体顶边严格从 Bar 底边开始；右岛本身已经绘制颈部，面板不再
-        // 重复填充该矩形区域，以免较高层的宿主窗口盖住右岛下半部内容。
-        ctx.moveTo(bodyLeft + r, f)
-        ctx.lineTo(w, f)
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
 
-        // 主体右边与底部圆角。
-        ctx.lineTo(w, Math.max(0, h - r))
-        if (r > 0)
-            ctx.arcTo(w, h, w - r, h, r)
-        else
-            ctx.lineTo(w, h)
+        onPaint: {
+            const ctx = getContext("2d")
+            ctx.reset()
 
-        ctx.lineTo(bodyLeft + r, h)
-        if (r > 0)
-            ctx.arcTo(bodyLeft, h, bodyLeft, h - r, r)
-        else
-            ctx.lineTo(bodyLeft, h)
+            const w = root.effectiveWidth
+            const body = root.effectiveBodyWidth
+            const bodyLeft = root.bodyLeft
+            const neckLeft = root.neckLeft
+            const f = root.effectiveFlare
+            const r = root.effectiveRadius
 
-        // 主体左边与左上圆角。
-        ctx.lineTo(bodyLeft, f + r)
-        if (r > 0)
-            ctx.arcTo(bodyLeft, f, bodyLeft + r, f, r)
-        else
-            ctx.lineTo(bodyLeft, f)
+            if (body <= 0 || height <= 0)
+                return
 
-        ctx.closePath()
-        ctx.fill()
-
-        // 颈部左侧的 16×16 flare 伸入 Bar；边界右侧再保留同宽安全区，
-        // 只盖住 Bar 关闭态遗留的左下外凸角。覆盖总宽仅 32px，不会
-        // 触及颈部中的 Metrics、Tray 或 Power 内容。
-        if (f > 0 && neckLeft > bodyLeft) {
-            const flareLeft = Math.max(bodyLeft, neckLeft - f)
-            const coverRight = Math.min(w, neckLeft + f)
             ctx.beginPath()
-            ctx.moveTo(flareLeft, f)
-            ctx.quadraticCurveTo(neckLeft, f, neckLeft, 0)
-            ctx.lineTo(coverRight, 0)
-            ctx.lineTo(coverRight, f)
+            ctx.fillStyle = root.color
+            ctx.moveTo(bodyLeft + r, f)
+            ctx.lineTo(w, f)
+            ctx.lineTo(w, height)
+            ctx.lineTo(bodyLeft, height)
+            ctx.lineTo(bodyLeft, f + r)
+            if (r > 0)
+                ctx.arcTo(bodyLeft, f, bodyLeft + r, f, r)
+            else
+                ctx.lineTo(bodyLeft, f)
+            ctx.closePath()
+            ctx.fill()
+
+            // 颈部左侧形成连接弧，右侧只抹平旧外凸角；覆盖宽度仍
+            // 限制在边界左右各一个 flare，避免遮挡右岛内容。
+            if (f > 0 && neckLeft > bodyLeft) {
+                const flareLeft = Math.max(bodyLeft, neckLeft - f)
+                const coverRight = Math.min(w, neckLeft + f)
+                ctx.beginPath()
+                ctx.moveTo(flareLeft, f)
+                ctx.quadraticCurveTo(neckLeft, f, neckLeft, 0)
+                ctx.lineTo(coverRight, 0)
+                ctx.lineTo(coverRight, f)
+                ctx.closePath()
+                ctx.fill()
+            }
+        }
+    }
+
+    // 底部 Canvas 固定为一个圆角高，只移动位置而不调整纹理尺寸。
+    Canvas {
+        id: bottomCap
+
+        anchors.right: parent.right
+        y: Math.max(root.topSectionHeight,
+                    root.height - height)
+        width: root.effectiveWidth
+        height: root.bottomSectionHeight
+        visible: height > 0
+        antialiasing: true
+        renderStrategy: Canvas.Threaded
+
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+
+        onPaint: {
+            const ctx = getContext("2d")
+            ctx.reset()
+
+            const w = root.effectiveWidth
+            const body = root.effectiveBodyWidth
+            const bodyLeft = root.bodyLeft
+            const r = root.effectiveRadius
+
+            if (body <= 0 || r <= 0)
+                return
+
+            ctx.beginPath()
+            ctx.fillStyle = root.color
+            ctx.moveTo(bodyLeft, 0)
+            ctx.lineTo(w, 0)
+            ctx.arcTo(w, r, w - r, r, r)
+            ctx.lineTo(bodyLeft + r, r)
+            ctx.arcTo(bodyLeft, r, bodyLeft, 0, r)
             ctx.closePath()
             ctx.fill()
         }
+    }
+
+    Connections {
+        target: root
+
+        function repaintCaps() {
+            topCap.requestPaint()
+            bottomCap.requestPaint()
+        }
+
+        function onColorChanged() { repaintCaps() }
+        function onNeckWidthChanged() { repaintCaps() }
+        function onBodyWidthChanged() { repaintCaps() }
+        function onRadiusChanged() { repaintCaps() }
+        function onFlareChanged() { repaintCaps() }
     }
 }

@@ -11,7 +11,7 @@
 - `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、跨页切换与退场窗口生命周期。
 - `components/RightPanelHost.qml`：固定最大透明外窗，把 flare 上移到右岛底边接缝；打开时承载一次外部点击关闭，退场时输入 mask 跟随实际 sizer。
 - `components/UnifiedRightPanel.qml`：使用宽度、高度和内容三个独立进度驱动右锚定 sizer，常驻 Control / History 页面并支持动画中途反向。
-- `components/RightPanelShape.qml`：区分 `304px` 连接颈部、`560–640px` 主体和 `16px` flare 的线程化 Canvas 轮廓；按最终尺寸绘制，开合阶段只由 sizer 裁剪揭示。
+- `components/RightPanelShape.qml`：区分 `304px` 连接颈部、`560–640px` 主体和 `16px` flare；以固定尺寸顶部/底部 Canvas 和同步伸缩主体保持跨页高度动画连续，开合阶段只由 sizer 裁剪揭示。
 - `components/AnimatedPanelPage.qml`：页面常驻包装器，只用透明度与 `12px` 水平位移切换内容。
 - `components/RightPanelTabs.qml`、`RightPanelPageSwitcher.qml`：目标 `296×38px`、最小面板下不超过主体 `50%` 的单指示器分页轨道及 `58px` 页脚层。
 - `components/NotificationHistoryPage.qml`：History 内容驱动高度和通知 ListView；标题、空态及加载/错误状态分别由 `NotificationHistoryHeader`、`NotificationHistoryEmptyState`、`NotificationHistoryStatusState` 承担，高度限制为 `460–640px`。
@@ -52,3 +52,4 @@
 - [2026-08-25] 大型右面板不能把右岛宽度等同主体宽度，也不能同步动画窗口宽高。最终实现把右岛关闭态限制为 `218–240px`、打开颈部固定为 `304px`，主体宽度独立为 `560–640px`；固定外窗内按 `40/95/180ms` 依次启动横向、纵向和内容阶段，反向操作从当前进度继续。
 - [2026-08-25] History 高度应由真实 ListView `contentHeight` 驱动并限制为 `460–640px`；页面和底部 Tab 只在壳内过渡，不能通过关闭/重开窗口切页。Control 目标高 `760px`，紧凑分页轨道固定 `296×38px`。
 - [2026-08-25] 固定宿主上移 flare 时不能再次填充整块右岛颈部：主体仍从 `40px` Bar 底边开始，向上衔接只覆盖颈部边界左右各 `16px`；左侧形成反 R 弧，右侧消除右岛旧外凸角留下的月牙缺口，同时避开 Metrics/Tray/Power。History 切页也不得触发 Tray 全量图标展开。
+- [2026-08-25] 页面高度动画不能直接 resize 线程化 Canvas：sizer 会先扩大裁剪区，而新纹理异步完成前会短暂露出壁纸。顶部连接和上下圆角应使用固定尺寸 Canvas，中段改用场景图原生矩形同步伸缩，跨页只移动底部边界。

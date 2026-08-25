@@ -31,14 +31,16 @@
 - **[通知]**: 恢复历史存储 `append/count/list/clear` 的 `sourceCounts` 响应并贯穿 Bar；来源按规范化身份聚合，QQ 仅在唯一空标签 `chrome_status_icon_1` 候选下归属，避免与 VCP 串号。
 
 ### 修复
+- **[右侧子面板]**: 修复 History 切换到 Control 时，线程化外壳 Canvas 随 `220ms` 页面高度动画逐帧重建纹理而出现顶部透明帧、露出壁纸的问题。外壳改为固定尺寸顶部/底部 Canvas 与同步伸缩主体，跨页只移动底部边界，顶部连接保持不动。
 - **[右侧子面板]**: 面板窗口上移 `15px`，让主体顶边与右岛底边共用接缝；flare 仅覆盖视觉接缝且不抢占 Bar 点击区域。
-- **[右侧子面板]**: 固定外窗尺寸和锚点；只改变内部 sizer，页面内容和 Canvas 外壳始终按最终宽高排版并由裁剪逐步揭示。Canvas 使用线程化渲染且不再随开合进度逐帧重绘，内容仅做透明度与位移，减少 4K/1.5× 下的主线程掉帧。
+- **[右侧子面板]**: 固定外窗尺寸和锚点；只改变内部 sizer，页面内容和外壳按当前目标宽高排版并由裁剪逐步揭示。外壳上下 Canvas 使用固定尺寸线程化渲染，内容仅做透明度与位移，减少 4K/1.5× 下的主线程掉帧。
 - **[右侧子面板]**: 移除覆盖右岛下半部的 `304×16px` 重复颈部填充；主体从 Bar `40px` 底边开始，仅在颈部边界左右各保留 `16px` 衔接区，分别形成反 R 弧并消除旧外凸角的月牙缺口。History 打开时不再展开全部 Tray 图标。
 - **[右侧子面板]**: 页签底部增加完整 flare 安全区，选中背景不再越过面板左下圆角；外部点击层和面板合并为一个窗口，单次点击即可关闭。
 - **[Tray]**: 焦点项隐藏时不再动态关闭 `activeFocusOnTab`，消除页面展开/收起期间的 Qt 焦点警告。
 - **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
 
 ### 验证
+- History→Control 回归新增顶部锚点、上下 Canvas 固定纹理高度及主体连续性断言；`right-panel-animation-check.qml`、相关 `qmllint`、高对比背景下的 compact/midpoint/expanded 中间帧截图与 `git diff --check` 通过。
 - 生产 `BarContour` 与 `Bar.qml` QML lint 通过；2048/1280/1024/1008/1007/800/660px Bar 布局、Tray 状态、Tray 交互与 `git diff --check` 通过；当前 3840×2160、1.5× niri 实屏热重载无新增 Bar 绑定错误，截图确认顶部间隔为零、成对反 R 角方向正确且连接带无接缝。
 - 统一右侧面板及拆分后的 Control/History 组件静态检查通过；右面板状态、分阶段动画、Control 默认内容完整容纳、通知页状态、Bar 多宽度布局、Tray 状态/交互、音频输出模型/选择、通知历史 11 项、托盘聚焦 fixture 与 `git diff --check` 通过。当前 Wayland 会话连续热重载成功且无新增绑定错误。
 - `qmllint` 对既有复杂 `TrayIsland.qml` 仍以 `255` 且无诊断文本退出；未将其记为静态检查通过，改由真实 Quickshell 热重载、Tray 状态和 Tray 交互运行门禁覆盖本次集成表面变更。
