@@ -228,8 +228,79 @@ function trayIndexForHistoryGroup(items, group) {
     return matches.length === 1 ? matches[0] : -1
 }
 
-/** 将历史记录计算为可供 QML 消费的有序来源数组，并在首位插入 ALL。 */
-function buildHistorySources(entries, trayItems, sourceCounts) {
+function appendTrayAlias(aliases, prefix, value) {
+    if (!validSourceIdentity(value))
+        return
+    const alias = prefix + normalizedIdentity(value)
+    if (aliases.indexOf(alias) < 0)
+        aliases.push(alias)
+}
+
+function trayOnlySource(items, index) {
+    const item = items[index]
+    const identity = String(itemIdentity(item) || "").trim()
+    const title = String(item && item.title || "").trim()
+    const tooltipTitle = String(item && item.tooltipTitle || "").trim()
+    const qqFallback = uniqueQqFallbackMatch(items, "QQ", "QQ") === index
+    const label = qqFallback ? "QQ" : (title || tooltipTitle
+        || identity.replace(/^.*[\\/]/, "").replace(/\.desktop$/i, "")
+        || "Tray " + (index + 1))
+    const aliases = []
+    if (qqFallback) {
+        aliases.push("desktop:qq", "app:qq")
+    } else {
+        appendTrayAlias(aliases, "desktop:", identity)
+        appendTrayAlias(aliases, "app:", title)
+        appendTrayAlias(aliases, "app:", tooltipTitle)
+    }
+    if (aliases.length === 0)
+        aliases.push("tray:" + index)
+    return {
+        "key": "tray:" + (normalizedIdentity(identity || label) || "item")
+            + ":" + index,
+        "aliases": aliases,
+        "label": label,
+        "desktopEntry": identity,
+        "appName": title || tooltipTitle || label,
+        "appIcon": "",
+        "entries": [],
+        "count": 0,
+        "latestTimestamp": 0,
+        "trayItem": item,
+        "trayBacked": true,
+        "trayIndex": index,
+        "trayOrder": index,
+        "iconSource": String(item && item.icon || "")
+    }
+}
+
+function historySourceForGroup(group, items) {
+    const details = historyGroupDetails(group)
+    const trayItem = group.trayIndex >= 0 ? items[group.trayIndex] : null
+    details.trayItem = trayItem
+    details.trayBacked = trayItem !== null
+    details.trayIndex = group.trayIndex
+    details.trayOrder = group.trayIndex
+    details.iconSource = String(
+        (trayItem && trayItem.icon) || details.appIcon || "")
+    return details
+}
+
+function compareHistorySources(left, right) {
+    if (left.trayBacked !== right.trayBacked)
+        return left.trayBacked ? -1 : 1
+    if (left.trayBacked) {
+        const countDifference = left.count - right.count
+        return countDifference !== 0
+            ? countDifference : left.trayOrder - right.trayOrder
+    }
+    const timeDifference = right.latestTimestamp - left.latestTimestamp
+    return timeDifference !== 0
+        ? timeDifference : left.label.localeCompare(right.label)
+}
+
+/** 将历史与全部活跃托盘项计算为有序来源数组，并在首位插入 ALL。 */
+function buildHistorySources(entries, trayItems, _sourceCounts) {
     const allEntries = Array.isArray(entries) ? entries.slice() : []
     const baseItems = itemArray(trayItems)
     const groups = aggregateHistoryGroups(allEntries)
@@ -248,27 +319,13 @@ function buildHistorySources(entries, trayItems, sourceCounts) {
         }
     }
 
-    const orderedTrayItems = sortedItems(baseItems, sourceCounts)
-    const sources = consolidated.map(group => {
-        const details = historyGroupDetails(group)
-        const trayItem = group.trayIndex >= 0 ? baseItems[group.trayIndex] : null
-        details.trayItem = trayItem
-        details.trayBacked = trayItem !== null
-        details.trayIndex = group.trayIndex
-        details.trayOrder = trayItem ? orderedTrayItems.indexOf(trayItem) : -1
-        details.iconSource = String(
-            (trayItem && trayItem.icon) || details.appIcon || "")
-        return details
-    })
-    sources.sort((left, right) => {
-        if (left.trayBacked !== right.trayBacked)
-            return left.trayBacked ? -1 : 1
-        if (left.trayBacked)
-            return left.trayOrder - right.trayOrder
-        const timeDifference = right.latestTimestamp - left.latestTimestamp
-        return timeDifference !== 0
-            ? timeDifference : left.label.localeCompare(right.label)
-    })
+    const sources = consolidated.map(group =>
+        historySourceForGroup(group, baseItems))
+    for (let index = 0; index < baseItems.length; index++) {
+        if (!sources.some(source => source.trayIndex === index))
+            sources.push(trayOnlySource(baseItems, index))
+    }
+    sources.sort(compareHistorySources)
     sources.unshift({
         "key": "__all__",
         "aliases": ["__all__"],
@@ -311,67 +368,6 @@ function sourceKeyForSelection(sources, previousKey, previousAliases) {
     }
     const allSource = sourceForKey(sources, "__all__")
     return allSource ? allSource.key : "__all__"
-}
-
-function removeNotificationByIdentity(notifications, target) {
-    const list = Array.isArray(notifications) ? notifications : []
-    return list.filter(notification => notification !== target)
-}
-
-function notificationIdentifier(notification) {
-    if (!notification)
-        return undefined
-    if (notification.id !== undefined && notification.id !== null)
-        return notification.id
-    if (notification.notificationId !== undefined && notification.notificationId !== null)
-        return notification.notificationId
-    return undefined
-}
-
-function notificationIsCritical(notification) {
-    if (!notification)
-        return false
-    const urgency = notification.urgency
-    return Number(urgency) === 2
-        || String(urgency || "").trim().toLowerCase() === "critical"
-}
-
-function notificationGroupsWithout(groups, shouldRemove) {
-    const groupList = Array.isArray(groups) ? groups : []
-    return groupList.reduce((next, group) => {
-        const notices = group && Array.isArray(group.notifications)
-            ? group.notifications : []
-        const remaining = notices.filter(notification => !shouldRemove(notification))
-        if (remaining.length === 0)
-            return next
-
-        let critical = false
-        for (const notification of remaining) {
-            if (notificationIsCritical(notification)) {
-                critical = true
-                break
-            }
-        }
-        next.push({
-            "appName": group.appName,
-            "notifications": remaining,
-            "critical": critical
-        })
-        return next
-    }, [])
-}
-
-function removeNotificationFromGroupsByIdentity(groups, target) {
-    return notificationGroupsWithout(groups, notification => notification === target)
-}
-
-function removeReplacedNotificationFromGroups(groups, replacement) {
-    const replacementId = notificationIdentifier(replacement)
-    return notificationGroupsWithout(groups, notification => {
-        if (notification === replacement || replacementId === undefined)
-            return false
-        return notificationIdentifier(notification) === replacementId
-    })
 }
 
 function sortedItems(items, sources) {

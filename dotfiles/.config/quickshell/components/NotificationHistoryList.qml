@@ -7,6 +7,8 @@ Item {
     property int currentIndex: 0
     property string panelState: "idle"
     property string detailMessage: ""
+    property string emptyTitle: "No recent notifications"
+    property string emptyDetail: "You're all caught up"
     property bool reducedMotion: false
     property bool sourceSwitching: false
     property real listOpacity: 1
@@ -127,10 +129,15 @@ Item {
 
     NotificationHistoryEmptyState {
         visible: historyList.panelState === "empty"
+            || (historyList.panelState === "ready"
+                && historyList.entries.length === 0)
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(260, parent.width)
         height: 220
+        opacity: historyList.listOpacity
+        title: historyList.emptyTitle
+        detail: historyList.emptyDetail
         zenSmoke: historyList.zenSmoke
         zenCloud: historyList.zenCloud
         zenAccent: historyList.zenAccent

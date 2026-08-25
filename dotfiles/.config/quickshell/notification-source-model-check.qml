@@ -81,8 +81,10 @@ ShellRoot {
 
     function runOrderingChecks() {
         const kitty = trayItem("kitty", "Kitty", "kitty-tray", true)
+        const idleOne = trayItem("idle-one", "Idle One", "idle-one", true)
         const telegram = trayItem("org.telegram.desktop", "Telegram Desktop",
                                   "telegram-tray", true)
+        const idleTwo = trayItem("idle-two", "Idle Two", "idle-two", false)
         const history = [
             entry(1, "Recent", "recent.desktop", 900),
             entry(2, "Telegram Desktop", "org.telegram.desktop", 800,
@@ -95,18 +97,33 @@ ShellRoot {
             {"desktopEntry": "org.telegram.desktop", "appName": "Telegram Desktop", "count": 3}
         ]
         const sources = TrayModel.buildHistorySources(
-            history, [kitty, telegram], counts)
+            history, [kitty, idleOne, telegram, idleTwo], counts)
 
         expectEqual(sources.map(source => source.label).join(","),
-                    "ALL,Telegram Desktop,Kitty,Recent,Older",
-                    "tray order precedes latest non-tray order")
-        expect(sources[1].trayItem === telegram,
-               "History uses the same promoted tray object as the top bar")
-        expectEqual(sources[1].iconSource, "telegram-tray",
+                    "ALL,Idle One,Idle Two,Kitty,Telegram Desktop,Recent,Older",
+                    "all tray items use ascending count before non-tray sources")
+        const telegramSource = sourceWithLabel(sources, "Telegram Desktop")
+        const idleSource = sourceWithLabel(sources, "Idle One")
+        expect(telegramSource.trayItem === telegram,
+               "History keeps the matched live tray object")
+        expectEqual(telegramSource.iconSource, "telegram-tray",
                     "live tray icon has highest priority")
-        expect(sources[1].trayItem.hasMenu, "tray-backed source exposes menu")
-        expect(!sources[3].trayBacked && sources[3].trayItem === null,
+        expect(telegramSource.trayItem.hasMenu,
+               "tray-backed source exposes menu")
+        expectEqual(idleSource.count, 0,
+                    "registered tray source without history has zero count")
+        expectEqual(idleSource.entries.length, 0,
+                    "registered tray source without history has empty entries")
+        expect(idleSource.trayBacked && idleSource.trayItem === idleOne,
+               "zero-count source retains live tray ownership")
+        const recentSource = sourceWithLabel(sources, "Recent")
+        expect(!recentSource.trayBacked && recentSource.trayItem === null,
                "non-tray source does not invent a menu owner")
+        expectEqual(TrayModel.sortedItems(
+                        [kitty, idleOne, telegram, idleTwo], counts)
+                        .map(item => item.title).join(","),
+                    "Telegram Desktop,Kitty,Idle One,Idle Two",
+                    "top bar keeps its existing descending count order")
 
         const tieSources = TrayModel.buildHistorySources([
             entry(5, "Zulu", "zulu.desktop", 100),
@@ -138,7 +155,11 @@ ShellRoot {
         const ambiguous = TrayModel.buildHistorySources([
             entry(3, "Unique App", "org.example.App.desktop", 300)
         ], ambiguousItems, [])
-        expect(!ambiguous[1].trayBacked,
+        const ambiguousHistory = ambiguous.find(source =>
+            source.key !== "__all__" && source.entries.length === 1)
+        expect(ambiguous.length === 4,
+               "ambiguous registered items still appear as zero-count sources")
+        expect(!ambiguousHistory.trayBacked,
                "ambiguous source is not assigned to a tray item")
 
         const chrome = trayItem("chrome_status_icon_1", "Chrome", "", true)
@@ -147,7 +168,36 @@ ShellRoot {
         const qqSources = TrayModel.buildHistorySources([
             entry(4, "QQ", "QQ.desktop", 400)
         ], [chrome, qq], [])
-        expect(qqSources[1].trayItem === qq, "QQ fallback maps blank chrome item")
+        const qqHistory = qqSources.find(source =>
+            source.key !== "__all__" && source.entries.length === 1)
+        expect(qqHistory.trayItem === qq, "QQ fallback maps blank chrome item")
+        expectEqual(sourceWithLabel(qqSources, "Chrome").count, 0,
+                    "unmatched Chrome tray item remains visible")
+    }
+
+    function runUnconditionalTrayChecks() {
+        const first = trayItem("first.desktop", "First Tray", "first", false)
+        const second = trayItem("second.desktop", "Second Tray", "second", true)
+        const sources = TrayModel.buildHistorySources([], [first, second], [])
+
+        expectEqual(sources.map(source => source.label).join(","),
+                    "ALL,First Tray,Second Tray",
+                    "empty history still exposes every registered tray item")
+        expectEqual(sources[0].count, 0, "empty ALL source has zero count")
+        expect(sources.slice(1).every(source => source.trayBacked),
+               "every synthesized source is tray-backed")
+        expect(sources[2].trayItem.hasMenu,
+               "zero-count tray source retains native menu capability")
+
+        const previousKey = sources[2].key
+        const previousAliases = sources[2].aliases
+        const refreshed = TrayModel.buildHistorySources([
+            entry(9, "Second Tray", "second.desktop", 500)
+        ], [first, second], [])
+        expectEqual(TrayModel.sourceKeyForSelection(
+                        refreshed, previousKey, previousAliases),
+                    "desktop:second",
+                    "first history entry preserves a selected tray-only source")
     }
 
     function runLifecycleAndSelectionChecks() {
@@ -188,6 +238,7 @@ ShellRoot {
         runAliasAndIconChecks()
         runOrderingChecks()
         runTrayMergeAndProtectionChecks()
+        runUnconditionalTrayChecks()
         runLifecycleAndSelectionChecks()
         if (failureCount === 0) {
             console.log("[NotificationSourceModelCheck] PASS")

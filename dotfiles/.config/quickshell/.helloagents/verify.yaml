@@ -28,6 +28,7 @@ commands:
   - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryStatusState.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationSourceRail.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationSourceTab.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationLifecycleModel.js
   - qmllint -I /usr/lib/qt6/qml components/TrayNotificationModel.js
   - qmllint -I /usr/lib/qt6/qml components/UnifiedRightPanel.qml
   - qmllint -I /usr/lib/qt6/qml components/RightPanelHost.qml

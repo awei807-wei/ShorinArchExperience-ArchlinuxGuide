@@ -8,6 +8,8 @@ Item {
     property color zenSmoke: Config.Theme.textMuted
     property color zenCloud: Config.Theme.textSecondary
     property color zenAccent: Config.Theme.accent
+    property string title: "No recent notifications"
+    property string detail: "You're all caught up"
 
     implicitWidth: 260
     implicitHeight: 220
@@ -38,7 +40,8 @@ Item {
         anchors.topMargin: 78
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
-        text: "No recent notifications"
+        text: emptyState.title
+        textFormat: Text.PlainText
         color: emptyState.zenCloud
         font.family: "JetBrains Mono"
         font.pixelSize: 13
@@ -49,7 +52,8 @@ Item {
         anchors.topMargin: 103
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
-        text: "You're all caught up"
+        text: emptyState.detail
+        textFormat: Text.PlainText
         color: emptyState.zenSmoke
         font.family: "JetBrains Mono"
         font.pixelSize: 11

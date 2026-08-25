@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import "components"
 import "config" as Config
+import "components/NotificationLifecycleModel.js" as NotificationModel
 import "components/TrayNotificationModel.js" as TrayModel
 
 ShellRoot {
@@ -238,13 +239,13 @@ ShellRoot {
                     "ambiguous blank-label QQ candidates are ignored");
 
         const replacementActive = [oldNotification, currentNotification];
-        const afterOldClose = TrayModel.removeNotificationByIdentity(
+        const afterOldClose = NotificationModel.removeNotificationByIdentity(
             replacementActive, oldNotification);
         expectEqual(afterOldClose.length, 1,
                     "replacement close removes one object by identity");
         expect(afterOldClose[0] === currentNotification,
                "old replacement close keeps current notification object");
-        const afterCurrentClose = TrayModel.removeNotificationByIdentity(
+        const afterCurrentClose = NotificationModel.removeNotificationByIdentity(
             afterOldClose, currentNotification);
         expectEqual(afterCurrentClose.length, 0,
                     "current replacement close removes itself");
@@ -260,7 +261,7 @@ ShellRoot {
             "notifications": [newGroupedNotification],
             "critical": false
         }];
-        const groupsAfterReplacement = TrayModel.removeReplacedNotificationFromGroups(
+        const groupsAfterReplacement = NotificationModel.removeReplacedNotificationFromGroups(
             groupsWithReplacement, newGroupedNotification);
         expectEqual(groupsAfterReplacement.length, 1,
                     "replacement removes old app group by notification id");
@@ -268,11 +269,11 @@ ShellRoot {
                     "replacement keeps new app group");
         expect(groupsAfterReplacement[0].notifications[0] === newGroupedNotification,
                "replacement keeps current notification object in groups");
-        const groupsAfterOldClose = TrayModel.removeNotificationFromGroupsByIdentity(
+        const groupsAfterOldClose = NotificationModel.removeNotificationFromGroupsByIdentity(
             groupsAfterReplacement, oldGroupedNotification);
         expectEqual(groupsAfterOldClose[0].notifications.length, 1,
                     "old replacement close keeps new app group");
-        const groupsAfterNewClose = TrayModel.removeNotificationFromGroupsByIdentity(
+        const groupsAfterNewClose = NotificationModel.removeNotificationFromGroupsByIdentity(
             groupsAfterOldClose, newGroupedNotification);
         expectEqual(groupsAfterNewClose.length, 0,
                     "current replacement close clears new app group");

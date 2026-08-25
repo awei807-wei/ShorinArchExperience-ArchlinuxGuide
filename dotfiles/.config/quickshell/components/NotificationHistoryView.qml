@@ -126,6 +126,12 @@ Item {
         currentIndex: historyView.currentIndex
         panelState: historyView.panelState
         detailMessage: historyView.detailMessage
+        emptyTitle: historyView.selectedSourceKey === "__all__"
+            ? "No recent notifications"
+            : "No notifications from this source"
+        emptyDetail: historyView.selectedSourceKey === "__all__"
+            ? "You're all caught up"
+            : "This tray app has no saved history"
         reducedMotion: historyView.reducedMotion
         sourceSwitching: historyView.sourceSwitching
         notificationGap: historyView.notificationGap

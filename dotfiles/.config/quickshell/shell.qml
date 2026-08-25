@@ -27,6 +27,7 @@ import "." as Core
 import "components"
 import "config" as Config
 import "components/AudioOutputModel.js" as AudioOutputModel
+import "components/NotificationLifecycleModel.js" as NotificationModel
 import "components/TrayNotificationModel.js" as TrayModel
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
@@ -117,7 +118,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
         const appName = configRoot.cleanNotificationText(notification.appName || "Notification")
         const key = appName.toLowerCase()
-        const groups = TrayModel.removeReplacedNotificationFromGroups(
+        const groups = NotificationModel.removeReplacedNotificationFromGroups(
             configRoot.notificationGroups, notification)
 
         let groupIndex = -1
@@ -156,7 +157,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 输出：无返回值
         // 副作用：把通知从对应 app 分组增量移除（空组整体删除；重算 critical；触发一次属性变更通知）
 
-        configRoot.notificationGroups = TrayModel.removeNotificationFromGroupsByIdentity(
+        configRoot.notificationGroups = NotificationModel.removeNotificationFromGroupsByIdentity(
             configRoot.notificationGroups, notification)
     }
     // MPRIS 播放器（响应式绑定逻辑，副作用剥离至信号处理器）
@@ -286,7 +287,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
         // 替换通知可能复用同一个 id；旧对象稍后 closed/expire 时只能移除自身，
         // 不能按 id 删除当前仍在活动队列中的新对象。
-        configRoot.activeNotifications = TrayModel.removeNotificationByIdentity(
+        configRoot.activeNotifications = NotificationModel.removeNotificationByIdentity(
             configRoot.activeNotifications, notification)
         configRoot.removeNotificationFromGroups(notification)
     }

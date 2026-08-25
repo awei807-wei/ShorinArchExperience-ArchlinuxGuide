@@ -9,6 +9,15 @@ ShellRoot {
     property int failureCount: 0
     property int closeCount: 0
     property int stage: 0
+    property var idleTrayItem: ({
+        "id": "idle.desktop",
+        "title": "Idle Tray",
+        "tooltipTitle": "Idle Tray",
+        "tooltipDescription": "",
+        "icon": "idle-icon",
+        "hasMenu": true,
+        "menu": {"title": "Idle menu"}
+    })
     property var sampleEntries: [
         {
             "id": 2,
@@ -85,6 +94,7 @@ ShellRoot {
             width: 396
             height: 290
             store: fakeStore
+            trayItems: [testRoot.idleTrayItem]
             open: false
             reducedMotion: true
             onCloseRequested: testRoot.closeCount += 1
@@ -125,6 +135,10 @@ ShellRoot {
                 testRoot.expectEqual(panel.panelState, "empty", "clear state")
                 testRoot.expectEqual(panel.entries.length, 0,
                     "entries released after clear")
+                testRoot.expectEqual(panel.sources.length, 2,
+                    "registered tray source survives empty history")
+                testRoot.expectEqual(panel.sources[1].label, "Idle Tray",
+                    "empty history keeps registered tray icon source")
                 testRoot.expectEqual(testRoot.closeCount, 1,
                     "close requested after clear")
                 testRoot.finish()
@@ -148,8 +162,17 @@ ShellRoot {
 
             const secondSource = panel.sources.find(source =>
                 source.label === "Second")
+            const idleSource = panel.sources.find(source =>
+                source.label === "Idle Tray")
             testRoot.expectEqual(secondSource !== undefined, true,
                 "application source is available")
+            testRoot.expectEqual(idleSource.count, 0,
+                "registered tray source is available without history")
+            panel.selectSource(idleSource.key)
+            testRoot.expectEqual(panel.filteredEntries.length, 0,
+                "zero-count tray source selects an empty result")
+            testRoot.expectEqual(panel.panelState, "ready",
+                "source-level empty result keeps loaded state")
             panel.selectSource(secondSource.key)
             testRoot.expectEqual(panel.filteredEntries.length, 1,
                 "left-click selection filters entries")
