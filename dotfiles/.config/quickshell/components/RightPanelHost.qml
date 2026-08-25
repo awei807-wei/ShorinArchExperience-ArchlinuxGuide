@@ -44,17 +44,9 @@ Scope {
                     Config.BarTuning.rightPanelFlare,
                     modelData.height - host.barBottom - 24
                 )
-                readonly property int controlHeight: Math.min(
-                    Config.BarTuning.rightPanelControlHeight,
+                readonly property int panelContentHeight: Math.min(
+                    Config.BarTuning.rightPanelHeight,
                     availablePanelHeight
-                )
-                readonly property int historyMaximumHeight: Math.min(
-                    Config.BarTuning.rightPanelHistoryMaxHeight,
-                    availablePanelHeight
-                )
-                readonly property int maximumPanelHeight: Math.max(
-                    controlHeight,
-                    historyMaximumHeight
                 )
 
                 screen: modelData
@@ -110,10 +102,7 @@ Scope {
                     anchors.right: parent.right
                     anchors.rightMargin: host.shellRoot.barMarginSide
                     width: panelWindow.panelWidth
-                    height: panelWindow.maximumPanelHeight
-                    controlTargetHeight: panelWindow.controlHeight
-                    historyMaximumHeight: panelWindow.historyMaximumHeight
-                    availablePanelHeight: panelWindow.availablePanelHeight
+                    height: panelWindow.panelContentHeight
                     shellRoot: host.shellRoot
                     store: host.store
                     open: host.controller.open

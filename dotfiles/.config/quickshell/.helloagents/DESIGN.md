@@ -8,7 +8,7 @@ Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级�
 
 ## 设计 token
 - 几何：Bar 窗口与内容区均高 `40px`，顶部、左右外边距和内容起点均为 `0px`。连续顶部连接带厚 `6px`，岛间上部内凹与下部外凸圆角半径为 `15px`，中间保留 `4px` 短直边；左右外端保持方形接缝，再以 `17px` 内凹角融入 `6px` 屏幕侧边轨道。相邻岛主体最小排除间距 `34px`，Tray/Power 内部间距 `4px`。
-- 右侧子面板：主体宽度按屏宽 `31%` 计算并限制为 `560–640px`，右岛关闭态内容预算 `218–240px`、展开连接颈部 `304px`，flare `16px`、主体圆角 `18px`。Control 高 `760px`；History 按内容限制为 `460–640px`。宿主顶部上移一个 flare，但向上衔接区只占颈部边界左右各 `16px`：左侧绘制连接弧，右侧抹平右岛旧外凸角；主体顶边从右岛 `40px` 底边开始，不得覆盖其余内容。
+- 右侧子面板：主体宽度按屏宽 `31%` 计算并限制为 `560–640px`，右岛关闭态内容预算 `218–240px`、展开连接颈部 `304px`，flare `16px`、主体圆角 `18px`。Control 与 History 共用 `760px` 目标高度，屏幕空间不足时统一收敛到可用高度。宿主顶部上移一个 flare，但向上衔接区只占颈部边界左右各 `16px`：左侧绘制连接弧，右侧抹平右岛旧外凸角；主体顶边从右岛 `40px` 底边开始，不得覆盖其余内容。
 - 主表面：`rgba(10,12,13,.94)`；次级与工具表面保持 `86%–88%` 不透明度。
 - 边框与高光：白色 `8.5%` 边框、白色 `4.5%` 顶部内高光；不使用外发光或 hover 抬升。
 - 文本：主文字 `#E7E9EA`、次文字 `#A7ABAD`、弱文字 `#6D7376`。
@@ -38,11 +38,11 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 - `ImportedControlCenterPanel` 在标题栏并列呈现时间、日期与天气，天气字号继续由 `clockWeatherFontSize` 统一调节。
 - `RightPanelController` 是右岛唯一的打开、当前页与退场窗口生命周期状态机；Metrics 入口定位 `CONTROL`，Tray 复合入口定位 `HISTORY`，同入口再次点击关闭，跨入口点击直接切页。
 - `RightPanelHost` 保持固定最大透明外窗，`UnifiedRightPanel` 只改变右锚定 sizer；打开时外部点击区负责一次关闭，退场开始后 mask 立即缩回可见面板。Escape 走同一关闭状态机。
-- `ImportedControlCenterPanel` 与 `NotificationHistoryPage` 的嵌入模式只保留页面内容；两页保持实例化，通过 `opacity + 12px x` 交叉过渡，禁止叠加旧窗口背景、阴影或第二套开关动画。Control 页使用 `12px` 卡片节奏，默认内容必须在 `760px` 面板内完整显示。
+- `ImportedControlCenterPanel` 与 `NotificationHistoryPage` 的嵌入模式只保留页面内容；两页保持实例化，在固定外壳内通过透明度、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放完成整页卡片切换，禁止叠加旧窗口背景、阴影或第二套开关动画。Control 页使用 `12px` 卡片节奏，默认内容必须在 `760px` 面板内完整显示。
 - 控制中心音量卡片在滑条与百分比之间使用 `34px` 方形箭头按钮；展开时卡片自身向下增高并在分隔线下显示居中的音频输出设备列表，后续卡片随布局下移。当前设备使用低对比强调底色和右侧勾选，选择后立即收起并恢复 `86px` 高度。
 - `SystemIsland` 组合 `Metrics`、低权重 `TrayIsland` 和独立 `Power`，三者共用一个连续右区外轮廓，并保留内部 hover 与焦点反馈；History 只切换壳内页面，不得触发 Tray 全量图标横向展开。频谱只能作为 Metrics 内部中性灰暗纹。
 - 托盘复合入口的隐藏应用数与通知历史角标分别表达，禁止合并计数。
-- 通知历史作为 `HISTORY` 页使用顶部起排的真实 ListView：卡片最小高 `88px`、间距 `10px`，正文为空时隐藏，普通界面不展示 desktopEntry、内部 ID 或空正文占位。0 条时显示 `220px` 空态；多条超过 `640px` 后内部滚动。
+- 通知历史作为 `HISTORY` 页使用顶部起排的真实 ListView：卡片最小高 `88px`、间距 `10px`，正文为空时隐藏，普通界面不展示 desktopEntry、内部 ID 或空正文占位。0 条时显示 `220px` 空态；内容超过固定页面视口后由列表内部滚动。
 
 ## 状态覆盖
 - 加载：保持岛面和标签结构稳定，以 `--` 或可验证状态文本降级，不使用全屏 spinner。
@@ -56,7 +56,7 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 贴住屏幕顶边的连续连接带与三段下伸反 R 角是 Bar 的首要轮廓记忆点：左区右侧和右区左侧保留成对反 R 角，中区双侧成对；左右外端不使用普通凸圆角，而是从方形岛底以内凹角收束到屏幕侧边细轨。右侧子面板从右岛底边连续“生长”，而不是悬浮在 Bar 下方。Context 与 Metrics 保留 1px 冰蓝校准标记；Clock 不使用主题色横条，由放大的时间建立视觉中心。System 的 32 段频谱仅保留约 5% 的有效对比，像高端音频设备的背景纹理，而不是独立视觉焦点。
 
 ## 动效策略
-常规交互反馈限定为 `120–180ms` 的颜色与轻量过渡。右侧子面板分阶段生长：右岛颈部从 `0ms` 开始，面板宽度从 `40ms`、高度从 `95ms`、内容从 `180ms` 开始；关闭时内容 `80ms` 先退场，高度与宽度随后收起，颈部延迟 `120ms` 收回。页面切换只做 `90/150ms` 交叉淡入淡出、`12px` 位移和 `220ms` 高度调整。窗口尺寸和锚点不参与动画，内容禁止缩放、持续脉冲、发光和漂浮；`QUICKSHELL_REDUCE_MOTION=1` 时直接到端点。
+常规交互反馈限定为 `120–180ms` 的颜色与轻量过渡。右侧子面板分阶段生长：右岛颈部从 `0ms` 开始，面板宽度从 `40ms`、高度从 `95ms`、内容从 `180ms` 开始；关闭时内容 `80ms` 先退场，高度与宽度随后收起，颈部延迟 `120ms` 收回。页面切换只做 `90/150ms` 交叉淡入淡出、方向相反的 `28px` 位移和一次 `0.985→1` 卡片缩放，外壳高度始终不变。窗口尺寸和锚点不参与动画；除页面切换的轻量卡片缩放外，禁止持续脉冲、发光和漂浮；`QUICKSHELL_REDUCE_MOTION=1` 时直接到端点。
 
 ## 无障碍要求
 状态不能只靠颜色：工作区同时使用文字与短线长度，指标同时显示标签和值。工作区、托盘和主入口支持键盘聚焦与 Enter/Space；焦点指示采用短校准线，避免覆盖整个紧凑控件。文字与表面对比必须在实际缩放下可读。
@@ -71,4 +71,4 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；天气不占用 Bar 宽度，Tray 直接图标和分段仪表必须严格按优先级退让。
 
 ## 实现备注
-Bar 的几何与排版 token 位于 `config/BarTuning.qml`，岛间反向轮廓由 `components/BarContour.qml` 使用单个 Qt Quick Canvas 路径绘制，左右外端通过 `ScreenEdgeBorder` 复刻 Brain_Shell `Border.qml` 的侧边轨道融角，稳定颜色 token 位于 `Bar.qml`；几何拓扑与 `40/15/6/34px` 参数取自 Brainitech/Brain_Shell 的 `SeamlessBarShape.qml`、`Border.qml` 与 `Metrics.qml`（MIT，提交 `f90fc9c6bdfb25568c731ea1158d3f8e4b7a6e20`）。右面板采用固定窗口、三进度 sizer、固定尺寸顶部/底部 Canvas 与同步主体组成的 `RightPanelShape`、常驻页面和紧凑单指示器分页条；开合仅裁剪揭示外壳，跨页高度动画只伸缩主体并移动底部圆角，避免 Canvas 纹理重建产生透明帧。动画时序以 Brain_Shell 的生长关系为基础，再按实屏需求拆成横向、纵向和内容三个阶段。环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供。视觉验收覆盖 2048/1280/1024/1008/1007/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。
+Bar 的几何与排版 token 位于 `config/BarTuning.qml`，岛间反向轮廓由 `components/BarContour.qml` 使用单个 Qt Quick Canvas 路径绘制，左右外端通过 `ScreenEdgeBorder` 复刻 Brain_Shell `Border.qml` 的侧边轨道融角，稳定颜色 token 位于 `Bar.qml`；几何拓扑与 `40/15/6/34px` 参数取自 Brainitech/Brain_Shell 的 `SeamlessBarShape.qml`、`Border.qml` 与 `Metrics.qml`（MIT，提交 `f90fc9c6bdfb25568c731ea1158d3f8e4b7a6e20`）。右面板采用固定窗口、三进度 sizer、固定最终尺寸的单个 `RightPanelShape` Canvas、常驻页面和紧凑单指示器分页条；开合仅由 sizer 裁剪揭示外壳，跨页只移动和淡入淡出页面卡片，不改变外壳几何，避免 Canvas 纹理重建产生透明帧。动画时序以 Brain_Shell 的生长关系为基础，再按实屏需求拆成横向、纵向和内容三个阶段。环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供。视觉验收覆盖 2048/1280/1024/1008/1007/800/660 宽度及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。

@@ -12,11 +12,6 @@ Item {
     property bool open: false
     property int page: 0
     property bool reducedMotion: false
-    property int controlTargetHeight:
-        Config.BarTuning.rightPanelControlHeight
-    property int historyMaximumHeight:
-        Config.BarTuning.rightPanelHistoryMaxHeight
-    property int availablePanelHeight: height
 
     property real widthProgress: 0
     property real heightProgress: 0
@@ -29,27 +24,24 @@ Item {
         + Config.BarTuning.rightPanelFlare
     readonly property real collapsedHeight:
         Config.BarTuning.rightPanelFlare
-    readonly property int historyMinimumHeight: Math.min(
-        Config.BarTuning.rightPanelHistoryMinHeight,
-        historyMaximumHeight
-    )
-    readonly property int historyTargetHeight: clamp(
-        historyPage.desiredPanelHeight,
-        historyMinimumHeight,
-        historyMaximumHeight
-    )
-    readonly property int targetOpenHeight: page === 0
-        ? Math.min(controlTargetHeight, availablePanelHeight)
-        : historyTargetHeight
-    property real animatedOpenHeight: targetOpenHeight
+    readonly property real openHeight: height
 
     readonly property Item inputRegion: inputMask
     readonly property Item sizerItem: sizer
-    readonly property Item shellItem: panelShape
     readonly property real controlPageOpacity:
         controlsPageWrapper.opacity
     readonly property real historyPageOpacity:
         historyPageWrapper.opacity
+    readonly property real controlPageX: controlsPageWrapper.cardX
+    readonly property real historyPageX: historyPageWrapper.cardX
+    readonly property real controlPageScale:
+        controlsPageWrapper.cardScale
+    readonly property real historyPageScale:
+        historyPageWrapper.cardScale
+    readonly property bool controlPageReady:
+        controlsPageWrapper.contentReady
+    readonly property bool historyPageReady:
+        historyPageWrapper.contentReady
     readonly property bool controlBaseContentFits:
         controlPanel.baseContentFits
 
@@ -58,10 +50,6 @@ Item {
     signal closeAnimationFinished()
 
     focus: open
-
-    function clamp(value, minimum, maximum) {
-        return Math.max(minimum, Math.min(maximum, value))
-    }
 
     function setProgress(widthValue, heightValue, contentValue) {
         widthProgress = widthValue
@@ -144,17 +132,6 @@ Item {
     }
 
     Keys.onEscapePressed: closeRequested()
-
-    Behavior on animatedOpenHeight {
-        enabled: !root.reducedMotion
-            && root.open
-            && root.heightProgress > 0.001
-
-        NumberAnimation {
-            duration: Config.BarTuning.panelPageHeightDuration
-            easing.type: Easing.InOutCubic
-        }
-    }
 
     ParallelAnimation {
         id: openAnimation
@@ -260,7 +237,7 @@ Item {
             + (root.width - root.collapsedWidth)
                 * root.widthProgress
         height: root.collapsedHeight
-            + (root.animatedOpenHeight - root.collapsedHeight)
+            + (root.openHeight - root.collapsedHeight)
                 * root.heightProgress
         clip: true
 
@@ -270,15 +247,13 @@ Item {
             enabled: root.open || root.widthProgress > 0.001
         }
 
-        // 外壳顶部与 Canvas 纹理尺寸保持固定；页面高度变化只伸缩
-        // 同步主体并移动底部圆角，sizer 继续负责开合阶段的裁剪揭示。
+        // 两页共用最终尺寸外壳；开合仅由 sizer 裁剪揭示，翻页不会
+        // 改变 Canvas 尺寸或重新触发外壳动画。
         RightPanelShape {
-            id: panelShape
-
             anchors.top: parent.top
             anchors.right: parent.right
             width: root.width
-            height: root.animatedOpenHeight
+            height: root.openHeight
             neckWidth: Config.BarTuning.rightPanelNeckWidth
             bodyWidth: width
             radius: Config.BarTuning.rightPanelRadius
@@ -293,7 +268,7 @@ Item {
             anchors.top: parent.top
             anchors.right: parent.right
             width: root.width
-            height: root.animatedOpenHeight
+            height: root.openHeight
             opacity: root.contentProgress
             enabled: root.contentProgress > 0.95
             visible: root.contentProgress > 0.001
@@ -322,7 +297,8 @@ Item {
                         Config.BarTuning.rightPanelPaddingH
                     active: root.page === 0
                     reducedMotion: root.reducedMotion
-                    inactiveX: -12
+                    inactiveX:
+                        -Config.BarTuning.panelPageCardOffset
 
                     ImportedControlCenterPanel {
                         id: controlPanel
@@ -350,7 +326,8 @@ Item {
                     anchors.fill: parent
                     active: root.page === 1
                     reducedMotion: root.reducedMotion
-                    inactiveX: 12
+                    inactiveX:
+                        Config.BarTuning.panelPageCardOffset
 
                     NotificationHistoryPage {
                         id: historyPage

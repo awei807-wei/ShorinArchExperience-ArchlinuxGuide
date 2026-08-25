@@ -58,9 +58,8 @@ QtObject {
     property int rightPanelWidthMax: 640
     property real rightPanelWidthRatio: 0.31
 
-    property int rightPanelControlHeight: 760
-    property int rightPanelHistoryMinHeight: 460
-    property int rightPanelHistoryMaxHeight: 640
+    // Control / History 共用同一高度，翻页期间外壳几何保持不变。
+    property int rightPanelHeight: 760
 
     property int rightPanelNeckWidth: 304
     property int rightPanelRadius: 18
@@ -111,12 +110,12 @@ QtObject {
     property int panelNotchCloseDelay: 120
     property int panelNotchCloseDuration: 130
 
-    // 页面切换时保留两个页面实例，仅做淡入淡出、位移和有限高度调整。
+    // 页面切换时保留两个页面实例，以整页卡片做推拉、淡入和轻微缩放。
     property int panelPageOutDuration: 90
     property int panelPageInDelay: 40
     property int panelPageInDuration: 150
-    property int panelPageMoveDuration: 180
-    property int panelPageHeightDuration: 220
+    property int panelPageCardOffset: 28
+    property real panelPageCardInactiveScale: 0.985
     property int panelTabIndicatorDuration: 190
 
     // ═══════════════════════════════════════════════════════

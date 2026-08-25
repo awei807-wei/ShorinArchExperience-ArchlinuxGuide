@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import "components"
+import "config" as Config
 
 ShellRoot {
     id: testRoot
@@ -84,6 +85,9 @@ ShellRoot {
         interval: 0
         running: true
         onTriggered: {
+            testRoot.expectEqual(panel.implicitHeight,
+                Config.BarTuning.rightPanelHeight,
+                "fixed shared panel height")
             panel.open = true
             testRoot.expectEqual(panel.panelState, "ready", "load state")
             testRoot.expectEqual(panel.entries.length, 2, "loaded entries")

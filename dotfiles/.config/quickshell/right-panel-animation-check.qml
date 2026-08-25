@@ -12,9 +12,8 @@ ShellRoot {
     property real reverseWidth: 0
     property real reverseHeight: 0
     property real reverseContent: 0
-    property real historySettledHeight: 0
-    property real stableTopCanvasHeight: 0
-    property real stableBottomCanvasHeight: 0
+    property real stablePageHeight: 0
+    property real stableSizerHeight: 0
 
     function expect(condition, label) {
         if (condition)
@@ -108,9 +107,6 @@ ShellRoot {
 
             width: 640
             height: 760
-            controlTargetHeight: 760
-            historyMaximumHeight: 640
-            availablePanelHeight: 760
             shellRoot: fakeShell
             store: fakeStore
             reducedMotion: false
@@ -194,6 +190,8 @@ ShellRoot {
                                 "open content completes")
                 testRoot.expect(panel.controlBaseContentFits,
                                 "Control cards fit before the footer without initial clipping")
+                testRoot.stablePageHeight = panel.openHeight
+                testRoot.stableSizerHeight = panel.sizerItem.height
                 panel.page = 1
                 testRoot.phase = 6
                 testRoot.next(25)
@@ -207,6 +205,21 @@ ShellRoot {
                                 "old page starts fading immediately")
                 testRoot.expect(panel.historyPageOpacity < 1,
                                 "new page does not appear instantly")
+                testRoot.expect(testRoot.near(
+                    panel.openHeight, testRoot.stablePageHeight, 0.001)
+                    && testRoot.near(
+                        panel.sizerItem.height,
+                        testRoot.stableSizerHeight, 0.001),
+                    "page switch keeps the shared shell height fixed")
+                testRoot.expect(panel.controlPageX < 0
+                                && panel.historyPageX > 0,
+                                "cards move toward opposite sides during switch")
+                testRoot.expect(panel.controlPageScale < 1
+                                && panel.historyPageScale < 1,
+                                "cards gain depth during switch")
+                testRoot.expect(!panel.controlPageReady
+                                && !panel.historyPageReady,
+                                "moving cards do not accept input")
                 testRoot.phase = 7
                 testRoot.next(230)
                 return
@@ -217,24 +230,24 @@ ShellRoot {
                                 "history page fades in")
                 testRoot.expect(testRoot.near(panel.controlPageOpacity, 0, 0.03),
                                 "control page fades out")
-                testRoot.expect(panel.animatedOpenHeight <= 520,
-                                "single notification keeps History compact")
-                testRoot.expect(panel.sizerItem.y === 0
-                                && panel.shellItem.y === 0,
-                                "History keeps sizer and shell top anchored")
                 testRoot.expect(testRoot.near(
-                    panel.shellItem.bodySectionTop,
-                    panel.shellItem.topSectionHeight, 0.001),
-                    "fixed top cap meets synchronous body")
+                    panel.openHeight, testRoot.stablePageHeight, 0.001)
+                    && testRoot.near(
+                        panel.sizerItem.height,
+                        testRoot.stableSizerHeight, 0.001),
+                    "History uses the same final height as Control")
                 testRoot.expect(testRoot.near(
-                    panel.shellItem.bodySectionBottom,
-                    panel.shellItem.bottomCanvasY, 0.001),
-                    "synchronous body meets fixed bottom cap")
-                testRoot.historySettledHeight = panel.animatedOpenHeight
-                testRoot.stableTopCanvasHeight =
-                    panel.shellItem.topCanvasHeight
-                testRoot.stableBottomCanvasHeight =
-                    panel.shellItem.bottomCanvasHeight
+                    panel.historyPageX, 0, 0.03)
+                    && testRoot.near(
+                        panel.historyPageScale, 1, 0.003),
+                    "History card settles at full size")
+                testRoot.expect(panel.historyPageReady
+                                && !panel.controlPageReady,
+                                "only settled History accepts input")
+                testRoot.expect(testRoot.near(
+                    panel.controlPageX,
+                    -Config.BarTuning.panelPageCardOffset, 0.03),
+                    "inactive Control card rests to the left")
                 panel.page = 0
                 testRoot.phase = 8
                 testRoot.next(25)
@@ -244,25 +257,21 @@ ShellRoot {
             if (testRoot.phase === 8) {
                 testRoot.expect(panel.open,
                                 "History-to-Control keeps shell open")
-                testRoot.expect(panel.animatedOpenHeight
-                                > testRoot.historySettledHeight,
-                                "History-to-Control grows from compact height")
-                testRoot.expect(panel.sizerItem.y === 0
-                                && panel.shellItem.y === 0
-                                && panel.shellItem.topCanvasY === 0,
-                                "History-to-Control keeps the shell top fixed")
                 testRoot.expect(testRoot.near(
-                    panel.shellItem.topCanvasHeight,
-                    testRoot.stableTopCanvasHeight, 0.001),
-                    "top Canvas texture does not resize across pages")
-                testRoot.expect(testRoot.near(
-                    panel.shellItem.bottomCanvasHeight,
-                    testRoot.stableBottomCanvasHeight, 0.001),
-                    "bottom Canvas texture does not resize across pages")
-                testRoot.expect(testRoot.near(
-                    panel.shellItem.bodySectionBottom,
-                    panel.shellItem.bottomCanvasY, 0.001),
-                    "growing body remains joined to the bottom cap")
+                    panel.openHeight, testRoot.stablePageHeight, 0.001)
+                    && testRoot.near(
+                        panel.sizerItem.height,
+                        testRoot.stableSizerHeight, 0.001),
+                    "History-to-Control does not animate shell geometry")
+                testRoot.expect(panel.controlPageX < 0
+                                && panel.historyPageX > 0,
+                                "reverse switch moves both page cards")
+                testRoot.expect(panel.controlPageScale < 1
+                                && panel.historyPageScale < 1,
+                                "reverse switch preserves card depth")
+                testRoot.expect(!panel.controlPageReady
+                                && !panel.historyPageReady,
+                                "reverse-moving cards do not accept input")
                 testRoot.phase = 9
                 testRoot.next(230)
                 return
@@ -270,17 +279,24 @@ ShellRoot {
 
             if (testRoot.phase === 9) {
                 testRoot.expect(testRoot.near(
-                    panel.animatedOpenHeight,
-                    panel.controlTargetHeight, 0.03),
-                    "Control height finishes without moving the top")
+                    panel.openHeight, testRoot.stablePageHeight, 0.001),
+                    "Control retains the shared page height")
                 testRoot.expect(testRoot.near(panel.controlPageOpacity, 1, 0.03),
                                 "control page fades back in")
                 testRoot.expect(testRoot.near(panel.historyPageOpacity, 0, 0.03),
                                 "history page fades back out")
                 testRoot.expect(testRoot.near(
-                    panel.shellItem.topCanvasHeight,
-                    testRoot.stableTopCanvasHeight, 0.001),
-                    "top Canvas remains stable after height growth")
+                    panel.controlPageX, 0, 0.03)
+                    && testRoot.near(
+                        panel.controlPageScale, 1, 0.003),
+                    "Control card settles at full size")
+                testRoot.expect(panel.controlPageReady
+                                && !panel.historyPageReady,
+                                "only settled Control accepts input")
+                testRoot.expect(testRoot.near(
+                    panel.historyPageX,
+                    Config.BarTuning.panelPageCardOffset, 0.03),
+                    "inactive History card rests to the right")
                 panel.open = false
                 testRoot.phase = 10
                 testRoot.next(50)
@@ -340,6 +356,12 @@ ShellRoot {
                                 && panel.heightProgress === 1
                                 && panel.contentProgress === 1,
                                 "reduced motion opens immediately")
+                panel.page = 1
+                testRoot.expect(panel.historyPageOpacity === 1
+                                && panel.controlPageOpacity === 0
+                                && panel.historyPageX === 0
+                                && panel.historyPageScale === 1,
+                                "reduced motion switches cards immediately")
                 panel.open = false
                 testRoot.phase = 13
                 testRoot.next(10)

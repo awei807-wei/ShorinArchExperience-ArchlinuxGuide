@@ -1,38 +1,46 @@
 import "../config" as Config
 import QtQuick
 
-// 常驻页面包装器：切页时只改变页面的透明度和水平位移，
+// 常驻页面包装器：把整页作为一张卡片做推拉、淡入和轻微缩放，
 // 不销毁/重建页面实例，也不重新播放外层面板的开合动画。
 Item {
     id: root
 
     property bool active: false
     property bool reducedMotion: false
-    // Control 从左侧退场，History 可将此值设为 12 从右侧退场。
-    property real inactiveX: -12
-    property real transitionOpacity: active ? 1 : 0
+    // Control 从左侧退场，History 传入正值从右侧退场。
+    property real inactiveX: -Config.BarTuning.panelPageCardOffset
+    property real inactiveScale:
+        Config.BarTuning.panelPageCardInactiveScale
+    property real transitionProgress: active ? 1 : 0
 
-    readonly property bool contentVisible: transitionOpacity > 0.001
-    readonly property bool contentReady: active && opacity > 0.95
+    readonly property real cardX: contentHost.x
+    readonly property real cardScale: contentHost.scale
+    readonly property bool contentVisible: transitionProgress > 0.001
+    readonly property bool contentReady: active
+        && opacity > 0.95
+        && Math.abs(cardX) < 1
 
     default property alias contentData: contentHost.data
 
-    opacity: transitionOpacity
+    z: active ? 1 : 0
+    opacity: transitionProgress
     visible: contentVisible
     enabled: contentReady
+    clip: true
 
     function syncActivePage() {
         pageInDelay.stop()
 
         if (reducedMotion) {
-            transitionOpacity = active ? 1 : 0
+            transitionProgress = active ? 1 : 0
             return
         }
 
         if (active)
             pageInDelay.restart()
         else
-            transitionOpacity = 0
+            transitionProgress = 0
     }
 
     onActiveChanged: syncActivePage()
@@ -44,11 +52,11 @@ Item {
         interval: Config.BarTuning.panelPageInDelay
         onTriggered: {
             if (root.active)
-                root.transitionOpacity = 1
+                root.transitionProgress = 1
         }
     }
 
-    Behavior on transitionOpacity {
+    Behavior on transitionProgress {
         enabled: !root.reducedMotion
 
         NumberAnimation {
@@ -65,15 +73,9 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: parent.width
-        x: root.active ? 0 : root.inactiveX
-
-        Behavior on x {
-            enabled: !root.reducedMotion
-
-            NumberAnimation {
-                duration: Config.BarTuning.panelPageMoveDuration
-                easing.type: Easing.OutCubic
-            }
-        }
+        x: root.inactiveX * (1 - root.transitionProgress)
+        scale: root.inactiveScale
+            + (1 - root.inactiveScale) * root.transitionProgress
+        transformOrigin: Item.Center
     }
 }

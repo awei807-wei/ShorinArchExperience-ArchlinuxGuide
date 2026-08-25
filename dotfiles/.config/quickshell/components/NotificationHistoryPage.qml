@@ -1,5 +1,5 @@
-// 右侧子面板中的持久通知历史页。
-// 页面本身只负责历史数据、列表和交互；窗口尺寸由 desiredPanelHeight 提供给宿主。
+// 右侧子面板中的持久通知历史页。页面只负责历史数据、列表和交互；
+// 与 Control 共用固定面板高度，内容超过可用区域后由 ListView 滚动。
 import "../config" as Config
 import QtQuick
 Item {
@@ -29,34 +29,20 @@ Item {
         ? entries[Math.max(0, Math.min(currentIndex, entries.length - 1))]
         : null
     readonly property int headerHeight: 58
-    readonly property int historyMinHeight: Config.BarTuning.rightPanelHistoryMinHeight
-        ?? 460
-    readonly property int historyMaxHeight: Config.BarTuning.rightPanelHistoryMaxHeight
-        ?? 640
-    readonly property int footerHeight: Config.BarTuning.rightPanelFooterHeight
-        ?? 58
     readonly property int horizontalPadding: Config.BarTuning.rightPanelPaddingH
         ?? 24
     readonly property int topPadding: Config.BarTuning.rightPanelPaddingTop
         ?? 18
     readonly property int notificationGap: Config.BarTuning.notificationCardGap
         ?? 10
-    readonly property int listContentCap: 450
-    readonly property int desiredPanelHeight: clampHeight(
-        headerHeight
-        + Math.min(Math.max(0, Math.round(notificationList.contentHeight)), listContentCap)
-        + footerHeight
-        + 72
-    )
+    readonly property int desiredPanelHeight:
+        Config.BarTuning.rightPanelHeight ?? 760
 
     signal closeRequested()
     implicitWidth: panelWidth
     implicitHeight: desiredPanelHeight
     visible: open
     focus: open
-    function clampHeight(value) {
-        return Math.max(historyMinHeight, Math.min(historyMaxHeight, Math.round(value)))
-    }
     function load() {
         if (!store)
             return

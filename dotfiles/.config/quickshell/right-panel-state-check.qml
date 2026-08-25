@@ -118,14 +118,14 @@ ShellRoot {
                                  16, "neck flare")
             testRoot.expectEqual(Config.BarTuning.rightPanelRadius,
                                  18, "panel radius")
-            testRoot.expectEqual(Config.BarTuning.rightPanelControlHeight,
-                                 760, "control height")
-            testRoot.expectEqual(
-                Config.BarTuning.rightPanelHistoryMinHeight,
-                460, "history minimum height")
-            testRoot.expectEqual(
-                Config.BarTuning.rightPanelHistoryMaxHeight,
-                640, "history maximum height")
+            testRoot.expectEqual(Config.BarTuning.rightPanelHeight,
+                                 760, "shared page height")
+            testRoot.expectEqual(Config.BarTuning.panelPageCardOffset,
+                                 28, "page card offset")
+            testRoot.expect(
+                Math.abs(Config.BarTuning.panelPageCardInactiveScale
+                         - 0.985) < 0.0001,
+                "page card inactive scale")
             testRoot.expectEqual(Config.BarTuning.panelWidthOpenDelay,
                                  40, "width open delay")
             testRoot.expectEqual(Config.BarTuning.panelHeightOpenDelay,
