@@ -167,6 +167,25 @@ ShellRoot {
         expect(neckOpen.animatedRightContourWidth
                / Config.BarTuning.rightPanelWidthMax <= 0.50,
                "open neck occupies at most 50% of maximum panel");
+        expectEqual(neckHalf.animatedRightContourWidth,
+                    Math.round(neckHalf.naturalRightContourWidth
+                        + (neckHalf.openRightContourWidth
+                            - neckHalf.naturalRightContourWidth) * 0.5),
+                    "right island reads shared half progress directly");
+        expectEqual(neckHalf.normalizedRightPanelProgress, 0.5,
+                    "right island does not add a second easing layer");
+        expect(narrowOpen.openRightContourWidth
+               < Config.BarTuning.rightPanelNeckWidth,
+               "800px Bar constrains the target neck");
+        expectEqual(narrowOpen.animatedRightContourWidth,
+                    narrowOpen.openRightContourWidth,
+                    "800px open Bar uses its constrained target");
+        expect(ultraOpen.openRightContourWidth
+               < narrowOpen.openRightContourWidth,
+               "660px Bar constrains the target further");
+        expectEqual(ultraOpen.animatedRightContourWidth,
+                    ultraOpen.openRightContourWidth,
+                    "660px open Bar uses its constrained target");
         expectEqual(modeTwoEdge.layoutMode, 2, "configured tray threshold mode");
         expectEqual(modeThreeEdge.layoutMode, 3, "configured below-tray mode");
         if (failureCount === 0) {
@@ -180,7 +199,7 @@ ShellRoot {
 
     Item {
         width: 2048
-        height: (Config.BarTuning.barHeight + 4) * 8
+        height: (Config.BarTuning.barHeight + 4) * 11
 
         Bar {
             id: wide
@@ -260,7 +279,43 @@ ShellRoot {
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
             rightPanelOpen: true
-            panelNeckReducedMotion: true
+            rightPanelProgress: 1
+        }
+
+        Bar {
+            id: neckHalf
+
+            width: 2048
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 8
+            trayDirectIconLimit: 3
+            notificationHistoryCount: 1
+            rightPanelOpen: true
+            rightPanelProgress: 0.5
+        }
+
+        Bar {
+            id: narrowOpen
+
+            width: 800
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 9
+            trayDirectIconLimit: 3
+            notificationHistoryCount: 1
+            rightPanelOpen: true
+            rightPanelProgress: 1
+        }
+
+        Bar {
+            id: ultraOpen
+
+            width: Config.BarTuning.minimumSupportedWidth
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 10
+            trayDirectIconLimit: 3
+            notificationHistoryCount: 1
+            rightPanelOpen: true
+            rightPanelProgress: 1
         }
 
     }

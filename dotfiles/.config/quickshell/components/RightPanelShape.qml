@@ -1,10 +1,10 @@
 import "../config" as Config
 import QtQuick
 
-// 右侧面板的活动轮廓。主体按当前揭示宽高真实生长，左侧圆角始终
-// 贴住活动边缘；颈部 flare 保持对齐 Bar，避免裁剪线切过固定圆角。
+// 右侧面板的最终连体轮廓。Canvas 始终保持最终宽高，动画只由外层
+// viewport 揭示，因此路径不会经历凹角与圆角无法成立的中间拓扑。
 // 几何实现参考 Brainitech/Brain_Shell 的 PopupShape（MIT）。
-Item {
+Canvas {
     id: root
 
     property color color: Config.Theme.surface
@@ -47,73 +47,74 @@ Item {
         bodyHeight / 2
     ))
 
-    clip: true
+    antialiasing: true
+    renderStrategy: Canvas.Threaded
 
-    // 原生场景图矩形随 sizer 同步变形，不需要逐帧重绘或重分配
-    // 大尺寸 Canvas 纹理。右上角补成直角，以继续贴合屏幕右边缘。
-    Rectangle {
-        id: body
+    onWidthChanged: requestPaint()
+    onHeightChanged: requestPaint()
+    onColorChanged: requestPaint()
+    onNeckWidthChanged: requestPaint()
+    onBodyWidthChanged: requestPaint()
+    onRadiusChanged: requestPaint()
+    onFlareChanged: requestPaint()
 
-        x: root.bodyLeft
-        y: root.effectiveFlare
-        width: root.effectiveBodyWidth
-        height: root.bodyHeight
-        radius: root.effectiveRadius
-        color: root.color
-        antialiasing: true
-        visible: width > 0 && height > 0
-    }
+    onPaint: {
+        const ctx = getContext("2d")
+        ctx.reset()
+        ctx.clearRect(0, 0, width, height)
 
-    Rectangle {
-        x: root.effectiveWidth - root.effectiveRadius
-        y: root.effectiveFlare
-        width: root.effectiveRadius
-        height: Math.min(root.effectiveRadius, root.bodyHeight)
-        color: root.color
-        visible: width > 0 && height > 0
-    }
+        const w = root.effectiveWidth
+        const h = root.effectiveHeight
+        const body = root.effectiveBodyWidth
+        const bodyLeft = root.bodyLeft
+        const neckLeft = root.neckLeft
+        const f = root.effectiveFlare
+        const r = root.effectiveRadius
 
-    // flare 只占固定的 32×16px 左右，不参与主体宽高动画；即时绘制
-    // 可避免窗口首次出现时线程化 Canvas 仍未提交纹理。
-    Canvas {
-        id: flareCap
+        if (body <= 0 || h <= 0)
+            return
 
-        x: root.neckLeft - root.effectiveFlare
-        width: root.effectiveFlare * 2
-        height: root.effectiveFlare
-        visible: root.effectiveFlare > 0
-            && root.neckLeft > root.bodyLeft
-        antialiasing: true
-        renderStrategy: Canvas.Immediate
+        ctx.beginPath()
+        ctx.fillStyle = root.color
 
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        onVisibleChanged: requestPaint()
+        // 主体顶边位于 flare 下方；右边贴屏，因此右上角保持直角。
+        ctx.moveTo(bodyLeft + r, f)
+        ctx.lineTo(w, f)
+        ctx.lineTo(w, Math.max(f, h - r))
 
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.reset()
+        if (r > 0)
+            ctx.arcTo(w, h, w - r, h, r)
+        else
+            ctx.lineTo(w, h)
 
-            const f = height
-            if (f <= 0)
-                return
+        ctx.lineTo(bodyLeft + r, h)
+        if (r > 0)
+            ctx.arcTo(bodyLeft, h, bodyLeft, h - r, r)
+        else
+            ctx.lineTo(bodyLeft, h)
+
+        ctx.lineTo(bodyLeft, f + r)
+        if (r > 0)
+            ctx.arcTo(bodyLeft, f, bodyLeft + r, f, r)
+        else
+            ctx.lineTo(bodyLeft, f)
+
+        ctx.closePath()
+        ctx.fill()
+
+        // 颈部左侧以 flare 接入 Bar；右侧只覆盖一个 flare 的安全区，
+        // 不遮挡右岛中的 Metrics、Tray 与 Power 内容。
+        if (f > 0 && neckLeft > bodyLeft) {
+            const flareLeft = Math.max(bodyLeft, neckLeft - f)
+            const coverRight = Math.min(w, neckLeft + f)
 
             ctx.beginPath()
-            ctx.fillStyle = root.color
-            ctx.moveTo(0, f)
-            ctx.quadraticCurveTo(f, f, f, 0)
-            ctx.lineTo(width, 0)
-            ctx.lineTo(width, f)
+            ctx.moveTo(flareLeft, f)
+            ctx.quadraticCurveTo(neckLeft, f, neckLeft, 0)
+            ctx.lineTo(coverRight, 0)
+            ctx.lineTo(coverRight, f)
             ctx.closePath()
             ctx.fill()
-        }
-
-        Connections {
-            target: root
-
-            function onColorChanged() {
-                flareCap.requestPaint()
-            }
         }
     }
 }

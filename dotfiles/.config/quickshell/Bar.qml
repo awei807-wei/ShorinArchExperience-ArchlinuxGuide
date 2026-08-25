@@ -25,8 +25,9 @@ Rectangle {
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property bool rightPanelOpen: false
-    property bool panelNeckReducedMotion: Core.TopBarState.reducedMotion
-    property real panelNeckProgress: 0
+    property real rightPanelProgress: rightPanelOpen ? 1 : 0
+    property real rightPanelBaseWidth: naturalRightContourWidth
+    property real rightPanelTargetWidth: openRightContourWidth
     readonly property int trayPowerGap: Config.BarTuning.trayPowerGap
     readonly property int leftIslandOffsetX: Config.BarTuning.leftIslandOffsetX
     readonly property int centerIslandOffsetX: Config.BarTuning.centerIslandOffsetX
@@ -77,10 +78,22 @@ Rectangle {
         Math.min(Config.BarTuning.rightPanelNeckWidth,
                  availableRightNeckWidth)
     )
+    readonly property real normalizedRightPanelProgress: Math.max(
+        0, Math.min(1, rightPanelProgress)
+    )
+    readonly property real animationTargetRightWidth: Math.max(
+        naturalRightContourWidth,
+        Math.min(openRightContourWidth, rightPanelTargetWidth)
+    )
+    readonly property real animationBaseRightWidth:
+        rightPanelOpen || normalizedRightPanelProgress > 0.001
+        ? Math.max(1, Math.min(animationTargetRightWidth,
+                              rightPanelBaseWidth))
+        : naturalRightContourWidth
     readonly property real animatedRightContourWidth:
-        naturalRightContourWidth
-        + (openRightContourWidth - naturalRightContourWidth)
-            * panelNeckProgress
+        Math.round(animationBaseRightWidth
+        + (animationTargetRightWidth - animationBaseRightWidth)
+            * normalizedRightPanelProgress)
     readonly property real centeredClockLeft: (width - clockWidth) / 2 + centerIslandOffsetX
     readonly property real minimumClockLeft: contextRight + exclusionGap
     readonly property real maximumClockLeft: systemLeft - exclusionGap - clockWidth
@@ -109,50 +122,6 @@ Rectangle {
 
     implicitHeight: barHeight
     color: "transparent"
-
-    function syncPanelNeck() {
-        panelNeckOpenAnimation.stop()
-        panelNeckCloseAnimation.stop()
-
-        if (panelNeckReducedMotion) {
-            panelNeckProgress = rightPanelOpen ? 1 : 0
-            return
-        }
-
-        if (rightPanelOpen)
-            panelNeckOpenAnimation.restart()
-        else
-            panelNeckCloseAnimation.restart()
-    }
-
-    onRightPanelOpenChanged: syncPanelNeck()
-    onPanelNeckReducedMotionChanged: syncPanelNeck()
-    Component.onCompleted: panelNeckProgress = rightPanelOpen ? 1 : 0
-
-    NumberAnimation {
-        id: panelNeckOpenAnimation
-
-        target: bar
-        property: "panelNeckProgress"
-        to: 1
-        duration: Config.BarTuning.panelNotchOpenDuration
-        easing.type: Easing.OutCubic
-    }
-
-    SequentialAnimation {
-        id: panelNeckCloseAnimation
-
-        PauseAnimation {
-            duration: Config.BarTuning.panelNotchCloseDelay
-        }
-        NumberAnimation {
-            target: bar
-            property: "panelNeckProgress"
-            to: 0
-            duration: Config.BarTuning.panelNotchCloseDuration
-            easing.type: Easing.InCubic
-        }
-    }
 
     BarContour {
         id: barContour

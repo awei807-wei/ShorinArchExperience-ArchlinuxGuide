@@ -8,12 +8,9 @@ ShellRoot {
 
     property int failureCount: 0
     property int phase: 0
-    property int closeFinishedCount: 0
-    property real reverseWidth: 0
-    property real reverseHeight: 0
-    property real reverseContent: 0
+    property real reverseProgress: 0
     property real stablePageHeight: 0
-    property real stableSizerHeight: 0
+    property real stableViewportHeight: 0
 
     function expect(condition, label) {
         if (condition)
@@ -26,37 +23,85 @@ ShellRoot {
         return Math.abs(actual - expected) <= tolerance
     }
 
-    function expectShellTracksSizer(label) {
-        const shell = panel.shapeItem
-
-        expect(near(shell.bodyWidth, panel.sizerItem.width, 0.5),
-               label + " shell width follows reveal edge")
-        expect(near(shell.height, panel.sizerItem.height, 0.5),
-               label + " shell height follows reveal edge")
-        expect(near(shell.x + shell.bodyLeft, 0, 0.5),
-               label + " rounded body edge matches clip edge")
-        if (shell.bodyHeight > 1)
-            expect(shell.effectiveRadius > 0,
-                   label + " moving edge keeps a rounded corner")
-        expect(near(shell.effectiveFlare,
-                    Config.BarTuning.rightPanelFlare, 0.01),
-               label + " flare remains stable")
-        expect(near(shell.neckLeft,
-                    panel.width - Config.BarTuning.rightPanelNeckWidth,
-                    0.5), label + " flare remains aligned to neck")
+    function expectedBody(progress) {
+        return Math.max(0, Math.min(1,
+            (progress - Config.BarTuning.panelBodyStartProgress)
+            / (1 - Config.BarTuning.panelBodyStartProgress)))
     }
 
-    function expectProbeGeometry(bodyWidth, height, expectedRadius, label) {
-        shapeProbe.bodyWidth = bodyWidth
-        shapeProbe.height = height
+    function expectedContent(progress) {
+        return Math.max(0, Math.min(1,
+            (progress - Config.BarTuning.panelContentStartProgress)
+            / (1 - Config.BarTuning.panelContentStartProgress)))
+    }
 
-        expect(near(shapeProbe.bodyLeft, shapeProbe.width - bodyWidth, 0.01),
-               label + " body edge")
-        expect(near(shapeProbe.neckLeft,
-                    shapeProbe.width - shapeProbe.neckWidth, 0.01),
-               label + " neck edge")
-        expect(near(shapeProbe.effectiveRadius, expectedRadius, 0.01),
-               label + " radius")
+    function expectedWidth(progress) {
+        return Math.round(panel.collapsedWidth
+            + (panel.width - panel.collapsedWidth) * progress)
+    }
+
+    function expectedHeight(progress) {
+        return Math.round(panel.safeRevealHeight
+            + (panel.openHeight - panel.safeRevealHeight)
+                * expectedBody(progress))
+    }
+
+    function expectGeometry(progress, label) {
+        controller.rightPanelProgress = progress
+        const body = expectedBody(progress)
+        const content = expectedContent(progress)
+
+        expect(near(panel.normalizedShellProgress, progress, 0.0001),
+               label + " consumes shared progress")
+        expect(near(panel.bodyProgress, body, 0.0001),
+               label + " derives body progress")
+        expect(near(panel.contentProgress, content, 0.0001),
+               label + " derives content progress")
+        expect(near(panel.sizerItem.width, expectedWidth(progress), 0.5),
+               label + " viewport width")
+        expect(near(panel.sizerItem.height, expectedHeight(progress), 0.5),
+               label + " viewport height")
+        expect(near(panel.sizerItem.opacity, body, 0.0001),
+               label + " body opacity")
+        expect(near(panel.inputRegion.x, panel.sizerItem.x, 0.01)
+               && near(panel.inputRegion.width, panel.sizerItem.width, 0.01),
+               label + " input follows viewport width")
+        expect(near(panel.inputRegion.y,
+                    Config.BarTuning.rightPanelFlare, 0.01),
+               label + " input leaves overlap flare to Bar")
+        expect(near(panel.inputRegion.height,
+                    body > 0.001
+                        ? panel.sizerItem.height
+                            - Config.BarTuning.rightPanelFlare
+                        : 0,
+                    0.01),
+               label + " input follows visible body")
+
+        const shape = panel.shapeItem
+        expect(near(shape.width, panel.width, 0.01)
+               && near(shape.height, panel.openHeight, 0.01),
+               label + " shell keeps final dimensions")
+        expect(near(shape.bodyWidth, panel.width, 0.01)
+               && near(shape.bodyLeft, 0, 0.01),
+               label + " shell body never deforms")
+        expect(near(shape.effectiveRadius,
+                    Config.BarTuning.rightPanelRadius, 0.01),
+               label + " shell radius never collapses")
+        expect(near(shape.neckLeft,
+                    panel.width - panel.normalizedTargetRightWidth,
+                    0.01), label + " shell neck stays aligned")
+        if (progress > 0) {
+            expect(near(progressBar.animatedRightContourWidth,
+                        panel.currentNeckWidth, 0.01),
+                   label + " Bar and shell share the same neck width")
+            expect(near(panel.shellHorizontalOffset,
+                        panel.normalizedTargetRightWidth
+                            - panel.currentNeckWidth, 0.01),
+                   label + " fixed shell translates without reshaping")
+            expect(near(shape.neckLeft + panel.shellHorizontalOffset,
+                        panel.width - panel.currentNeckWidth, 0.01),
+                   label + " translated flare meets the Bar edge")
+        }
     }
 
     function next(delay) {
@@ -131,32 +176,45 @@ ShellRoot {
         function clearHistory() { historyCleared() }
     }
 
+    RightPanelController {
+        id: controller
+
+        animationDuration: 200
+        hideDelay: 20
+        baseRightWidth: 240
+    }
+
+    Bar {
+        id: progressBar
+
+        width: 1280
+        height: Config.BarTuning.barHeight
+        visible: false
+        rightPanelOpen: controller.open
+        rightPanelProgress: controller.progress
+        rightPanelBaseWidth: controller.baseRightWidth
+        rightPanelTargetWidth: controller.targetRightWidth
+    }
+
     Item {
-        width: 640
+        width: 560
         height: 760
-
-        RightPanelShape {
-            id: shapeProbe
-
-            width: 640
-            height: 16
-            bodyWidth: 384
-            neckWidth: 304
-            radius: 18
-            flare: 16
-            visible: false
-        }
 
         UnifiedRightPanel {
             id: panel
 
-            width: 640
+            width: 560
             height: 760
             shellRoot: fakeShell
             store: fakeStore
-            reducedMotion: false
-            onCloseAnimationFinished:
-                testRoot.closeFinishedCount += 1
+            open: controller.open
+            page: controller.page
+            shellProgress: controller.progress
+            baseRightWidth: controller.baseRightWidth
+            targetRightWidth: controller.targetRightWidth
+            reducedMotion: controller.reducedMotion
+            onCloseRequested: controller.close()
+            onPageRequested: targetPage => controller.showPage(targetPage)
         }
     }
 
@@ -165,283 +223,162 @@ ShellRoot {
 
         onTriggered: {
             if (testRoot.phase === 0) {
-                testRoot.expectProbeGeometry(384, 16, 0,
-                                             "flare-only height")
-                testRoot.expectProbeGeometry(384, 17, 0.5,
-                                             "first body pixel")
-                testRoot.expectProbeGeometry(384, 34, 9,
-                                             "half-radius height")
-                testRoot.expectProbeGeometry(384, 52, 18,
-                                             "full-radius height")
-                testRoot.expectProbeGeometry(320, 52, 16,
-                                             "collapsed-width radius")
-                testRoot.expectProbeGeometry(322, 52, 18,
-                                             "expanded-width radius")
-                testRoot.expect(panel.widthProgress === 0,
-                                "initial width collapsed")
-                testRoot.expect(panel.heightProgress === 0,
-                                "initial height collapsed")
-                testRoot.expect(panel.contentProgress === 0,
-                                "initial content hidden")
-                testRoot.expect(testRoot.near(
-                    panel.sizerItem.width,
+                expect(panel.safeRevealHeight === 54,
+                       "safe reveal height is flare plus two radii plus overshoot")
+                expectGeometry(0, "collapsed")
+                expect(panel.sizerItem.opacity === 0
+                       && panel.inputRegion.height === 0,
+                       "collapsed body and input are not exposed")
+                expectGeometry(0.05, "bar-only stage")
+                expect(panel.bodyProgress === 0
+                       && panel.contentProgress === 0,
+                       "first ten percent reveals only the Bar")
+                expectGeometry(0.35, "body-only stage")
+                expect(panel.bodyProgress > 0
+                       && panel.contentProgress === 0,
+                       "body precedes content without deforming shell")
+                expectGeometry(0.75, "content stage")
+                expect(panel.bodyProgress > panel.contentProgress
+                       && panel.contentProgress > 0,
+                       "content remains visually delayed")
+                expectGeometry(1, "expanded")
+
+                controller.targetRightWidth = 278
+                expectGeometry(0.5, "constrained neck")
+                expect(panel.normalizedTargetRightWidth === 278,
+                       "panel honors the Bar's constrained target neck")
+                controller.targetRightWidth =
                     Config.BarTuning.rightPanelNeckWidth
-                        + Config.BarTuning.rightPanelFlare,
-                    0.5), "collapsed width equals neck plus flare")
-                testRoot.expectShellTracksSizer("collapsed")
-                panel.open = true
-                testRoot.phase = 1
-                testRoot.next(25)
+
+                controller.rightPanelProgress = 0
+                controller.showPage(controller.controlsPage)
+                phase = 1
+                next(30)
                 return
             }
 
             if (testRoot.phase === 1) {
-                testRoot.expect(panel.widthProgress === 0,
-                                "width waits for 40ms delay")
-                testRoot.expect(panel.heightProgress === 0,
-                                "height waits for 95ms delay")
-                testRoot.expect(panel.contentProgress === 0,
-                                "content waits for 180ms delay")
-                testRoot.phase = 2
-                testRoot.next(50)
+                expect(controller.progress > 0 && controller.progress < 0.10,
+                       "real animation starts in Bar-only stage")
+                expect(panel.bodyProgress === 0
+                       && panel.inputRegion.height === 0,
+                       "panel and input stay absent before safe threshold")
+                expectGeometry(controller.progress, "early animation")
+                phase = 2
+                next(50)
                 return
             }
 
             if (testRoot.phase === 2) {
-                testRoot.expect(panel.widthProgress > 0,
-                                "width expands before height")
-                testRoot.expect(panel.widthProgress >= panel.heightProgress,
-                                "width leads height during staged open")
-                testRoot.expect(panel.contentProgress === 0,
-                                "content still hidden at 75ms")
-                testRoot.expectShellTracksSizer("width lead")
-                testRoot.phase = 3
-                testRoot.next(60)
+                expect(controller.progress > 0.10
+                       && controller.progress < 0.52,
+                       "real animation reaches body-only interval")
+                expect(panel.bodyProgress > 0
+                       && panel.contentProgress === 0,
+                       "real body reveal keeps content hidden")
+                expectGeometry(controller.progress, "body animation")
+                phase = 3
+                next(55)
                 return
             }
 
             if (testRoot.phase === 3) {
-                testRoot.expect(panel.widthProgress > 0,
-                                "width remains in progress")
-                testRoot.expect(panel.heightProgress > 0,
-                                "height begins after width")
-                testRoot.expect(panel.contentProgress === 0,
-                                "content absent before 180ms")
-                testRoot.expectShellTracksSizer("width and height growth")
-                testRoot.phase = 4
-                testRoot.next(75)
+                expect(controller.progress > 0.52,
+                       "real animation reaches content interval")
+                expect(panel.contentProgress > 0,
+                       "content begins from shared progress")
+                expectGeometry(controller.progress, "content animation")
+                phase = 4
+                next(100)
                 return
             }
 
             if (testRoot.phase === 4) {
-                testRoot.expect(panel.contentProgress > 0,
-                                "content enters last")
-                testRoot.expectShellTracksSizer("content entrance")
-                testRoot.phase = 5
-                testRoot.next(180)
+                expect(near(controller.progress, 1, 0.01),
+                       "shared shell animation completes")
+                expect(panel.controlBaseContentFits,
+                       "Control content still fits above footer")
+                stablePageHeight = panel.openHeight
+                stableViewportHeight = panel.sizerItem.height
+                controller.showPage(controller.notificationsPage)
+                phase = 5
+                next(25)
                 return
             }
 
             if (testRoot.phase === 5) {
-                testRoot.expect(testRoot.near(panel.widthProgress, 1, 0.01),
-                                "open width completes")
-                testRoot.expect(testRoot.near(panel.heightProgress, 1, 0.01),
-                                "open height completes")
-                testRoot.expect(testRoot.near(panel.contentProgress, 1, 0.01),
-                                "open content completes")
-                testRoot.expect(panel.controlBaseContentFits,
-                                "Control cards fit before the footer without initial clipping")
-                testRoot.stablePageHeight = panel.openHeight
-                testRoot.stableSizerHeight = panel.sizerItem.height
-                panel.page = 1
-                testRoot.phase = 6
-                testRoot.next(25)
+                expect(near(controller.progress, 1, 0.001)
+                       && near(panel.sizerItem.height,
+                               stableViewportHeight, 0.001),
+                       "page switch never restarts shell geometry")
+                expect(panel.controlPageX < 0 && panel.historyPageX > 0,
+                       "page cards transition independently")
+                expect(!panel.controlPageReady && !panel.historyPageReady,
+                       "moving pages reject input")
+                phase = 6
+                next(220)
                 return
             }
 
             if (testRoot.phase === 6) {
-                testRoot.expect(panel.open,
-                                "page switch keeps shell open")
-                testRoot.expect(panel.controlPageOpacity < 1,
-                                "old page starts fading immediately")
-                testRoot.expect(panel.historyPageOpacity < 1,
-                                "new page does not appear instantly")
-                testRoot.expect(testRoot.near(
-                    panel.openHeight, testRoot.stablePageHeight, 0.001)
-                    && testRoot.near(
-                        panel.sizerItem.height,
-                        testRoot.stableSizerHeight, 0.001),
-                    "page switch keeps the shared shell height fixed")
-                testRoot.expect(panel.controlPageX < 0
-                                && panel.historyPageX > 0,
-                                "cards move toward opposite sides during switch")
-                testRoot.expect(panel.controlPageScale < 1
-                                && panel.historyPageScale < 1,
-                                "cards gain depth during switch")
-                testRoot.expect(!panel.controlPageReady
-                                && !panel.historyPageReady,
-                                "moving cards do not accept input")
-                testRoot.phase = 7
-                testRoot.next(230)
+                expect(near(panel.historyPageOpacity, 1, 0.03)
+                       && near(panel.controlPageOpacity, 0, 0.03),
+                       "History page settles inside unchanged shell")
+                expect(near(panel.openHeight, stablePageHeight, 0.001)
+                       && panel.historyPageReady,
+                       "History keeps shared final height")
+                controller.close()
+                phase = 7
+                next(50)
                 return
             }
 
             if (testRoot.phase === 7) {
-                testRoot.expect(testRoot.near(panel.historyPageOpacity, 1, 0.03),
-                                "history page fades in")
-                testRoot.expect(testRoot.near(panel.controlPageOpacity, 0, 0.03),
-                                "control page fades out")
-                testRoot.expect(testRoot.near(
-                    panel.openHeight, testRoot.stablePageHeight, 0.001)
-                    && testRoot.near(
-                        panel.sizerItem.height,
-                        testRoot.stableSizerHeight, 0.001),
-                    "History uses the same final height as Control")
-                testRoot.expect(testRoot.near(
-                    panel.historyPageX, 0, 0.03)
-                    && testRoot.near(
-                        panel.historyPageScale, 1, 0.003),
-                    "History card settles at full size")
-                testRoot.expect(panel.historyPageReady
-                                && !panel.controlPageReady,
-                                "only settled History accepts input")
-                testRoot.expect(testRoot.near(
-                    panel.controlPageX,
-                    -Config.BarTuning.panelPageCardOffset, 0.03),
-                    "inactive Control card rests to the left")
-                panel.page = 0
-                testRoot.phase = 8
-                testRoot.next(25)
+                expect(controller.progress > 0 && controller.progress < 1,
+                       "close reverses the single shell progress")
+                expectGeometry(controller.progress, "closing")
+                reverseProgress = controller.progress
+                controller.showPage(controller.controlsPage)
+                expect(near(controller.progress, reverseProgress, 0.001),
+                       "mid-close reopen has no geometry jump")
+                phase = 8
+                next(240)
                 return
             }
 
             if (testRoot.phase === 8) {
-                testRoot.expect(panel.open,
-                                "History-to-Control keeps shell open")
-                testRoot.expect(testRoot.near(
-                    panel.openHeight, testRoot.stablePageHeight, 0.001)
-                    && testRoot.near(
-                        panel.sizerItem.height,
-                        testRoot.stableSizerHeight, 0.001),
-                    "History-to-Control does not animate shell geometry")
-                testRoot.expect(panel.controlPageX < 0
-                                && panel.historyPageX > 0,
-                                "reverse switch moves both page cards")
-                testRoot.expect(panel.controlPageScale < 1
-                                && panel.historyPageScale < 1,
-                                "reverse switch preserves card depth")
-                testRoot.expect(!panel.controlPageReady
-                                && !panel.historyPageReady,
-                                "reverse-moving cards do not accept input")
-                testRoot.phase = 9
-                testRoot.next(230)
+                expect(near(controller.progress, 1, 0.01)
+                       && controller.windowVisible,
+                       "reversed opening settles normally")
+                controller.close()
+                phase = 9
+                next(270)
                 return
             }
 
             if (testRoot.phase === 9) {
-                testRoot.expect(testRoot.near(
-                    panel.openHeight, testRoot.stablePageHeight, 0.001),
-                    "Control retains the shared page height")
-                testRoot.expect(testRoot.near(panel.controlPageOpacity, 1, 0.03),
-                                "control page fades back in")
-                testRoot.expect(testRoot.near(panel.historyPageOpacity, 0, 0.03),
-                                "history page fades back out")
-                testRoot.expect(testRoot.near(
-                    panel.controlPageX, 0, 0.03)
-                    && testRoot.near(
-                        panel.controlPageScale, 1, 0.003),
-                    "Control card settles at full size")
-                testRoot.expect(panel.controlPageReady
-                                && !panel.historyPageReady,
-                                "only settled Control accepts input")
-                testRoot.expect(testRoot.near(
-                    panel.historyPageX,
-                    Config.BarTuning.panelPageCardOffset, 0.03),
-                    "inactive History card rests to the right")
-                panel.open = false
-                testRoot.phase = 10
-                testRoot.next(50)
-                return
+                expect(near(controller.progress, 0, 0.01)
+                       && !controller.windowVisible,
+                       "close waits one post-frame delay then hides window")
+                controller.reducedMotion = true
+                controller.showPage(controller.notificationsPage)
+                expect(controller.progress === 1
+                       && controller.windowVisible,
+                       "reduced motion opens immediately")
+                expect(panel.historyPageOpacity === 1
+                       && panel.historyPageX === 0,
+                       "reduced motion switches page immediately")
+                controller.close()
+                expect(controller.progress === 0
+                       && !controller.windowVisible,
+                       "reduced motion closes immediately")
+                finish()
             }
-
-            if (testRoot.phase === 10) {
-                testRoot.expect(panel.contentProgress < 1,
-                                "close removes content first")
-                testRoot.expect(panel.heightProgress < 1,
-                                "close begins shrinking height")
-                testRoot.expect(testRoot.near(panel.widthProgress, 1, 0.02),
-                                "width waits for close delay")
-                testRoot.expectShellTracksSizer("closing height")
-                testRoot.reverseWidth = panel.widthProgress
-                testRoot.reverseHeight = panel.heightProgress
-                testRoot.reverseContent = panel.contentProgress
-                panel.open = true
-                testRoot.expect(testRoot.near(panel.widthProgress,
-                                             testRoot.reverseWidth, 0.001),
-                                "reverse does not jump width")
-                testRoot.expect(testRoot.near(panel.heightProgress,
-                                             testRoot.reverseHeight, 0.001),
-                                "reverse does not jump height")
-                testRoot.expect(testRoot.near(panel.contentProgress,
-                                             testRoot.reverseContent, 0.001),
-                                "reverse does not jump content")
-                testRoot.phase = 11
-                testRoot.next(380)
-                return
-            }
-
-            if (testRoot.phase === 11) {
-                testRoot.expect(testRoot.near(panel.widthProgress, 1, 0.01),
-                                "reverse reopen completes width")
-                testRoot.expect(testRoot.near(panel.heightProgress, 1, 0.01),
-                                "reverse reopen completes height")
-                testRoot.expect(testRoot.near(panel.contentProgress, 1, 0.01),
-                                "reverse reopen completes content")
-                panel.open = false
-                testRoot.phase = 12
-                testRoot.next(260)
-                return
-            }
-
-            if (testRoot.phase === 12) {
-                testRoot.expect(testRoot.near(panel.widthProgress, 0, 0.01),
-                                "close completes width")
-                testRoot.expect(testRoot.near(panel.heightProgress, 0, 0.01),
-                                "close completes height")
-                testRoot.expect(testRoot.near(panel.contentProgress, 0, 0.01),
-                                "close completes content")
-                testRoot.expect(testRoot.closeFinishedCount === 1,
-                                "only completed close emits lifecycle signal")
-                panel.reducedMotion = true
-                panel.open = true
-                testRoot.expect(panel.widthProgress === 1
-                                && panel.heightProgress === 1
-                                && panel.contentProgress === 1,
-                                "reduced motion opens immediately")
-                panel.page = 1
-                testRoot.expect(panel.historyPageOpacity === 1
-                                && panel.controlPageOpacity === 0
-                                && panel.historyPageX === 0
-                                && panel.historyPageScale === 1,
-                                "reduced motion switches cards immediately")
-                panel.open = false
-                testRoot.phase = 13
-                testRoot.next(10)
-                return
-            }
-
-            testRoot.expect(panel.widthProgress === 0
-                            && panel.heightProgress === 0
-                            && panel.contentProgress === 0,
-                            "reduced motion closes immediately")
-            testRoot.expect(testRoot.closeFinishedCount === 2,
-                            "reduced motion close reports completion")
-            testRoot.finish()
         }
     }
 
     Component.onCompleted: {
-        testRoot.phase = 0
-        testRoot.next(0)
+        phase = 0
+        next(0)
     }
 }

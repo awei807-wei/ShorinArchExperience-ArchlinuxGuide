@@ -8,10 +8,10 @@
 - `Bar.qml`：三语义区装配、稳定视觉 token 与响应式宽度预算。
 - `components/BarContour.qml`：以单个 Canvas 路径绘制全宽顶部连接带和三段反 R 角岛屿轮廓。
 - `components/ScreenEdgeBorder.qml`、`ScreenEdgeBorderHost.qml`：把 Bar 方形外端以 `17px` 内凹角融入两侧 `6px` 屏幕轨道，复刻 Brain_Shell `Border.qml` 的实际外缘结构。
-- `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、跨页切换与退场窗口生命周期。
-- `components/RightPanelHost.qml`：固定最大透明外窗，把 flare 上移到右岛底边接缝；打开时承载一次外部点击关闭，退场时输入 mask 跟随实际 sizer。
-- `components/UnifiedRightPanel.qml`：使用宽度、高度和内容三个独立进度驱动右锚定 sizer，常驻 Control / History 页面并支持动画中途反向。
-- `components/RightPanelShape.qml`：区分 `304px` 连接颈部、`560–640px` 主体和 `16px` flare；原生圆角主体随 sizer 当前宽高同步生长，固定小尺寸 Canvas 只绘制颈部连接弧，跨页不改变外壳几何。
+- `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、触发屏幕、右岛起始/目标颈宽、唯一 `rightPanelProgress` 与退场窗口生命周期。
+- `components/RightPanelHost.qml`：每屏保留固定最大透明外窗，但只显示触发屏幕实例；flare 上移到右岛底边接缝，打开时承载一次外部点击关闭，退场时输入 mask 跟随 reveal viewport 的可见主体并避开 Bar 接缝。
+- `components/UnifiedRightPanel.qml`：以共享进度和触发 Bar 的两个颈宽端点驱动右锚定 reveal viewport；surface 空间允许时从 `54px` 安全高度揭示固定最终外壳，主体和内容进度只做阈值派生，常驻 Control / History 页面支持动画中途反向。
+- `components/RightPanelShape.qml`：用单个最终尺寸 Canvas 绘制 `304px` 连接颈部、`560–640px` 主体、`16px` flare 与 `18px` 圆角；动画期间纹理尺寸和路径拓扑不变，只水平平移以对齐 Bar 的活动颈部。
 - `components/AnimatedPanelPage.qml`：页面常驻包装器，通过透明度、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放切换整页内容，并在卡片完全就位后恢复输入。
 - `components/RightPanelTabs.qml`、`RightPanelPageSwitcher.qml`：目标 `296×38px`、最小面板下不超过主体 `50%` 的单指示器分页轨道及 `58px` 页脚层。
 - `components/NotificationHistoryPage.qml`：History 与 Control 共用固定面板高度，通知溢出时由 ListView 内部滚动；标题、空态及加载/错误状态分别由 `NotificationHistoryHeader`、`NotificationHistoryEmptyState`、`NotificationHistoryStatusState` 承担。
@@ -27,8 +27,8 @@
 - `scripts/focus-tray-item.sh`：按托盘 `id/title/tooltipTitle` 对 niri 窗口进行确定性评分和最近聚焦；通知卡片继续使用 `focus-notification-source.sh`。回归 fixture 位于 `scripts/test-focus-tray-item.sh`。
 - `bar-layout-check.qml`：2048/1280/1024/1008/1007/800/660 宽度的几何、阈值、反 R 角排除间距与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
-- `right-panel-state-check.qml`：控制/通知入口路由、同页关闭、跨页切换、退场生命周期与统一 token 门禁。
-- `right-panel-animation-check.qml`：分阶段开关、固定外壳高度、双向页面卡片过渡、就位后输入、半途反向与减弱动效门禁。
+- `right-panel-state-check.qml`：控制/通知入口路由、同屏同页关闭、关闭中跨屏从 `0` 重新定向、受限目标颈宽、退场生命周期与统一 token 门禁。
+- `right-panel-animation-check.qml`：共享进度、`54px` 安全揭示、固定 Canvas 拓扑、常规/受限目标下的 Bar/flare 逐帧对齐、双向页面卡片过渡、半途反向与减弱动效门禁。
 
 ## 依赖
 依赖 Quickshell 0.3、QtQuick、SystemTray；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，频谱使用 Cava，天气沿用 Waybar weather 脚本。
@@ -49,8 +49,8 @@
 - [2026-08-25] 生产 Bar 顶部及左右边距归零并采用 Brainitech/Brain_Shell 的 `40px` 高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。全宽单路径避免接缝；System 的 Metrics/Tray/Power 共用连续外表面，Tray 展开面仍保持独立背景。
 - [2026-08-25] Brain_Shell 截图中的左右外缘来自 `Border.qml`，不是 Bar 末端普通凸圆角：Bar 外端保持方形接缝，以 `17px` 内凹角收束到 `6px` 屏幕侧边轨道。控制中心和通知历史收敛为唯一双页右侧窗口；面板窗口上移一个 `16px` flare，窗口尺寸与锚点保持固定。
 - [2026-08-25] 统一面板的外部点击层与内容必须属于同一个 PanelWindow；打开时输入区覆盖 Bar 底边以下，关闭时立即缩回动画面板区域，才能同时做到单击关闭和退场期间不吞桌面输入。
-- [2026-08-25] 大型右面板不能把右岛宽度等同主体宽度，也不能同步动画窗口宽高。最终实现把右岛关闭态限制为 `218–240px`、打开颈部固定为 `304px`，主体宽度独立为 `560–640px`；固定外窗内按 `40/95/180ms` 依次启动横向、纵向和内容阶段，反向操作从当前进度继续。
+- [2026-08-25] 大型右面板不能把右岛宽度等同主体宽度，也不能动画 Wayland 窗口本身。右岛关闭态限制为 `218–240px`、打开颈部固定为 `304px`，主体宽度独立为 `560–640px`；固定外窗内的 Bar 与 reveal viewport 读取同一进度，反向操作从当前值继续。
 - [2026-08-25] Control 与 History 应共用 `760px` 目标高度并受屏幕可用高度统一限制；History 内容溢出时只滚动 ListView，页面和底部 Tab 在固定外壳内过渡，不能通过关闭/重开窗口切页。紧凑分页轨道固定 `296×38px`。
 - [2026-08-25] 固定宿主上移 flare 时不能再次填充整块右岛颈部：主体仍从 `40px` Bar 底边开始，向上衔接只覆盖颈部边界左右各 `16px`；左侧形成反 R 弧，右侧消除右岛旧外凸角留下的月牙缺口，同时避开 Metrics/Tray/Power。History 切页也不得触发 Tray 全量图标展开。
-- [2026-08-25] 页面切换不能 resize 线程化 Canvas：sizer 会先改变裁剪区，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
-- [2026-08-26] 开合也不能用活动裁剪线揭示固定最终轮廓：裁剪线在横向末段穿过左上圆角时会造成边缘短暂挤压。主体应以原生圆角矩形跟随 sizer 的当前宽高，颈部 flare 则用固定 `32×16px` 即时 Canvas 保持对齐；这样不逐帧重绘大纹理，也不改变既有分阶段时序。
+- [2026-08-25] 页面切换不能 resize 线程化 Canvas：裁剪区会先变化，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
+- [2026-08-26] 连体外壳不能让宽度、高度与 Bar 错峰：`16–52px` 低高度无法容纳 flare 与两个 `18px` 圆角，会产生 GIF 中的凹口。最终实现使用一条 `300ms InOutCubic` 进度，Canvas 始终保持最终拓扑，viewport 在 surface 允许时从 `54px` 安全高度揭示；前 `10%` 只展开 Bar，内容从 `52%` 后进入。Controller 从触发屏幕捕获右岛起始/目标宽度，固定 Canvas 只做水平平移，使常规与窄屏受限颈部都逐帧一致；其他屏幕实例保持关闭。

@@ -92,23 +92,13 @@ QtObject {
     property int rightPanelSliderTrackHeight: 10
     property int rightPanelSliderHandleSize: 28
 
-    // 打开/关闭分阶段时序（ms）。阶段之间的错位让面板先建立颈部，
-    // 再横向、纵向展开，最后才显示页面内容。
-    property int panelNotchOpenDuration: 140
-    property int panelWidthOpenDelay: 40
-    property int panelWidthOpenDuration: 170
-    property int panelHeightOpenDelay: 95
-    property int panelHeightOpenDuration: 240
-    property int panelContentInDelay: 180
-    property int panelContentInDuration: 150
-
-    property int panelContentOutDuration: 80
-    property int panelHeightCloseDelay: 20
-    property int panelHeightCloseDuration: 180
-    property int panelWidthCloseDelay: 70
-    property int panelWidthCloseDuration: 150
-    property int panelNotchCloseDelay: 120
-    property int panelNotchCloseDuration: 130
+    // 顶栏右岛、面板宽度和面板高度共用一条时间轴；内容只从进度
+    // 派生延后，避免连体轮廓经历低高度退化形态。
+    property int panelShellDuration: 300
+    property int panelWindowHideDelay: 20
+    property real panelBodyStartProgress: 0.10
+    property real panelContentStartProgress: 0.52
+    property int panelSafeRevealExtra: 2
 
     // 页面切换时保留两个页面实例，以整页卡片做推拉、淡入和轻微缩放。
     property int panelPageOutDuration: 90

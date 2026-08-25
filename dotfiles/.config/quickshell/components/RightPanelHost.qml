@@ -3,8 +3,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 
-// 固定的全屏宿主只负责 Wayland 表面、定位和输入。面板实际几何全部
-// 在 UnifiedRightPanel 的内部 sizer 中变化，不动画窗口尺寸或锚点。
+// 每屏固定宿主只负责 Wayland 表面、定位和输入；只有触发屏幕可见。
+// 面板外壳按最终几何绘制，reveal viewport 与 Bar 消费同一份状态。
 Scope {
     id: host
 
@@ -32,6 +32,9 @@ Scope {
 
                 required property var modelData
 
+                readonly property bool panelActiveOnScreen:
+                    host.controller.isScreenActive(modelData)
+
                 readonly property int panelWidth: host.clamp(
                     Math.round(modelData.width
                         * Config.BarTuning.rightPanelWidthRatio),
@@ -40,9 +43,17 @@ Scope {
                     Math.min(Config.BarTuning.rightPanelWidthMax,
                              modelData.width)
                 )
+                readonly property int minimumPanelHeight:
+                    Config.BarTuning.rightPanelFlare
+                    + Config.BarTuning.rightPanelRadius * 2
+                    + Config.BarTuning.panelSafeRevealExtra
+                readonly property int surfaceHeight: Math.max(
+                    0, modelData.height - host.panelTop
+                )
                 readonly property int availablePanelHeight: Math.max(
-                    Config.BarTuning.rightPanelFlare,
-                    modelData.height - host.barBottom - 24
+                    Math.min(minimumPanelHeight, surfaceHeight),
+                    Math.min(surfaceHeight,
+                             modelData.height - host.barBottom - 24)
                 )
                 readonly property int panelContentHeight: Math.min(
                     Config.BarTuning.rightPanelHeight,
@@ -51,6 +62,7 @@ Scope {
 
                 screen: modelData
                 visible: host.controller.windowVisible
+                    && panelActiveOnScreen
                 exclusiveZone: -1
                 anchors {
                     top: true
@@ -62,25 +74,30 @@ Scope {
                 color: "transparent"
                 WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.keyboardFocus: host.controller.open
+                    && panelActiveOnScreen
                     ? WlrKeyboardFocus.OnDemand
                     : WlrKeyboardFocus.None
                 mask: Region { item: windowInput }
 
-                // 打开期间保留单次外部点击关闭；退场一开始，输入区域立刻
-                // 缩回可见 sizer，使固定透明外窗不再吞掉桌面点击。
+                // 打开期间保留单次外部点击关闭；退场一开始，mask 缩回
+                // reveal viewport 的可见主体，并避开由 Bar 持有的重叠 flare。
                 Item {
                     id: windowInput
 
-                    x: host.controller.open
+                    readonly property bool captureOutside:
+                        panelWindow.panelActiveOnScreen
+                        && host.controller.open
+
+                    x: captureOutside
                         ? 0
                         : panel.x + panel.inputRegion.x
-                    y: host.controller.open
+                    y: captureOutside
                         ? Config.BarTuning.rightPanelFlare
                         : panel.y + panel.inputRegion.y
-                    width: host.controller.open
+                    width: captureOutside
                         ? panelWindow.width
                         : panel.inputRegion.width
-                    height: host.controller.open
+                    height: captureOutside
                         ? Math.max(0, panelWindow.height
                             - Config.BarTuning.rightPanelFlare)
                         : panel.inputRegion.height
@@ -90,7 +107,7 @@ Scope {
                     z: 0
                     anchors.fill: parent
                     anchors.topMargin: Config.BarTuning.rightPanelFlare
-                    enabled: host.controller.open
+                    enabled: windowInput.captureOutside
                     onClicked: host.controller.close()
                 }
 
@@ -106,13 +123,16 @@ Scope {
                     shellRoot: host.shellRoot
                     store: host.store
                     open: host.controller.open
+                        && panelWindow.panelActiveOnScreen
                     page: host.controller.page
+                    shellProgress: panelWindow.panelActiveOnScreen
+                        ? host.controller.progress : 0
+                    baseRightWidth: host.controller.baseRightWidth
+                    targetRightWidth: host.controller.targetRightWidth
                     reducedMotion: host.controller.reducedMotion
                     onCloseRequested: host.controller.close()
                     onPageRequested: targetPage =>
                         host.controller.showPage(targetPage)
-                    onCloseAnimationFinished:
-                        host.controller.finishClose()
                 }
             }
         }

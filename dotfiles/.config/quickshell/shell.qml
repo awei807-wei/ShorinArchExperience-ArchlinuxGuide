@@ -813,12 +813,28 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     notificationSourceCounts: notificationHistoryStore.sourceCounts
                     // History 只切换壳内页面，不再把全部托盘图标向左展开；
-                    // 关闭态和打开态都维持 304px 颈部内的紧凑内容。
+                    // 内容保持紧凑；颈部目标通常为 304px，窄屏按时钟
+                    // 排除区收敛，并与面板接缝使用同一个目标宽度。
                     trayPanelExpanded: false
+                    readonly property bool rightPanelActiveOnScreen:
+                        rightPanelController.isScreenActive(
+                            barWindow.modelData
+                        )
                     rightPanelOpen: rightPanelController.open
+                        && rightPanelActiveOnScreen
+                    rightPanelProgress: rightPanelActiveOnScreen
+                        ? rightPanelController.progress : 0
+                    rightPanelBaseWidth: rightPanelController.baseRightWidth
+                    rightPanelTargetWidth:
+                        rightPanelController.targetRightWidth
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
                     onSystemClicked: {
-                        rightPanelController.togglePage(rightPanelController.controlsPage)
+                        rightPanelController.togglePage(
+                            rightPanelController.controlsPage,
+                            naturalRightContourWidth,
+                            openRightContourWidth,
+                            barWindow.modelData
+                        )
                         if (rightPanelController.open
                                 && rightPanelController.page === rightPanelController.controlsPage) {
                             configRoot.refreshControlData()
@@ -826,7 +842,12 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         }
                     }
                     onTrayPanelToggleRequested: () => {
-                        rightPanelController.togglePage(rightPanelController.notificationsPage)
+                        rightPanelController.togglePage(
+                            rightPanelController.notificationsPage,
+                            naturalRightContourWidth,
+                            openRightContourWidth,
+                            barWindow.modelData
+                        )
                     }
                     onTrayPanelCloseRequested: {
                         if (rightPanelController.page === rightPanelController.notificationsPage)

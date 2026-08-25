@@ -12,14 +12,14 @@
 ## 架构
 - `shell.qml` 是生产入口，汇总系统服务、全局状态和控制动作。
 - `Bar.qml` 与 `components/` 负责顶部 Bar、统一右侧双页面板、控制中心、通知与托盘等界面。
-- `RightPanelController` 以可写 `rightPanelOpen/rightPanelPage` 汇聚 Metrics/Tray 两个入口的打开、关闭和页面状态；`RightPanelHost` 使用固定透明外窗与动态输入区，`UnifiedRightPanel` 通过内部 sizer 驱动活动外壳宽高并裁剪最终尺寸内容、分阶段展开，以常驻 Control / History 页面完成卡片式切换。
+- `RightPanelController` 以可写 `rightPanelOpen/rightPanelPage/rightPanelProgress` 汇聚 Metrics/Tray 两个入口、触发屏幕、右岛起始/目标颈宽与固定外窗生命周期；仅触发屏幕的 `Bar`、`RightPanelHost` 和 `UnifiedRightPanel` 消费这一几何状态。面板 Canvas 始终保持最终几何，右锚定 reveal viewport 只做裁剪，Control / History 常驻并在壳内切页。
 - `services/TopBarState.qml` 与上下文组件负责共享系统采集和桌面环境适配。
 - 音频输出链路由 PipeWire 枚举/切换默认 sink，现有 `wpctl @DEFAULT_AUDIO_SINK@` 链路负责音量与静音。
 - `lockscreen/` 是独立锁屏入口；`tests/` 是与生产配置隔离的视觉原型和布局门禁。
 
 ## 领域语言
-- **右岛**：Bar 右侧的 System 区域；关闭态内容宽度约 `218–240px`，面板打开时轮廓扩成 `304px` 连接颈部。Metrics 点击打开 Control，Tray 复合入口点击打开 History。
-- **统一右侧子面板**：与右岛底边无缝连接、宽度限制 `560–640px`、承载 `CONTROL` 与 `HISTORY` 两页的唯一右侧详情窗口。两页共用 `760px` 目标高度（受屏幕可用高度限制），外窗固定，内部面板先向左、再向下生长，内容最后进入。
+- **右岛**：Bar 右侧的 System 区域；关闭态内容宽度约 `218–240px`，面板打开时轮廓通常扩成 `304px` 连接颈部，窄屏按时钟排除区收敛。Metrics 点击打开 Control，Tray 复合入口点击打开 History。
+- **统一右侧子面板**：与右岛底边无缝连接、宽度限制 `560–640px`、承载 `CONTROL` 与 `HISTORY` 两页的唯一右侧详情窗口。两页共用 `760px` 目标高度，外窗固定；`300ms InOutCubic` 单进度同时驱动右岛与揭示区，前 `10%` 只展开右岛，面板从至少 `54px` 的安全视口淡入，内容从 `52%` 后进入。
 - **音频输出设备**：PipeWire 中的硬件 sink；避免用语：MPRIS 播放器、应用音频流。
 - **默认输出**：PipeWire 当前实际采用的 sink；**首选默认输出**：用户通过控制中心写入的 `preferredDefaultAudioSink`。
 - **通知历史**：已持久化、可清理的通知记录；不同于当前临时通知浮层。
