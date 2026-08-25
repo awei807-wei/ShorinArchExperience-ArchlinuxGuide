@@ -28,6 +28,7 @@ Item {
 
     readonly property Item inputRegion: inputMask
     readonly property Item sizerItem: sizer
+    readonly property Item shapeItem: panelShape
     readonly property real controlPageOpacity:
         controlsPageWrapper.opacity
     readonly property real historyPageOpacity:
@@ -247,15 +248,17 @@ Item {
             enabled: root.open || root.widthProgress > 0.001
         }
 
-        // 两页共用最终尺寸外壳；开合仅由 sizer 裁剪揭示，翻页不会
-        // 改变 Canvas 尺寸或重新触发外壳动画。
+        // 主体轮廓跟随 sizer 的当前宽高，活动左边缘始终保留完整圆角；
+        // 内容仍按最终尺寸排版并由 sizer 裁剪，翻页不改变外壳几何。
         RightPanelShape {
+            id: panelShape
+
             anchors.top: parent.top
             anchors.right: parent.right
             width: root.width
-            height: root.openHeight
+            height: sizer.height
             neckWidth: Config.BarTuning.rightPanelNeckWidth
-            bodyWidth: width
+            bodyWidth: sizer.width
             radius: Config.BarTuning.rightPanelRadius
             flare: Config.BarTuning.rightPanelFlare
             color: Config.Theme.surface

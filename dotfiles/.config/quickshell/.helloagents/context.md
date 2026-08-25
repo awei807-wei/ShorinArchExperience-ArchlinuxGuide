@@ -12,7 +12,7 @@
 ## 架构
 - `shell.qml` 是生产入口，汇总系统服务、全局状态和控制动作。
 - `Bar.qml` 与 `components/` 负责顶部 Bar、统一右侧双页面板、控制中心、通知与托盘等界面。
-- `RightPanelController` 以可写 `rightPanelOpen/rightPanelPage` 汇聚 Metrics/Tray 两个入口的打开、关闭和页面状态；`RightPanelHost` 使用固定透明外窗与动态输入区，`UnifiedRightPanel` 通过内部 sizer 裁剪固定高度外壳、分阶段展开，并以常驻 Control / History 页面完成卡片式切换。
+- `RightPanelController` 以可写 `rightPanelOpen/rightPanelPage` 汇聚 Metrics/Tray 两个入口的打开、关闭和页面状态；`RightPanelHost` 使用固定透明外窗与动态输入区，`UnifiedRightPanel` 通过内部 sizer 驱动活动外壳宽高并裁剪最终尺寸内容、分阶段展开，以常驻 Control / History 页面完成卡片式切换。
 - `services/TopBarState.qml` 与上下文组件负责共享系统采集和桌面环境适配。
 - 音频输出链路由 PipeWire 枚举/切换默认 sink，现有 `wpctl @DEFAULT_AUDIO_SINK@` 链路负责音量与静音。
 - `lockscreen/` 是独立锁屏入口；`tests/` 是与生产配置隔离的视觉原型和布局门禁。

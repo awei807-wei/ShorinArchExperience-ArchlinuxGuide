@@ -26,6 +26,39 @@ ShellRoot {
         return Math.abs(actual - expected) <= tolerance
     }
 
+    function expectShellTracksSizer(label) {
+        const shell = panel.shapeItem
+
+        expect(near(shell.bodyWidth, panel.sizerItem.width, 0.5),
+               label + " shell width follows reveal edge")
+        expect(near(shell.height, panel.sizerItem.height, 0.5),
+               label + " shell height follows reveal edge")
+        expect(near(shell.x + shell.bodyLeft, 0, 0.5),
+               label + " rounded body edge matches clip edge")
+        if (shell.bodyHeight > 1)
+            expect(shell.effectiveRadius > 0,
+                   label + " moving edge keeps a rounded corner")
+        expect(near(shell.effectiveFlare,
+                    Config.BarTuning.rightPanelFlare, 0.01),
+               label + " flare remains stable")
+        expect(near(shell.neckLeft,
+                    panel.width - Config.BarTuning.rightPanelNeckWidth,
+                    0.5), label + " flare remains aligned to neck")
+    }
+
+    function expectProbeGeometry(bodyWidth, height, expectedRadius, label) {
+        shapeProbe.bodyWidth = bodyWidth
+        shapeProbe.height = height
+
+        expect(near(shapeProbe.bodyLeft, shapeProbe.width - bodyWidth, 0.01),
+               label + " body edge")
+        expect(near(shapeProbe.neckLeft,
+                    shapeProbe.width - shapeProbe.neckWidth, 0.01),
+               label + " neck edge")
+        expect(near(shapeProbe.effectiveRadius, expectedRadius, 0.01),
+               label + " radius")
+    }
+
     function next(delay) {
         phaseTimer.interval = delay
         phaseTimer.restart()
@@ -102,6 +135,18 @@ ShellRoot {
         width: 640
         height: 760
 
+        RightPanelShape {
+            id: shapeProbe
+
+            width: 640
+            height: 16
+            bodyWidth: 384
+            neckWidth: 304
+            radius: 18
+            flare: 16
+            visible: false
+        }
+
         UnifiedRightPanel {
             id: panel
 
@@ -120,6 +165,18 @@ ShellRoot {
 
         onTriggered: {
             if (testRoot.phase === 0) {
+                testRoot.expectProbeGeometry(384, 16, 0,
+                                             "flare-only height")
+                testRoot.expectProbeGeometry(384, 17, 0.5,
+                                             "first body pixel")
+                testRoot.expectProbeGeometry(384, 34, 9,
+                                             "half-radius height")
+                testRoot.expectProbeGeometry(384, 52, 18,
+                                             "full-radius height")
+                testRoot.expectProbeGeometry(320, 52, 16,
+                                             "collapsed-width radius")
+                testRoot.expectProbeGeometry(322, 52, 18,
+                                             "expanded-width radius")
                 testRoot.expect(panel.widthProgress === 0,
                                 "initial width collapsed")
                 testRoot.expect(panel.heightProgress === 0,
@@ -131,6 +188,7 @@ ShellRoot {
                     Config.BarTuning.rightPanelNeckWidth
                         + Config.BarTuning.rightPanelFlare,
                     0.5), "collapsed width equals neck plus flare")
+                testRoot.expectShellTracksSizer("collapsed")
                 panel.open = true
                 testRoot.phase = 1
                 testRoot.next(25)
@@ -156,6 +214,7 @@ ShellRoot {
                                 "width leads height during staged open")
                 testRoot.expect(panel.contentProgress === 0,
                                 "content still hidden at 75ms")
+                testRoot.expectShellTracksSizer("width lead")
                 testRoot.phase = 3
                 testRoot.next(60)
                 return
@@ -168,6 +227,7 @@ ShellRoot {
                                 "height begins after width")
                 testRoot.expect(panel.contentProgress === 0,
                                 "content absent before 180ms")
+                testRoot.expectShellTracksSizer("width and height growth")
                 testRoot.phase = 4
                 testRoot.next(75)
                 return
@@ -176,6 +236,7 @@ ShellRoot {
             if (testRoot.phase === 4) {
                 testRoot.expect(panel.contentProgress > 0,
                                 "content enters last")
+                testRoot.expectShellTracksSizer("content entrance")
                 testRoot.phase = 5
                 testRoot.next(180)
                 return
@@ -310,6 +371,7 @@ ShellRoot {
                                 "close begins shrinking height")
                 testRoot.expect(testRoot.near(panel.widthProgress, 1, 0.02),
                                 "width waits for close delay")
+                testRoot.expectShellTracksSizer("closing height")
                 testRoot.reverseWidth = panel.widthProgress
                 testRoot.reverseHeight = panel.heightProgress
                 testRoot.reverseContent = panel.contentProgress

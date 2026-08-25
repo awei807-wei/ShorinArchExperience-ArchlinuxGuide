@@ -11,7 +11,7 @@
 - `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、跨页切换与退场窗口生命周期。
 - `components/RightPanelHost.qml`：固定最大透明外窗，把 flare 上移到右岛底边接缝；打开时承载一次外部点击关闭，退场时输入 mask 跟随实际 sizer。
 - `components/UnifiedRightPanel.qml`：使用宽度、高度和内容三个独立进度驱动右锚定 sizer，常驻 Control / History 页面并支持动画中途反向。
-- `components/RightPanelShape.qml`：区分 `304px` 连接颈部、`560–640px` 主体和 `16px` flare；以固定最终尺寸的单个 Canvas 绘制外壳，开合阶段只由 sizer 裁剪揭示，跨页不改变纹理尺寸。
+- `components/RightPanelShape.qml`：区分 `304px` 连接颈部、`560–640px` 主体和 `16px` flare；原生圆角主体随 sizer 当前宽高同步生长，固定小尺寸 Canvas 只绘制颈部连接弧，跨页不改变外壳几何。
 - `components/AnimatedPanelPage.qml`：页面常驻包装器，通过透明度、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放切换整页内容，并在卡片完全就位后恢复输入。
 - `components/RightPanelTabs.qml`、`RightPanelPageSwitcher.qml`：目标 `296×38px`、最小面板下不超过主体 `50%` 的单指示器分页轨道及 `58px` 页脚层。
 - `components/NotificationHistoryPage.qml`：History 与 Control 共用固定面板高度，通知溢出时由 ListView 内部滚动；标题、空态及加载/错误状态分别由 `NotificationHistoryHeader`、`NotificationHistoryEmptyState`、`NotificationHistoryStatusState` 承担。
@@ -47,9 +47,10 @@
 - [2026-08-08] 自动门禁通过：Python 通知历史、offscreen 托盘/存储/布局检查、托盘聚焦 fixture、锁屏 `qmllint` 与 `git diff --check`；真实托盘与锁屏认证仍需人工验收。
 - [2026-08-09] 已移除的 `tests/` Edge-Integrated 原型只验证了贴顶布局框架与连续右岛；其单段椭圆不是最终目标几何，不再是活动测试入口。
 - [2026-08-25] 生产 Bar 顶部及左右边距归零并采用 Brainitech/Brain_Shell 的 `40px` 高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。全宽单路径避免接缝；System 的 Metrics/Tray/Power 共用连续外表面，Tray 展开面仍保持独立背景。
-- [2026-08-25] Brain_Shell 截图中的左右外缘来自 `Border.qml`，不是 Bar 末端普通凸圆角：Bar 外端保持方形接缝，以 `17px` 内凹角收束到 `6px` 屏幕侧边轨道。控制中心和通知历史收敛为唯一双页右侧窗口；面板窗口上移一个 `15px` flare，动画只调整裁剪框，避免 4K/1.5× 下逐帧重绘和布局。
+- [2026-08-25] Brain_Shell 截图中的左右外缘来自 `Border.qml`，不是 Bar 末端普通凸圆角：Bar 外端保持方形接缝，以 `17px` 内凹角收束到 `6px` 屏幕侧边轨道。控制中心和通知历史收敛为唯一双页右侧窗口；面板窗口上移一个 `16px` flare，窗口尺寸与锚点保持固定。
 - [2026-08-25] 统一面板的外部点击层与内容必须属于同一个 PanelWindow；打开时输入区覆盖 Bar 底边以下，关闭时立即缩回动画面板区域，才能同时做到单击关闭和退场期间不吞桌面输入。
 - [2026-08-25] 大型右面板不能把右岛宽度等同主体宽度，也不能同步动画窗口宽高。最终实现把右岛关闭态限制为 `218–240px`、打开颈部固定为 `304px`，主体宽度独立为 `560–640px`；固定外窗内按 `40/95/180ms` 依次启动横向、纵向和内容阶段，反向操作从当前进度继续。
 - [2026-08-25] Control 与 History 应共用 `760px` 目标高度并受屏幕可用高度统一限制；History 内容溢出时只滚动 ListView，页面和底部 Tab 在固定外壳内过渡，不能通过关闭/重开窗口切页。紧凑分页轨道固定 `296×38px`。
 - [2026-08-25] 固定宿主上移 flare 时不能再次填充整块右岛颈部：主体仍从 `40px` Bar 底边开始，向上衔接只覆盖颈部边界左右各 `16px`；左侧形成反 R 弧，右侧消除右岛旧外凸角留下的月牙缺口，同时避开 Metrics/Tray/Power。History 切页也不得触发 Tray 全量图标展开。
-- [2026-08-25] 页面切换不能 resize 线程化 Canvas：sizer 会先改变裁剪区，而新纹理异步完成前会短暂露出壁纸。最终方案让两页共用固定高度，以单个最终尺寸 Canvas 绘制外壳，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
+- [2026-08-25] 页面切换不能 resize 线程化 Canvas：sizer 会先改变裁剪区，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
+- [2026-08-26] 开合也不能用活动裁剪线揭示固定最终轮廓：裁剪线在横向末段穿过左上圆角时会造成边缘短暂挤压。主体应以原生圆角矩形跟随 sizer 的当前宽高，颈部 flare 则用固定 `32×16px` 即时 Canvas 保持对齐；这样不逐帧重绘大纹理，也不改变既有分阶段时序。

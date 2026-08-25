@@ -1,10 +1,10 @@
 import "../config" as Config
 import QtQuick
 
-// 右侧面板的颈部/主体连接轮廓。主体固定贴右，顶部只保留
-// neckWidth 的平直连接段；flare 负责连续过渡到主体左上角。
+// 右侧面板的活动轮廓。主体按当前揭示宽高真实生长，左侧圆角始终
+// 贴住活动边缘；颈部 flare 保持对齐 Bar，避免裁剪线切过固定圆角。
 // 几何实现参考 Brainitech/Brain_Shell 的 PopupShape（MIT）。
-Canvas {
+Item {
     id: root
 
     property color color: Config.Theme.surface
@@ -18,92 +18,102 @@ Canvas {
     property alias flareWidth: root.flare
     property alias flareHeight: root.flare
 
-    antialiasing: true
-    // 两页共用固定外壳高度，Canvas 在开合和翻页期间都不 resize；
-    // 线程化渲染只准备一次最终纹理，sizer 负责裁剪揭示。
-    renderStrategy: Canvas.Threaded
+    readonly property real effectiveWidth: Math.max(0, width)
+    readonly property real effectiveHeight: Math.max(0, height)
+    readonly property real effectiveBodyWidth: Math.max(
+        0, Math.min(effectiveWidth, bodyWidth)
+    )
+    readonly property real bodyLeft:
+        effectiveWidth - effectiveBodyWidth
+    readonly property real effectiveNeckWidth: Math.max(
+        0, Math.min(neckWidth, effectiveBodyWidth)
+    )
+    readonly property real neckLeft: Math.max(
+        bodyLeft, effectiveWidth - effectiveNeckWidth
+    )
+    readonly property real effectiveFlare: Math.max(0, Math.min(
+        flare,
+        effectiveNeckWidth / 3,
+        effectiveWidth / 2,
+        effectiveHeight
+    ))
+    readonly property real bodyHeight: Math.max(
+        0, effectiveHeight - effectiveFlare
+    )
+    readonly property real effectiveRadius: Math.max(0, Math.min(
+        radius,
+        effectiveBodyWidth / 2,
+        Math.max(0, neckLeft - bodyLeft),
+        bodyHeight / 2
+    ))
 
-    onWidthChanged: requestPaint()
-    onHeightChanged: requestPaint()
-    onColorChanged: requestPaint()
-    onNeckWidthChanged: requestPaint()
-    onBodyWidthChanged: requestPaint()
-    onRadiusChanged: requestPaint()
-    onFlareChanged: requestPaint()
+    clip: true
 
-    onPaint: {
-        const ctx = getContext("2d")
-        ctx.reset()
+    // 原生场景图矩形随 sizer 同步变形，不需要逐帧重绘或重分配
+    // 大尺寸 Canvas 纹理。右上角补成直角，以继续贴合屏幕右边缘。
+    Rectangle {
+        id: body
 
-        // bodyWidth 通常跟随 Canvas 宽度；调用方传入更小主体时仍贴紧
-        // 右边缘，保证颈部与面板始终连成一体而不会向左漂移。
-        const w = Math.max(0, root.width)
-        const body = Math.max(0, Math.min(w, root.bodyWidth))
-        const bodyLeft = w - body
-        const h = Math.max(0, root.height)
+        x: root.bodyLeft
+        y: root.effectiveFlare
+        width: root.effectiveBodyWidth
+        height: root.bodyHeight
+        radius: root.effectiveRadius
+        color: root.color
+        antialiasing: true
+        visible: width > 0 && height > 0
+    }
 
-        if (body <= 0 || h <= 0)
-            return
+    Rectangle {
+        x: root.effectiveWidth - root.effectiveRadius
+        y: root.effectiveFlare
+        width: root.effectiveRadius
+        height: Math.min(root.effectiveRadius, root.bodyHeight)
+        color: root.color
+        visible: width > 0 && height > 0
+    }
 
-        const neck = Math.max(0, Math.min(root.neckWidth, body))
-        const neckLeft = Math.max(bodyLeft, w - neck)
-        const f = Math.max(0, Math.min(
-            root.flare,
-            neck / 3,
-            w / 2,
-            h
-        ))
-        const r = Math.max(0, Math.min(
-            root.radius,
-            body / 2,
-            Math.max(0, neckLeft - bodyLeft),
-            Math.max(0, (h - f) / 2)
-        ))
+    // flare 只占固定的 32×16px 左右，不参与主体宽高动画；即时绘制
+    // 可避免窗口首次出现时线程化 Canvas 仍未提交纹理。
+    Canvas {
+        id: flareCap
 
-        ctx.beginPath()
-        ctx.fillStyle = root.color
+        x: root.neckLeft - root.effectiveFlare
+        width: root.effectiveFlare * 2
+        height: root.effectiveFlare
+        visible: root.effectiveFlare > 0
+            && root.neckLeft > root.bodyLeft
+        antialiasing: true
+        renderStrategy: Canvas.Immediate
 
-        // 主体顶边严格从 Bar 底边开始；右岛本身已经绘制颈部，面板不再
-        // 重复填充该矩形区域，以免较高层的宿主窗口盖住右岛下半部内容。
-        ctx.moveTo(bodyLeft + r, f)
-        ctx.lineTo(w, f)
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onVisibleChanged: requestPaint()
 
-        // 主体右边与底部圆角。
-        ctx.lineTo(w, Math.max(0, h - r))
-        if (r > 0)
-            ctx.arcTo(w, h, w - r, h, r)
-        else
-            ctx.lineTo(w, h)
+        onPaint: {
+            const ctx = getContext("2d")
+            ctx.reset()
 
-        ctx.lineTo(bodyLeft + r, h)
-        if (r > 0)
-            ctx.arcTo(bodyLeft, h, bodyLeft, h - r, r)
-        else
-            ctx.lineTo(bodyLeft, h)
+            const f = height
+            if (f <= 0)
+                return
 
-        // 主体左边与左上圆角。
-        ctx.lineTo(bodyLeft, f + r)
-        if (r > 0)
-            ctx.arcTo(bodyLeft, f, bodyLeft + r, f, r)
-        else
-            ctx.lineTo(bodyLeft, f)
-
-        ctx.closePath()
-        ctx.fill()
-
-        // 颈部左侧的 16×16 flare 伸入 Bar；边界右侧再保留同宽安全区，
-        // 只盖住 Bar 关闭态遗留的左下外凸角。覆盖总宽仅 32px，不会
-        // 触及颈部中的 Metrics、Tray 或 Power 内容。
-        if (f > 0 && neckLeft > bodyLeft) {
-            const flareLeft = Math.max(bodyLeft, neckLeft - f)
-            const coverRight = Math.min(w, neckLeft + f)
             ctx.beginPath()
-            ctx.moveTo(flareLeft, f)
-            ctx.quadraticCurveTo(neckLeft, f, neckLeft, 0)
-            ctx.lineTo(coverRight, 0)
-            ctx.lineTo(coverRight, f)
+            ctx.fillStyle = root.color
+            ctx.moveTo(0, f)
+            ctx.quadraticCurveTo(f, f, f, 0)
+            ctx.lineTo(width, 0)
+            ctx.lineTo(width, f)
             ctx.closePath()
             ctx.fill()
+        }
+
+        Connections {
+            target: root
+
+            function onColorChanged() {
+                flareCap.requestPaint()
+            }
         }
     }
 }
