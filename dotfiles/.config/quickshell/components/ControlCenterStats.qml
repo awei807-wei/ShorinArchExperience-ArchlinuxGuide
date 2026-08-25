@@ -14,7 +14,7 @@ Item {
     property color accentColor: "#8fb3c5"
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 98
+    Layout.preferredHeight: Config.BarTuning.rightPanelControlStatsHeight
 
     Rectangle {
         anchors.fill: parent

@@ -74,7 +74,9 @@ Item {
     width: visible ? itemWidth : 0
     height: itemWidth
     opacity: visible ? 1 : 0
-    activeFocusOnTab: visible
+    // visible=false 已会把条目排除出焦点链；保持该值稳定可避免
+    // 展开/收起时在仍持有焦点的同一帧写入 false。
+    activeFocusOnTab: true
     Accessible.role: Accessible.Button
     Accessible.name: {
         const title = trayItem && trayItem.title ? trayItem.title : "System tray item"

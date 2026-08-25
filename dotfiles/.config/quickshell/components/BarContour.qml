@@ -49,7 +49,7 @@ Canvas {
         ctx.beginPath();
         ctx.fillStyle = root.surfaceColor;
 
-        // 左岛贴屏幕边缘，只在右侧绘制下凸圆角与上部反 R 角。
+        // 外侧保持方形接缝，交给 ScreenEdgeBorder 从岛底融入侧边轨道。
         ctx.moveTo(0, h);
         ctx.lineTo(leftEnd - r, h);
         ctx.arcTo(leftEnd, h, leftEnd, h - r, r);
@@ -66,7 +66,7 @@ Canvas {
         ctx.lineTo(centerEnd, b + r);
         ctx.arcTo(centerEnd, b, centerEnd + r, b, r);
 
-        // 右岛镜像左岛，并贴住屏幕右边缘。
+        // 右岛镜像左岛；外侧方形接缝由右侧边轨道继续。
         ctx.lineTo(rightStart - r, b);
         ctx.arcTo(rightStart, b, rightStart, b + r, r);
         ctx.lineTo(rightStart, h - r);

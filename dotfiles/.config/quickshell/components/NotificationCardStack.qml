@@ -1,17 +1,17 @@
-// 两层静态轮廓与一张真实通知卡片。
+// 历史通知卡片。名称保留 Stack 以兼容旧面板接口，但每个实例只代表一条通知。
 import "../config" as Config
 import QtQuick
-import "../config" as Config
+import Quickshell
+import Quickshell.Widgets
 
-Item {
-    id: cardStack
-
-    readonly property int animFast: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animFast : 120
-    readonly property int animNormal: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animNormal : 200
+Rectangle {
+    id: notificationCard
 
     property var entry: null
     property int entryCount: 0
-    property bool ready: false
+    property bool ready: true
+    property bool selected: false
+    property bool reducedMotion: false
     property real unit: 13.6
     property color zenInk: Config.Theme.surface
     property color zenStone: Config.Theme.surfaceContainer
@@ -20,179 +20,254 @@ Item {
     property color zenSmoke: Config.Theme.textMuted
     property color zenCloud: Config.Theme.textSecondary
     property color zenSnow: Config.Theme.textPrimary
+    property color zenAccent: Config.Theme.accent
     property color zenDanger: Config.Theme.danger
 
-    signal copyRequested()
+    readonly property int minimumHeight: Config.BarTuning.notificationCardMinHeight
+        ?? 88
+    readonly property string appNameText: String(entry?.appName || "Notification")
+        .replace(/\s+/g, " ").trim()
+    readonly property string summaryText: String(entry?.summary || "Notification")
+        .replace(/\s+/g, " ").trim()
+    readonly property string bodyText: String(entry?.body || "")
+        .replace(/\s+/g, " ").trim()
+    readonly property string urgencyText: formatUrgency(entry?.urgency)
+    readonly property string iconSource: resolveIconSource(entry)
+
+    signal copyRequested(var requestedEntry)
     signal moveRequested(int delta)
 
-    function animateSwitch() {
-        // 切换历史卡片：旧内容滑出 + 淡出，随后新内容滑入 + 淡入
-        cardSwitchOut.restart()
+    implicitWidth: 320
+    implicitHeight: Math.max(minimumHeight, textColumn.implicitHeight + 28)
+    height: implicitHeight
+    visible: ready && entry !== null
+    radius: Config.BarTuning.notificationCardRadius ?? 14
+    color: cardMouse.containsMouse
+        ? Qt.lighter(zenStone, 1.08)
+        : (selected ? Qt.rgba(zenStone.r, zenStone.g, zenStone.b, 0.82)
+                   : Qt.rgba(zenInk.r, zenInk.g, zenInk.b, 0.96))
+    border.width: 1
+    border.color: entry?.urgency === "Critical"
+        || String(entry?.urgency || "").toLowerCase() === "critical"
+        ? zenDanger
+        : (selected ? zenAccent : zenMist)
+    clip: true
+
+    function timestampInMilliseconds(timestamp) {
+        const numeric = Number(timestamp || 0)
+        if (!isFinite(numeric) || numeric <= 0)
+            return 0
+        // 测试夹具和旧日志可能使用 Unix 秒，持久化的新记录使用毫秒。
+        return numeric < 100000000000 ? numeric * 1000 : numeric
     }
 
     function displayTime(timestamp) {
-        const date = new Date(Number(timestamp || 0))
-        return isNaN(date.getTime())
-            ? "UNKNOWN TIME"
-            : Qt.formatDateTime(date, "MM-dd HH:mm:ss")
+        const milliseconds = timestampInMilliseconds(timestamp)
+        const date = new Date(milliseconds)
+        if (milliseconds <= 0 || isNaN(date.getTime()))
+            return "Unknown time"
+
+        const age = Math.max(0, Date.now() - milliseconds)
+        if (age < 60000)
+            return "Just now"
+        if (age < 3600000)
+            return Math.floor(age / 60000) + "m ago"
+        if (age < 86400000)
+            return Math.floor(age / 3600000) + "h ago"
+        return Qt.formatDateTime(date, "MM-dd HH:mm")
     }
 
-    // 旧内容退场（淡出 + 轻微右移）
-    SequentialAnimation {
-        id: cardSwitchOut
-        ParallelAnimation {
-            NumberAnimation {
-                target: notificationCard
-                property: "opacity"
-                to: 0
-                duration: cardStack.animFast
-                easing.type: Easing.InCubic
-            }
-            NumberAnimation {
-                target: notificationCard
-                property: "x"
-                to: cardStack.unit * 0.8 + cardStack.unit * 0.5
-                duration: cardStack.animFast
-                easing.type: Easing.InCubic
-            }
+    function displayClockTime(timestamp) {
+        const milliseconds = timestampInMilliseconds(timestamp)
+        const date = new Date(milliseconds)
+        if (milliseconds <= 0 || isNaN(date.getTime()))
+            return ""
+        return Qt.formatTime(date, "HH:mm")
+    }
+
+    function formatUrgency(value) {
+        const text = String(value || "Normal").trim().toLowerCase()
+        if (text.length === 0)
+            return "Normal"
+        return text.charAt(0).toUpperCase() + text.slice(1)
+    }
+
+    function resolveIconSource(item) {
+        if (!item)
+            return ""
+        const candidates = [item.appIcon, item.desktopEntry, item.appName]
+        for (const rawCandidate of candidates) {
+            const candidate = String(rawCandidate || "").trim()
+            if (candidate.length === 0)
+                continue
+            if (candidate.startsWith("/"))
+                return "file://" + candidate
+            if (candidate.includes("://"))
+                return candidate
+            const desktopName = candidate.replace(/\.desktop$/, "")
+            if (Quickshell.hasThemeIcon(desktopName))
+                return Quickshell.iconPath(desktopName)
+            if (Quickshell.hasThemeIcon(candidate))
+                return Quickshell.iconPath(candidate)
         }
-        ScriptAction { script: cardSwitchIn.restart() }
+        return ""
     }
 
-    // 新内容入场（淡入 + 从右侧归位）
-    ParallelAnimation {
-        id: cardSwitchIn
+    function animateSwitch() {
+        if (reducedMotion)
+            return
+        switchPulse.restart()
+    }
+
+    Behavior on color {
+        enabled: !notificationCard.reducedMotion
+        ColorAnimation { duration: Config.Theme.animFast }
+    }
+
+    Behavior on border.color {
+        enabled: !notificationCard.reducedMotion
+        ColorAnimation { duration: Config.Theme.animFast }
+    }
+
+    SequentialAnimation {
+        id: switchPulse
+
         NumberAnimation {
             target: notificationCard
             property: "opacity"
-            from: 0
-            to: 1
-            duration: cardStack.animNormal
-            easing.type: Easing.OutQuad
+            to: 0.42
+            duration: Config.Theme.animFast / 2
+            easing.type: Easing.InCubic
         }
         NumberAnimation {
             target: notificationCard
-            property: "x"
-            from: cardStack.unit * 0.8 + cardStack.unit * 0.5
-            to: cardStack.unit * 0.8
-            duration: cardStack.animNormal
+            property: "opacity"
+            to: 1
+            duration: Config.Theme.animFast
             easing.type: Easing.OutCubic
         }
     }
 
-    NumberAnimation {
-        id: cardReveal
-        target: notificationCard
-        property: "opacity"
-        to: 1
-        duration: cardStack.animNormal
-        easing.type: Easing.OutQuad
-    }
-    Rectangle {
-        visible: cardStack.ready && cardStack.entryCount > 2
-        x: cardStack.unit * 1.15
-        y: cardStack.unit * 1.05
-        width: parent.width - cardStack.unit * 2.3
-        height: parent.height - cardStack.unit * 1.65
-        color: "transparent"
-        border.color: cardStack.zenAsh
-        border.width: 1
-        radius: Config.Theme.radiusMedium
-        opacity: 0.45
-    }
+    Row {
+        id: cardRow
 
-    Rectangle {
-        visible: cardStack.ready && cardStack.entryCount > 1
-        x: cardStack.unit * 1.0
-        y: cardStack.unit * 0.78
-        width: parent.width - cardStack.unit * 2.0
-        height: parent.height - cardStack.unit * 1.45
-        color: cardStack.zenInk
-        border.color: cardStack.zenAsh
-        border.width: 1
-        radius: Config.Theme.radiusMedium
-        opacity: 0.72
-    }
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 12
 
-    Rectangle {
-        id: notificationCard
-        visible: cardStack.ready && cardStack.entry !== null
-        x: cardStack.unit * 0.8
-        y: cardStack.unit * 0.5
-        width: parent.width - cardStack.unit * 1.6
-        height: parent.height - cardStack.unit * 1.25
-        color: cardMouse.containsMouse ? cardStack.zenStone : cardStack.zenInk
-        border.color: cardStack.entry?.urgency === "Critical"
-            ? cardStack.zenDanger
-            : cardStack.zenMist
-        border.width: 1
-        radius: Config.Theme.radiusMedium
-        clip: true
+        Rectangle {
+            id: iconFrame
 
-        Behavior on color {
-            ColorAnimation { duration: Config.Theme.animFast }
+            width: 36
+            height: 36
+            radius: 10
+            color: Qt.rgba(zenAccent.r, zenAccent.g, zenAccent.b, 0.18)
+            border.width: 1
+            border.color: Qt.rgba(zenAccent.r, zenAccent.g, zenAccent.b, 0.32)
+
+            IconImage {
+                id: appIcon
+
+                anchors.centerIn: parent
+                width: 24
+                height: 24
+                source: notificationCard.iconSource
+                asynchronous: true
+                visible: source.length > 0 && status === Image.Ready
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: notificationCard.appNameText.slice(0, 1).toUpperCase() || "?"
+                color: notificationCard.zenSnow
+                font.family: "JetBrains Mono"
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+                visible: !appIcon.visible
+            }
         }
 
         Column {
-            anchors.fill: parent
-            anchors.margins: cardStack.unit * 0.65
-            spacing: cardStack.unit * 0.24
+            id: textColumn
+
+            width: Math.max(0, cardRow.width - iconFrame.width - cardRow.spacing)
+            spacing: 4
+
+            Row {
+                width: parent.width
+                spacing: 8
+
+                Text {
+                    width: Math.max(0, parent.width - timeText.width - parent.spacing)
+                    text: notificationCard.appNameText
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    color: notificationCard.zenCloud
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 12
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    id: timeText
+
+                    text: notificationCard.displayClockTime(
+                        notificationCard.entry?.timestamp)
+                    color: notificationCard.zenSmoke
+                    font.family: "JetBrains Mono"
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignRight
+                }
+            }
 
             Text {
                 width: parent.width
-                text: (cardStack.entry?.appName || "UNKNOWN")
-                    + "  ·  " + cardStack.displayTime(cardStack.entry?.timestamp)
+                text: notificationCard.summaryText
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
-                font.pixelSize: Math.max(Config.Theme.fontTiny, cardStack.unit * 0.34)
-                font.family: "JetBrainsMono Nerd Font"
-                color: cardStack.zenCloud
+                color: notificationCard.zenSnow
+                font.family: "JetBrains Mono"
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
             }
+
             Text {
+                visible: notificationCard.bodyText.length > 0
                 width: parent.width
-                text: cardStack.entry?.summary || "(NO TITLE)"
-                textFormat: Text.PlainText
-                elide: Text.ElideRight
-                font.pixelSize: cardStack.unit * 0.58
-                font.bold: true
-                font.family: "JetBrainsMono Nerd Font"
-                color: cardStack.zenSnow
-            }
-            Text {
-                width: parent.width
-                text: cardStack.entry?.body || "(EMPTY BODY)"
+                text: notificationCard.bodyText
                 textFormat: Text.PlainText
                 wrapMode: Text.Wrap
+                maximumLineCount: 3
                 elide: Text.ElideRight
-                maximumLineCount: 6
-                font.pixelSize: cardStack.unit * 0.43
-                lineHeight: 1.18
-                font.family: "JetBrainsMono Nerd Font"
-                color: cardStack.zenCloud
+                color: notificationCard.zenCloud
+                font.family: "JetBrains Mono"
+                font.pixelSize: 13
+                lineHeight: 1.16
             }
+
             Text {
                 width: parent.width
-                text: (cardStack.entry?.desktopEntry || "NO DESKTOP ENTRY")
-                    + "  ·  " + (cardStack.entry?.urgency || "Normal").toUpperCase()
-                    + "  ·  #" + String(cardStack.entry?.id ?? 0)
+                text: notificationCard.urgencyText + " · "
+                    + notificationCard.displayTime(notificationCard.entry?.timestamp)
                 textFormat: Text.PlainText
                 elide: Text.ElideRight
-                font.pixelSize: Math.max(Config.Theme.fontTiny, cardStack.unit * 0.3)
-                font.family: "JetBrainsMono Nerd Font"
-                color: cardStack.zenSmoke
+                color: notificationCard.zenSmoke
+                font.family: "JetBrains Mono"
+                font.pixelSize: 11
             }
         }
+    }
 
-        MouseArea {
-            id: cardMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: cardStack.copyRequested()
-            onWheel: wheel => {
-                cardStack.moveRequested(wheel.angleDelta.y < 0 ? 1 : -1)
-                wheel.accepted = true
-            }
+    MouseArea {
+        id: cardMouse
+
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: notificationCard.copyRequested(notificationCard.entry)
+        onWheel: wheel => {
+            notificationCard.moveRequested(wheel.angleDelta.y < 0 ? 1 : -1)
+            wheel.accepted = true
         }
     }
 }

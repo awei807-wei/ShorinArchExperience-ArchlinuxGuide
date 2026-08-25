@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
 import "components"
+import "config" as Config
 
 ShellRoot {
     id: testRoot
@@ -107,7 +108,8 @@ ShellRoot {
         onTriggered: {
             expect(volumeSlider.selectorRevealHeight < 0.5,
                    "selection hides the expanded device area")
-            expectEqual(Math.round(volumeSlider.Layout.preferredHeight), 62,
+            expectEqual(Math.round(volumeSlider.Layout.preferredHeight),
+                        Config.BarTuning.rightPanelControlSliderHeight,
                         "collapsed volume card returns to its original height")
             finish()
         }

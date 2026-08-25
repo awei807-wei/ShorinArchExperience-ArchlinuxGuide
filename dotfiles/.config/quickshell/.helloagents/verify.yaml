@@ -4,15 +4,37 @@
 
 commands:
   - qmllint -I /usr/lib/qt6/qml components/BarContour.qml
+  - qmllint -I /usr/lib/qt6/qml components/ScreenEdgeBorder.qml
+  - qmllint -I /usr/lib/qt6/qml components/ScreenEdgeBorderHost.qml
   - qmllint -I /usr/lib/qt6/qml Bar.qml
   - qmllint -I /usr/lib/qt6/qml components/SystemIsland.qml
   - qmllint -I /usr/lib/qt6/qml components/ControlCenterOutputSelector.qml
   - qmllint -I /usr/lib/qt6/qml components/ControlCenterOutputList.qml
   - qmllint -I /usr/lib/qt6/qml components/ControlCenterSlider.qml
   - qmllint -I /usr/lib/qt6/qml components/ImportedControlCenterPanel.qml
+  - qmllint -I /usr/lib/qt6/qml components/ControlCenterHeaderButton.qml
+  - qmllint -I /usr/lib/qt6/qml components/ControlCenterMediaCard.qml
+  - qmllint -I /usr/lib/qt6/qml components/TrayNotificationPanel.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelController.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelShape.qml
+  - qmllint -I /usr/lib/qt6/qml components/AnimatedPanelPage.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelTabs.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelPageSwitcher.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryPage.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryHeader.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryEmptyState.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryStatusState.qml
+  - qmllint -I /usr/lib/qt6/qml components/UnifiedRightPanel.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelHost.qml
   - quickshell --no-color -p audio-output-model-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p audio-output-selector-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p bar-layout-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-state-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-animation-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-panel-state-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-state-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-interaction-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-store-check.qml
   - python3 scripts/test-notification-history.py
   - bash scripts/test-focus-tray-item.sh
   - git diff --check

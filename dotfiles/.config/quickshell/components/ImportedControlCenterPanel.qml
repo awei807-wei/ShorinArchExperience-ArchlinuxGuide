@@ -10,6 +10,7 @@ Rectangle {
     required property var shellRoot
     property bool open: false
     property bool closing: false
+    property bool embedded: false
     property real panelOffsetY: 56
     property real rightMargin: 12
     property real preferredWidth: 440
@@ -28,6 +29,10 @@ Rectangle {
         return isNaN(value) ? 0 : Math.max(0, Math.min(100, value))
     }
     readonly property bool networkConnected: shellRoot.networkType !== "disconnected"
+    readonly property real contentRequiredHeight: contentColumn.implicitHeight
+    readonly property real contentViewportHeight: contentFlick.height
+    readonly property bool baseContentFits: contentRequiredHeight
+        <= contentViewportHeight + 1
     readonly property bool wiredConnection: shellRoot.networkType === "ethernet"
     readonly property string networkTitle: wiredConnection
         ? "Ethernet" : shellRoot.wifiAvailable ? "Wi-Fi" : "Network"
@@ -37,22 +42,26 @@ Rectangle {
             ? (shellRoot.wifiEnabled ? shellRoot.netSSID : "Off")
             : "No network device"
 
-    x: parent ? parent.width - width - rightMargin : 0
-    y: panelOffsetY + (open ? 0 : -10)
-    width: Math.min(preferredWidth, parent ? parent.width - rightMargin * 2 : preferredWidth)
+    x: embedded ? 0 : (parent ? parent.width - width - rightMargin : 0)
+    y: embedded ? 0 : panelOffsetY + (open ? 0 : -10)
+    width: embedded
+        ? (parent ? parent.width : preferredWidth)
+        : Math.min(preferredWidth, parent ? parent.width - rightMargin * 2 : preferredWidth)
     height: {
+        if (embedded)
+            return parent ? parent.height : preferredWidth
         const desired = header.implicitHeight + contentColumn.implicitHeight + 62
         return parent ? Math.max(0, Math.min(desired, parent.height - panelOffsetY - 12)) : desired
     }
     z: 2
-    radius: Config.Theme.radiusLarge
-    color: backgroundColor
+    radius: embedded ? 0 : Config.Theme.radiusLarge
+    color: embedded ? "transparent" : backgroundColor
     border.color: borderColor
-    border.width: 1
+    border.width: embedded ? 0 : 1
     clip: true
     enabled: open
-    opacity: open ? 1 : 0
-    scale: open ? 1 : 0.94
+    opacity: embedded ? 1 : (open ? 1 : 0)
+    scale: embedded ? 1 : (open ? 1 : 0.94)
     transformOrigin: Item.TopRight
 
     onOpenChanged: {
@@ -61,21 +70,22 @@ Rectangle {
     }
 
     Behavior on y {
-        enabled: !root.reducedMotion
+        enabled: !root.embedded && !root.reducedMotion
         NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
     }
     Behavior on opacity {
-        enabled: !root.reducedMotion
+        enabled: !root.embedded && !root.reducedMotion
         NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
     }
     Behavior on scale {
-        enabled: !root.reducedMotion
-        NumberAnimation { duration: 240; easing.type: Easing.OutBack }
+        enabled: !root.embedded && !root.reducedMotion
+        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
     }
 
     // 打开时的全屏背景遮罩（点击外部关闭由 shell.qml 的全屏 MouseArea 处理，这里只负责视觉）
     Rectangle {
         z: -1
+        visible: !root.embedded
         x: -root.x
         y: -root.y
         width: root.parent ? root.parent.width : 0
@@ -92,6 +102,7 @@ Rectangle {
     // 柔和投影（轻量实现：底下垫两层半透明黑矩形，避免 GraphicalEffects 的 DropShadow 开销）
     Rectangle {
         z: -1
+        visible: !root.embedded
         anchors.fill: parent
         anchors.margins: -1
         radius: root.radius + 1
@@ -101,6 +112,7 @@ Rectangle {
 
     Rectangle {
         z: -1
+        visible: !root.embedded
         anchors.fill: parent
         anchors.topMargin: 2
         radius: root.radius
@@ -123,12 +135,15 @@ Rectangle {
     ColumnLayout {
         id: mainLayout
         anchors.fill: parent
-        anchors.margins: 22
-        spacing: 18
+        anchors.margins: root.embedded ? 0 : 22
+        spacing: root.embedded ? Config.BarTuning.rightPanelControlGap : 18
 
         RowLayout {
             id: header
             Layout.fillWidth: true
+            Layout.preferredHeight: root.embedded
+                ? Config.BarTuning.rightPanelControlHeaderHeight
+                : -1
             spacing: 12
 
             ColumnLayout {
@@ -181,20 +196,38 @@ Rectangle {
 
             Item { Layout.fillWidth: true }
 
-            HeaderButton {
+            ControlCenterHeaderButton {
                 icon: "󰒓"
                 toolTip: "Network Settings"
+                accentColor: root.accentColor
+                elevatedColor: root.elevatedColor
+                surfaceColor: root.surfaceColor
+                textColor: root.textColor
+                dangerColor: root.dangerColor
+                reducedMotion: root.reducedMotion
                 onClicked: settingsProcess.running = true
             }
-            HeaderButton {
+            ControlCenterHeaderButton {
                 icon: "󰌾"
                 toolTip: "Lock"
+                accentColor: root.accentColor
+                elevatedColor: root.elevatedColor
+                surfaceColor: root.surfaceColor
+                textColor: root.textColor
+                dangerColor: root.dangerColor
+                reducedMotion: root.reducedMotion
                 onClicked: lockProcess.running = true
             }
-            HeaderButton {
+            ControlCenterHeaderButton {
                 icon: "󰐥"
                 toolTip: "Power"
                 danger: true
+                accentColor: root.accentColor
+                elevatedColor: root.elevatedColor
+                surfaceColor: root.surfaceColor
+                textColor: root.textColor
+                dangerColor: root.dangerColor
+                reducedMotion: root.reducedMotion
                 onClicked: powerProcess.running = true
             }
         }
@@ -211,7 +244,8 @@ Rectangle {
             ColumnLayout {
                 id: contentColumn
                 width: contentFlick.width
-                spacing: 14
+                spacing: root.embedded
+                    ? Config.BarTuning.rightPanelControlGap : 14
 
                 GridLayout {
                     Layout.fillWidth: true
@@ -297,88 +331,15 @@ Rectangle {
                     accentColor: root.accentColor
                 }
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: mediaContent.visible ? 96 : 62
-                    radius: Config.Theme.radiusMedium
-                    color: root.surfaceColor
-                    border.color: Config.Theme.outlineVariant
-
-                    RowLayout {
-                        id: mediaContent
-                        anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 12
-                        visible: root.shellRoot.mprisPlayer !== null
-
-                        Rectangle {
-                            Layout.preferredWidth: 64
-                            Layout.preferredHeight: 64
-                            radius: Config.Theme.radiusMedium
-                            clip: true
-                            color: root.elevatedColor
-
-                            Image {
-                                id: albumArt
-                                anchors.fill: parent
-                                source: root.shellRoot.mediaArtUrl
-                                fillMode: Image.PreserveAspectCrop
-                                asynchronous: true
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                visible: albumArt.status !== Image.Ready
-                                text: "󰝚"
-                                font.family: "Material Design Icons"
-                                font.pixelSize: 28
-                                color: root.mutedColor
-                            }
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 3
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.shellRoot.mediaTitle
-                                elide: Text.ElideRight
-                                font.family: "JetBrains Mono"
-                                font.pixelSize: 13
-                                font.weight: Font.Bold
-                                color: root.textColor
-                            }
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.shellRoot.mediaArtist
-                                elide: Text.ElideRight
-                                font.family: "JetBrains Mono"
-                                font.pixelSize: 10
-                                color: root.mutedColor
-                            }
-                        }
-
-                        HeaderButton {
-                            icon: root.shellRoot.mediaPlaying ? "󰏤" : "󰐊"
-                            toolTip: root.shellRoot.mediaPlaying ? "Pause" : "Play"
-                            emphasized: true
-                            onClicked: {
-                                if (root.shellRoot.mprisPlayer)
-                                    root.shellRoot.mprisPlayer.togglePlaying()
-                            }
-                        }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        visible: !mediaContent.visible
-                        text: "NO ACTIVE MEDIA"
-                        font.family: "JetBrains Mono"
-                        font.pixelSize: 11
-                        font.letterSpacing: 1
-                        color: root.mutedColor
-                    }
+                ControlCenterMediaCard {
+                    shellRoot: root.shellRoot
+                    surfaceColor: root.surfaceColor
+                    elevatedColor: root.elevatedColor
+                    textColor: root.textColor
+                    mutedColor: root.mutedColor
+                    accentColor: root.accentColor
+                    dangerColor: root.dangerColor
+                    reducedMotion: root.reducedMotion
                 }
 
                 Item { Layout.preferredHeight: 1 }
@@ -386,49 +347,4 @@ Rectangle {
         }
     }
 
-    component HeaderButton: Rectangle {
-        id: button
-        property string icon: ""
-        property string toolTip: ""
-        property bool danger: false
-        property bool emphasized: false
-        signal clicked()
-
-        Layout.preferredWidth: emphasized ? 48 : 40
-        Layout.preferredHeight: width
-        radius: width / 2
-        color: emphasized ? root.accentColor
-            : buttonMouse.pressed ? root.elevatedColor
-            : buttonMouse.containsMouse ? root.surfaceColor : "transparent"
-
-        Behavior on color {
-            enabled: !root.reducedMotion
-            ColorAnimation { duration: Config.Theme.animFast }
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: button.icon
-            font.family: "Material Design Icons"
-            font.pixelSize: button.emphasized ? 24 : 20
-            color: button.emphasized ? Config.Theme.surface
-                : button.danger ? root.dangerColor : root.textColor
-        }
-
-        MouseArea {
-            id: buttonMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: button.clicked()
-        }
-
-        AppToolTip {
-            anchors.top: parent.bottom
-            anchors.topMargin: Config.Theme.spacingTiny
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: button.toolTip
-            target: buttonMouse
-        }
-    }
 }

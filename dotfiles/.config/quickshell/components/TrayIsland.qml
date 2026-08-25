@@ -225,7 +225,9 @@ Rectangle {
             width: visible ? trayIsland.itemWidth : 0
             height: trayIsland.itemWidth
             opacity: visible ? 1 : 0
-            activeFocusOnTab: visible
+            // 不随 visible 翻转；隐藏项本身不会进入焦点链，同时避免
+            // 点击后立刻隐藏时把 activeFocusOnTab 设为 false 的 Qt 警告。
+            activeFocusOnTab: true
             Accessible.role: Accessible.Button
             Accessible.name: "More tray items and notification history"
 
@@ -348,7 +350,7 @@ Rectangle {
             width: visible ? trayIsland.itemWidth : 0
             height: trayIsland.itemWidth
             opacity: visible ? 1 : 0
-            activeFocusOnTab: visible
+            activeFocusOnTab: true
 
             Text {
                 anchors.centerIn: parent

@@ -59,19 +59,13 @@ ShellRoot {
     }
 
     function expectedMetricsWidth(mode) {
-        return mode >= 4 ? Config.BarTuning.metricsUltraWidth : (mode >= 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsWidth);
+        return Config.BarTuning.rightIslandMetricsWidth;
     }
 
     function expectedSystemWidth(target, mode) {
-        if (mode <= 2)
-            return expectedMetricsWidth(mode) + Config.BarTuning.metricsUtilityGap
-                + target.trayWidth + Config.BarTuning.trayPowerGap
-                + Config.BarTuning.powerIslandWidth;
-
-        if (mode === 3)
-            return Config.BarTuning.systemCompactWidth;
-
-        return Config.BarTuning.systemUltraWidth;
+        return expectedMetricsWidth(mode) + Config.BarTuning.metricsUtilityGap
+            + target.trayWidth + Config.BarTuning.trayPowerGap
+            + Config.BarTuning.powerIslandWidth;
     }
 
     function checkBar(target, label) {
@@ -84,19 +78,21 @@ ShellRoot {
         expectEqual(target.notchRadius, Config.BarTuning.barNotchRadius, label + " notch radius");
         expectEqual(target.exclusionGap, Config.BarTuning.barExclusionGap, label + " exclusion gap");
         expectEqual(target.islandContentTop, Config.BarTuning.islandContentTop, label + " content top");
-        expectEqual(target.actualTrayIconLimit, mode <= 1 ? target.trayDirectIconLimit : 0, label + " direct tray icon limit");
-        expectEqual(target.trayVisible, mode < 3, label + " tray visibility");
-        expectEqual(target.metricDetailsVisible, mode < 3, label + " metric detail visibility");
+        expectEqual(target.actualTrayIconLimit,
+                    Math.min(target.trayDirectIconLimit,
+                             Config.BarTuning.rightIslandDirectIconLimit),
+                    label + " direct tray icon limit");
+        expectEqual(target.trayVisible, true, label + " tray visibility");
+        expectEqual(target.metricDetailsVisible, false,
+                    label + " metric detail visibility");
         expectEqual(target.contextWidth, expectedContextWidth(mode), label + " context width");
         expectEqual(target.clockWidth, expectedClockWidth(mode), label + " clock width");
         expectEqual(target.metricsWidth, expectedMetricsWidth(mode), label + " metrics width");
         expectEqual(target.systemWidth, expectedSystemWidth(target, mode), label + " system width");
-        if (mode <= 1) {
-            expect(target.trayWidth >= Config.BarTuning.trayMinimumWidth,
-                   label + " dynamic tray minimum width");
-            expect(target.trayWidth <= Config.BarTuning.trayMaximumCollapsedWidth,
-                   label + " dynamic tray maximum width");
-        }
+        expect(target.trayWidth >= Config.BarTuning.trayMinimumWidth,
+               label + " dynamic tray minimum width");
+        expect(target.systemWidth >= 218 && target.systemWidth <= 240,
+               label + " closed right island width budget");
         expectEqual(target.systemSpacing, Config.BarTuning.metricsUtilityGap, label + " metrics/utility gap");
         expectEqual(target.utilitySpacing, Config.BarTuning.trayPowerGap, label + " tray/power gap");
         expectEqual(target.contextContourLeft, 0,
@@ -143,6 +139,11 @@ ShellRoot {
                "paired notch radii must fit inside bar height");
         expect(Config.BarTuning.barNotchRadius > 0,
                "reverse contour must have a positive radius");
+        expectEqual(Config.BarTuning.screenEdgeBorderWidth,
+                    Config.BarTuning.barTopBorderWidth,
+                    "screen edge rail matches top strip");
+        expect(Config.BarTuning.screenEdgeCornerRadius > 0,
+               "screen edge melt must have a positive radius");
         expect(Config.BarTuning.barExclusionGap >= 2 * Config.BarTuning.barNotchRadius,
                "exclusion gap must contain both reverse corners");
         expect(Config.BarTuning.islandContentTop + Config.BarTuning.islandHeight
@@ -155,6 +156,17 @@ ShellRoot {
         checkBar(ultra, "minimum");
         checkBar(modeTwoEdge, "tray threshold");
         checkBar(modeThreeEdge, "below tray threshold");
+        expectEqual(neckOpen.animatedRightContourWidth,
+                    Config.BarTuning.rightPanelNeckWidth,
+                    "open right island uses fixed neck width");
+        expect(neckOpen.systemWidth <= neckOpen.animatedRightContourWidth,
+               "right island content fits inside open neck");
+        expect(neckOpen.animatedRightContourWidth
+               / Config.BarTuning.rightPanelWidthMax >= 0.46,
+               "open neck occupies at least 46% of maximum panel");
+        expect(neckOpen.animatedRightContourWidth
+               / Config.BarTuning.rightPanelWidthMax <= 0.50,
+               "open neck occupies at most 50% of maximum panel");
         expectEqual(modeTwoEdge.layoutMode, 2, "configured tray threshold mode");
         expectEqual(modeThreeEdge.layoutMode, 3, "configured below-tray mode");
         if (failureCount === 0) {
@@ -168,7 +180,7 @@ ShellRoot {
 
     Item {
         width: 2048
-        height: (Config.BarTuning.barHeight + 4) * 7
+        height: (Config.BarTuning.barHeight + 4) * 8
 
         Bar {
             id: wide
@@ -237,6 +249,18 @@ ShellRoot {
             y: (Config.BarTuning.barHeight + 4) * 6
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
+        }
+
+        Bar {
+            id: neckOpen
+
+            width: 2048
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 7
+            trayDirectIconLimit: 3
+            notificationHistoryCount: 1
+            rightPanelOpen: true
+            panelNeckReducedMotion: true
         }
 
     }

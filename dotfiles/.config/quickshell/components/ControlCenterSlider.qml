@@ -33,7 +33,9 @@ Item {
     signal selectorRequested(int index)
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 62 + selectorRevealHeight
+    Layout.preferredHeight:
+        Config.BarTuning.rightPanelControlSliderHeight
+        + selectorRevealHeight
     clip: true
 
     Behavior on selectorRevealHeight {
@@ -94,7 +96,7 @@ Item {
         anchors.right: parent.right
         anchors.leftMargin: 12
         anchors.rightMargin: 18
-        height: 62
+        height: Config.BarTuning.rightPanelControlSliderHeight
         spacing: 12
 
         Rectangle {
@@ -146,8 +148,8 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                height: 7
-                radius: 4
+                height: Config.BarTuning.rightPanelSliderTrackHeight
+                radius: height / 2
                 color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.1)
 
                 Rectangle {
@@ -169,9 +171,11 @@ Item {
                 x: Math.max(0, Math.min(parent.width - width,
                     parent.width * root.value / 100 - width / 2))
                 anchors.verticalCenter: parent.verticalCenter
-                width: 18
-                height: sliderMouse.pressed ? 30 : 20
-                radius: 9
+                width: Config.BarTuning.rightPanelSliderHandleSize
+                height: sliderMouse.pressed
+                    ? Config.BarTuning.rightPanelSliderHandleSize + 4
+                    : Config.BarTuning.rightPanelSliderHandleSize
+                radius: width / 2
                 color: root.accentColor
 
                 Behavior on x {

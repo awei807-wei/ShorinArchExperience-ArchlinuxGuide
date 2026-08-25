@@ -29,6 +29,8 @@ Rectangle {
 
     readonly property bool hovered: pointerArea.containsMouse
     readonly property bool compactLayout: width < Config.BarTuning.metricsCompactLayoutThreshold
+    readonly property bool condensedLayout: width
+        < Config.BarTuning.metricsSmallFontThreshold
     readonly property int outerPadding: compactLayout
         ? Config.BarTuning.metricsCompactOuterPadding : Config.BarTuning.metricsOuterPadding
     readonly property var metricData: [
@@ -100,6 +102,7 @@ Rectangle {
         anchors.fill: parent
         anchors.leftMargin: metrics.outerPadding
         anchors.rightMargin: metrics.outerPadding
+        visible: !metrics.condensedLayout
         z: 2
 
         Repeater {
@@ -204,6 +207,67 @@ Rectangle {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // 130px 右岛模式使用上下两行，而不是在同一行挤压标签和值。
+    // 四个状态仍完整保留，最窄单元也不会把文字推到 Tray 区域。
+    Row {
+        id: condensedMetricRow
+
+        anchors.fill: parent
+        anchors.leftMargin: 3
+        anchors.rightMargin: 3
+        visible: metrics.condensedLayout
+        z: 2
+
+        Repeater {
+            model: metrics.metricData
+
+            Item {
+                id: condensedCell
+
+                required property int index
+                required property var modelData
+
+                width: condensedMetricRow.width / 4
+                height: condensedMetricRow.height
+
+                Rectangle {
+                    visible: condensedCell.index > 0
+                    x: 0
+                    y: Config.BarTuning.metricsDividerY
+                    width: 1
+                    height: Config.BarTuning.metricsDividerHeight
+                    color: metrics.lineSoft
+                }
+
+                Text {
+                    x: 2
+                    y: 8
+                    width: parent.width - 4
+                    text: condensedCell.modelData.label
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                    color: metrics.textDim
+                    font.family: metrics.monoFont
+                    font.pixelSize: Config.BarTuning.metricsSmallFontSize
+                    font.letterSpacing: 0.2
+                }
+
+                Text {
+                    x: 1
+                    y: 21
+                    width: parent.width - 2
+                    text: condensedCell.modelData.value
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                    color: metrics.textSoft
+                    font.family: metrics.monoFont
+                    font.pixelSize: Config.BarTuning.metricsSmallFontSize + 1
+                    font.weight: Font.Medium
                 }
             }
         }

@@ -23,6 +23,7 @@ import Quickshell.Services.Notifications // Freedesktop 通知接收服务（后
 import Quickshell.Services.Pipewire // PipeWire：输出设备枚举与默认 sink 切换
 import QtQuick // QML 基础类型（Timer/MouseArea/Rectangle/Text/Animation 等）
 import QtMultimedia // QML 原生音频播放（通知音效，无需外部二进制依赖）
+import "." as Core
 import "components"
 import "config" as Config
 import "components/AudioOutputModel.js" as AudioOutputModel
@@ -59,7 +60,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 📦 L3 · 子面板
     // ═══════════════════════════════════════════════════════
-    readonly property real panelOffsetY: baseUnit * 2.4       // 面板 Y 偏移（面板从顶栏向下的距离）
     readonly property real notificationPopupWidth: baseUnit * 18 // 临时通知浮窗宽度
     readonly property int notificationMaxVisible: 4              // 临时通知最多同时显示条数
 
@@ -86,13 +86,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // ═══════════════════════════════════════════════════════
     // 📊 系统状态数据
     // ═══════════════════════════════════════════════════════
-    property bool systemPanelVisible: false                 // 系统面板是否可见（用于 window.visible 绑定）
-    property bool systemPanelClosing: false                 // 系统面板“关闭动画期间”的占位可见
-    property bool trayPanelVisible: false                  // 托盘横向展开与通知历史面板统一开关
-    property real trayPanelWidth: notificationPopupWidth   // 顶部展开条与下方通知面板共享宽度
     property bool colorParseErrorLogged: false             // 动态配色解析错误只记录一次
     // 提供给子组件的显式引用（避免组件内出现 undefined / 自引用绑定）
-    property alias systemPanelCloseTimer: systemPanelCloseTimer
     property string netSSID: "loading..."                   // 网络 SSID（由 nmcli 采集）
     property string netInterface: "wlo1"                    // 网络接口名（展示用/占位；当前不随命令自动更新）
     property string networkType: "disconnected"             // ethernet / wifi / disconnected
@@ -328,14 +323,18 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
     NotificationHistoryStore {
         id: notificationHistoryStore
-        onHistoryCountChanged: {
-            if (historyCount === 0 && configRoot.trayPanelVisible)
-                configRoot.trayPanelVisible = false
+        onHistoryCleared: {
+            if (rightPanelController.page === rightPanelController.notificationsPage)
+                rightPanelController.close()
         }
-        onHistoryCleared: configRoot.trayPanelVisible = false
         onOperationFailed: (operation, message) => console.warn(
             "[NotificationHistory] " + operation + " failed: " + message
         )
+    }
+
+    RightPanelController {
+        id: rightPanelController
+        reducedMotion: Core.TopBarState.reducedMotion
     }
 
     NotificationServer {
@@ -731,13 +730,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         onTriggered: briProc.running = true // 触发一次亮度采集（brightnessctl）
     }
 
-    // 右侧控制中心关闭计时器
-    Timer {
-        id: systemPanelCloseTimer // 系统面板关闭“缓冲期”定时器
-        interval: configRoot.animSpeedNormal + 50 // 等动画结束后再清除 closing 标志
-        onTriggered: configRoot.systemPanelClosing = false // 关闭缓冲期结束
-    }
-
     // 音量反馈计时器（2秒后切回时间显示）
     Timer {
         id: volFeedbackTimer
@@ -820,54 +812,39 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     trayDirectIconLimit: configRoot.trayDirectIconLimit
                     notificationHistoryCount: notificationHistoryStore.historyCount
                     notificationSourceCounts: notificationHistoryStore.sourceCounts
-                    trayPanelExpanded: configRoot.trayPanelVisible
+                    // History 只切换壳内页面，不再把全部托盘图标向左展开；
+                    // 关闭态和打开态都维持 304px 颈部内的紧凑内容。
+                    trayPanelExpanded: false
+                    rightPanelOpen: rightPanelController.open
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
                     onSystemClicked: {
-                        console.log("[shell] systemClicked, toggling system panel") // 调试日志：记录点击
-                        configRoot.trayPanelVisible = false
-                        configRoot.systemPanelVisible = !configRoot.systemPanelVisible // 切换系统面板可见性
-                        if (configRoot.systemPanelVisible) {
+                        rightPanelController.togglePage(rightPanelController.controlsPage)
+                        if (rightPanelController.open
+                                && rightPanelController.page === rightPanelController.controlsPage) {
                             configRoot.refreshControlData()
                             configRoot.refreshDiskData()
                         }
                     }
-                    onTrayPanelToggleRequested: panelWidth => {
-                        const opening = !configRoot.trayPanelVisible
-                        configRoot.trayPanelWidth = Math.max(
-                            configRoot.notificationPopupWidth,
-                            panelWidth
-                        )
-                        configRoot.systemPanelVisible = false
-                        configRoot.trayPanelVisible = opening
+                    onTrayPanelToggleRequested: () => {
+                        rightPanelController.togglePage(rightPanelController.notificationsPage)
                     }
-                    onTrayPanelResizeRequested: panelWidth => {
-                        if (configRoot.trayPanelVisible) {
-                            configRoot.trayPanelWidth = Math.max(
-                                configRoot.notificationPopupWidth,
-                                panelWidth
-                            )
-                        }
+                    onTrayPanelCloseRequested: {
+                        if (rightPanelController.page === rightPanelController.notificationsPage)
+                            rightPanelController.close()
                     }
-                    onTrayPanelCloseRequested: configRoot.trayPanelVisible = false
                 }
             }
         }
     }
 
-    NotificationHistoryPanelHost {
-        root: configRoot
+    ScreenEdgeBorderHost {
+        shellRoot: configRoot
+    }
+
+    RightPanelHost {
+        shellRoot: configRoot
+        controller: rightPanelController
         store: notificationHistoryStore
-        open: configRoot.trayPanelVisible
-        panelWidth: configRoot.trayPanelWidth
-        // 托盘右边依次是工具组间距与电源岛，面板据此和展开托盘的右边缘对齐。
-        rightMargin: Math.max(
-            0,
-            configRoot.barMarginSide
-                - configRoot.rightIslandOffsetX
-                + configRoot.islandHeight
-                + configRoot.trayPowerGap
-        )
-        onCloseRequested: configRoot.trayPanelVisible = false
     }
 
     // ===== TEMP NOTIFICATION POPUPS =====
@@ -939,51 +916,4 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
-    // ===== SYSTEM PANEL WINDOW =====
-    Variants {
-        model: Quickshell.screens // 多屏支持：为每个 screen 创建一套“系统面板”窗口（全屏透明层 + 右侧面板）
-        delegate: Component {
-            PanelWindow {
-                id: sysPanelWindow
-                required property var modelData // Variants 委托注入：当前 screen 对象
-                screen: modelData // 将窗口绑定到当前屏幕
-                visible: configRoot.systemPanelVisible // 关闭缓冲期立刻隐藏窗口，绝不用 closing 维持全屏可见（否则吞掉全屏点击）
-                exclusiveZone: -1 // 不占用布局保留区（允许窗口覆盖全屏）
-                anchors { top: true; bottom: true; left: true; right: true } // 覆盖全屏：用于捕获“点击外部关闭”
-                color: "transparent" // 窗口透明：只显示面板本体
-
-                // 底层：点击外部关闭
-                MouseArea {
-                    z: 0 // 底层：在面板之下，用于捕获空白处点击
-                    anchors.fill: parent // 覆盖整个窗口（全屏）
-                    // 关闭缓冲期立即禁用，避免退场动画期间挡住屏幕上其他点击
-                    enabled: configRoot.systemPanelVisible
-                    onClicked: {
-                        if (configRoot.systemPanelVisible) {
-                            configRoot.systemPanelClosing = true // 进入关闭缓冲期（让动画/事件有时间完成）
-                            configRoot.systemPanelVisible = false // 关闭面板“打开态”
-                            configRoot.systemPanelCloseTimer.start() // 启动定时器：动画结束后清除 closing 标志
-                        }
-                    }
-                }
-
-                // 右侧控制中心
-                ImportedControlCenterPanel {
-                    shellRoot: configRoot
-                    open: configRoot.systemPanelVisible
-                    closing: configRoot.systemPanelClosing
-                    panelOffsetY: configRoot.panelOffsetY
-                    rightMargin: configRoot.barMarginSide
-                    backgroundColor: configRoot.zenInk
-                    surfaceColor: configRoot.zenStone
-                    elevatedColor: configRoot.zenMist
-                    borderColor: configRoot.zenMist
-                    textColor: configRoot.zenSnow
-                    mutedColor: configRoot.zenSmoke
-                    accentColor: configRoot.zenAccent
-                    dangerColor: configRoot.zenDanger
-                }
-            }
-        }
-    }
 }

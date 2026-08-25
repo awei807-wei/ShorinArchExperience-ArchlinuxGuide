@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "source": "conversation",
+  "originCommand": "direct-request",
+  "qaMode": "deep",
+  "qaFocus": [
+    "304px右岛连接颈部与560–640px面板主体比例",
+    "固定外窗、动态sizer和透明区域输入mask",
+    "宽度、高度、内容分阶段打开及反向关闭",
+    "动画中途反向与快速连续点击",
+    "Control和History常驻页面交叉过渡与有限高度调整",
+    "History 460–640px内容驱动高度和通知卡片信息层级",
+    "紧凑296×38单指示器分页条",
+    "减弱动效、QML静态门禁和实屏视觉验证"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "visualValidation": {
+      "required": true,
+      "screens": ["当前niri主屏", "1024px布局门禁", "660px最小支持宽度"],
+      "states": [
+        "Control打开与关闭",
+        "History 0条、1条、多条和滚动态",
+        "打开与关闭中途反向",
+        "Control与History快速切换",
+        "减弱动效",
+        "面板外透明区域点击"
+      ]
+    }
+  },
+  "advisor": {
+    "required": true,
+    "reason": "用户明确要求使用gpt-5.6-luna子代理并行落实独立组件。",
+    "focus": ["通知历史自适应", "紧凑分页条", "面板形状与统一参数"]
+  }
+}

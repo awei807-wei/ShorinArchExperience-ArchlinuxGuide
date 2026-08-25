@@ -42,9 +42,85 @@ QtObject {
     property int centerIslandOffsetX: 0
     // 控制：右岛水平偏移，正值向右、负值向左。
     property int rightIslandOffsetX: 0
+    // 控制：左右屏幕侧边轨道宽度，与顶部连接带保持一致。
+    readonly property int screenEdgeBorderWidth: barTopBorderWidth
+    // 控制：左右岛底边融入屏幕侧边轨道的内凹半径。
+    property int screenEdgeCornerRadius: 17
 
     // ═══════════════════════════════════════════════════════
-    // 2. 响应式切换阈值（屏幕宽度 px）
+    // 2. 右岛双页子面板（Brain_Shell 展开几何）
+    // ═══════════════════════════════════════════════════════
+
+    // 右侧 Control/History 面板的统一逻辑像素 token。这里的数值直接
+    // 用于 QML 布局，不随显示器缩放比例再次换算；旧 rightPanel* token
+    // 保留在下方，供尚未迁移的入口兼容使用。
+    property int rightPanelWidthMin: 560
+    property int rightPanelWidthMax: 640
+    property real rightPanelWidthRatio: 0.31
+
+    property int rightPanelControlHeight: 760
+    property int rightPanelHistoryMinHeight: 460
+    property int rightPanelHistoryMaxHeight: 640
+
+    property int rightPanelNeckWidth: 304
+    property int rightPanelRadius: 18
+    property int rightPanelFlare: 16
+
+    // 关闭态右岛只承载压缩状态、一个直接 Tray 项、复合入口与电源。
+    // 最坏宽度为 130 + 8 + 60 + 4 + 38 = 240px。
+    property int rightIslandMetricsWidth: 130
+    property int rightIslandDirectIconLimit: 1
+
+    property int rightPanelPaddingH: 24
+    property int rightPanelPaddingTop: 18
+    property int rightPanelGap: 14
+    property int rightPanelControlGap: 12
+
+    property int rightPanelFooterHeight: 58
+    property int rightPanelTabsWidth: 296
+    property int rightPanelTabsHeight: 38
+
+    property int notificationCardMinHeight: 88
+    property int notificationCardGap: 10
+    property int notificationCardRadius: 14
+
+    property int rightPanelControlHeaderHeight: 84
+    property int rightPanelControlToggleHeight: 100
+    property int rightPanelControlSliderHeight: 86
+    property int rightPanelControlStatsHeight: 118
+    property int rightPanelControlMediaHeight: 116
+    property int rightPanelQuickIconSize: 54
+    property int rightPanelSliderTrackHeight: 10
+    property int rightPanelSliderHandleSize: 28
+
+    // 打开/关闭分阶段时序（ms）。阶段之间的错位让面板先建立颈部，
+    // 再横向、纵向展开，最后才显示页面内容。
+    property int panelNotchOpenDuration: 140
+    property int panelWidthOpenDelay: 40
+    property int panelWidthOpenDuration: 170
+    property int panelHeightOpenDelay: 95
+    property int panelHeightOpenDuration: 240
+    property int panelContentInDelay: 180
+    property int panelContentInDuration: 150
+
+    property int panelContentOutDuration: 80
+    property int panelHeightCloseDelay: 20
+    property int panelHeightCloseDuration: 180
+    property int panelWidthCloseDelay: 70
+    property int panelWidthCloseDuration: 150
+    property int panelNotchCloseDelay: 120
+    property int panelNotchCloseDuration: 130
+
+    // 页面切换时保留两个页面实例，仅做淡入淡出、位移和有限高度调整。
+    property int panelPageOutDuration: 90
+    property int panelPageInDelay: 40
+    property int panelPageInDuration: 150
+    property int panelPageMoveDuration: 180
+    property int panelPageHeightDuration: 220
+    property int panelTabIndicatorDuration: 190
+
+    // ═══════════════════════════════════════════════════════
+    // 3. 响应式切换阈值（屏幕宽度 px）
     // ═══════════════════════════════════════════════════════
 
     // 控制：达到此宽度后显示 Tray 直接图标。
@@ -57,7 +133,7 @@ QtObject {
     property int minimumSupportedWidth: 660
 
     // ═══════════════════════════════════════════════════════
-    // 3. 左侧 Context Island
+    // 4. 左侧 Context Island
     // ═══════════════════════════════════════════════════════
 
     // 控制：Context 常规宽度（宽屏、标准屏和 1024px 档）。
@@ -145,7 +221,7 @@ QtObject {
     property int desktopContextFontSize: 7
 
     // ═══════════════════════════════════════════════════════
-    // 4. 中央 Clock Island
+    // 5. 中央 Clock Island
     // ═══════════════════════════════════════════════════════
 
     // 控制：中岛常规宽度。
@@ -184,7 +260,7 @@ QtObject {
     property real clockTimeLetterSpacing: -0.65
 
     // ═══════════════════════════════════════════════════════
-    // 5. 右侧控制中心标题栏
+    // 6. 右侧控制中心标题栏
     // ═══════════════════════════════════════════════════════
 
     // 控制：时间右侧天气文本区域宽度。
@@ -195,7 +271,7 @@ QtObject {
     property int clockWeatherFontSize: 12
 
     // ═══════════════════════════════════════════════════════
-    // 6. 右侧 Metrics 与频谱
+    // 7. 右侧 Metrics 与频谱
     // ═══════════════════════════════════════════════════════
 
     // 控制：Metrics 常规宽度。
@@ -279,7 +355,7 @@ QtObject {
     property real spectrumInactiveBarOpacity: 0.20
 
     // ═══════════════════════════════════════════════════════
-    // 7. Tray 与 Power
+    // 8. Tray 与 Power
     // ═══════════════════════════════════════════════════════
 
     // 控制：Tray 与 Power 两个表面之间的距离。

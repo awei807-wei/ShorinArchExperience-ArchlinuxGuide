@@ -24,6 +24,9 @@ Rectangle {
     property int notificationHistoryCount: 0
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
+    property bool rightPanelOpen: false
+    property bool panelNeckReducedMotion: Core.TopBarState.reducedMotion
+    property real panelNeckProgress: 0
     readonly property int trayPowerGap: Config.BarTuning.trayPowerGap
     readonly property int leftIslandOffsetX: Config.BarTuning.leftIslandOffsetX
     readonly property int centerIslandOffsetX: Config.BarTuning.centerIslandOffsetX
@@ -37,7 +40,7 @@ Rectangle {
     readonly property int islandGap: Config.BarTuning.islandGap
     readonly property int minimumSupportedWidth: Config.BarTuning.minimumSupportedWidth
     readonly property int layoutMode: width >= Config.BarTuning.fullTrayMinWidth ? 0 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4))
-    readonly property int responsiveTrayIconLimit: layoutMode <= 1 ? trayDirectIconLimit : 0
+    readonly property int responsiveTrayIconLimit: trayDirectIconLimit
     readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
     readonly property var currentScreen: panelWindow ? panelWindow.screen : null
     // Swiss industrial Bar 的稳定视觉 token；与 Matugen 动态面板强调色隔离。
@@ -63,6 +66,21 @@ Rectangle {
     readonly property real clockWidth: clockIslandItem.width
     readonly property real systemLeft: systemIslandItem.x
     readonly property real systemWidth: systemIslandItem.width
+    readonly property real naturalRightContourWidth: width - systemLeft
+    // 在极窄屏幕上以中央岛的排斥区为硬上限，避免两个轮廓相交。
+    readonly property real availableRightNeckWidth: Math.max(
+        naturalRightContourWidth,
+        width - clockRight - exclusionGap
+    )
+    readonly property real openRightContourWidth: Math.max(
+        naturalRightContourWidth,
+        Math.min(Config.BarTuning.rightPanelNeckWidth,
+                 availableRightNeckWidth)
+    )
+    readonly property real animatedRightContourWidth:
+        naturalRightContourWidth
+        + (openRightContourWidth - naturalRightContourWidth)
+            * panelNeckProgress
     readonly property real centeredClockLeft: (width - clockWidth) / 2 + centerIslandOffsetX
     readonly property real minimumClockLeft: contextRight + exclusionGap
     readonly property real maximumClockLeft: systemLeft - exclusionGap - clockWidth
@@ -72,7 +90,8 @@ Rectangle {
     readonly property real contextContourRight: contextRight + notchRadius
     readonly property real clockContourLeft: clockLeft - notchRadius
     readonly property real clockContourRight: clockRight + notchRadius
-    readonly property real systemContourLeft: systemLeft - notchRadius
+    readonly property real systemContourLeft:
+        width - animatedRightContourWidth - notchRadius
     readonly property real systemContourRight: width
     readonly property int metricsWidth: systemIslandItem.metricsWidth
     readonly property real trayWidth: systemIslandItem.trayWidth
@@ -91,6 +110,50 @@ Rectangle {
     implicitHeight: barHeight
     color: "transparent"
 
+    function syncPanelNeck() {
+        panelNeckOpenAnimation.stop()
+        panelNeckCloseAnimation.stop()
+
+        if (panelNeckReducedMotion) {
+            panelNeckProgress = rightPanelOpen ? 1 : 0
+            return
+        }
+
+        if (rightPanelOpen)
+            panelNeckOpenAnimation.restart()
+        else
+            panelNeckCloseAnimation.restart()
+    }
+
+    onRightPanelOpenChanged: syncPanelNeck()
+    onPanelNeckReducedMotionChanged: syncPanelNeck()
+    Component.onCompleted: panelNeckProgress = rightPanelOpen ? 1 : 0
+
+    NumberAnimation {
+        id: panelNeckOpenAnimation
+
+        target: bar
+        property: "panelNeckProgress"
+        to: 1
+        duration: Config.BarTuning.panelNotchOpenDuration
+        easing.type: Easing.OutCubic
+    }
+
+    SequentialAnimation {
+        id: panelNeckCloseAnimation
+
+        PauseAnimation {
+            duration: Config.BarTuning.panelNotchCloseDelay
+        }
+        NumberAnimation {
+            target: bar
+            property: "panelNeckProgress"
+            to: 0
+            duration: Config.BarTuning.panelNotchCloseDuration
+            easing.type: Easing.InCubic
+        }
+    }
+
     BarContour {
         id: barContour
 
@@ -98,7 +161,7 @@ Rectangle {
         leftWidth: bar.contextRight
         centerWidth: clockIslandItem.width
         centerOffset: bar.clockLeft - (bar.width - clockIslandItem.width) / 2
-        rightWidth: bar.width - bar.systemLeft
+        rightWidth: bar.animatedRightContourWidth
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth

@@ -20,7 +20,7 @@ Item {
     signal clicked()
 
     Layout.fillWidth: true
-    Layout.preferredHeight: 72
+    Layout.preferredHeight: Config.BarTuning.rightPanelControlToggleHeight
     opacity: root.interactive || root.active ? 1 : 0.48
     scale: mouseArea.pressed ? 0.97 : 1
 
@@ -64,9 +64,11 @@ Item {
         spacing: 12
 
         Rectangle {
-            Layout.preferredWidth: 42
-            Layout.preferredHeight: 42
-            radius: root.active ? Config.Theme.radiusMedium : 21
+            Layout.preferredWidth: Config.BarTuning.rightPanelQuickIconSize
+            Layout.preferredHeight: Config.BarTuning.rightPanelQuickIconSize
+            radius: root.active
+                ? Config.Theme.radiusMedium
+                : Config.BarTuning.rightPanelQuickIconSize / 2
             color: root.active
                 ? root.activeColor
                 : Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.07)

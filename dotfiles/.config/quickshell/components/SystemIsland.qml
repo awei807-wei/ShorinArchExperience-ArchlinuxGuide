@@ -27,10 +27,15 @@ Row {
     property color dangerColor: Config.Theme.danger
     property string monoFont: "JetBrains Mono"
     readonly property bool reducedMotion: metricsState ? metricsState.reducedMotion : false
-    readonly property bool showTray: responsiveLevel < 3
-    readonly property bool showSegments: responsiveLevel < 3
-    readonly property int metricsWidth: responsiveLevel <= 2 ? Config.BarTuning.metricsWidth : (responsiveLevel === 3 ? Config.BarTuning.metricsCompactWidth : Config.BarTuning.metricsUltraWidth)
-    readonly property int trayIconLimit: responsiveLevel <= 1 ? requestedTrayIconLimit : 0
+    // 右岛的内容预算独立于完整面板：常态保持 220–240px，
+    // 因而 304px 展开态只是一段稳定颈部，不会被业务内容反向撑宽。
+    readonly property bool showTray: true
+    readonly property bool showSegments: false
+    readonly property int metricsWidth: Config.BarTuning.rightIslandMetricsWidth
+    readonly property int trayIconLimit: Math.min(
+        requestedTrayIconLimit,
+        Config.BarTuning.rightIslandDirectIconLimit
+    )
     readonly property real trayWidth: trayItem.width
     readonly property int utilityGap: Config.BarTuning.trayPowerGap
     readonly property real contentWidth: metricsWidth + spacing
