@@ -6,6 +6,7 @@
 ## 关键文件
 - `config/BarTuning.qml`：唯一像素微调入口，集中管理三岛位置、宽度、字号、内部间距与响应式阈值。
 - `Bar.qml`：三语义区装配、稳定视觉 token 与响应式宽度预算。
+- `components/BarContour.qml`：以单个 Canvas 路径绘制全宽顶部连接带和三段反 R 角岛屿轮廓。
 - `Niri.qml`：共享 niri workspace 数据、事件流与聚焦动作。
 - `services/TopBarState.qml`：共享 CPU、MEM、NET、天气和 Cava 数据。
 - `components/ImportedControlCenterPanel.qml`：右岛当前调用的唯一控制中心，在标题栏显示时间、日期与天气，并提供网络、蓝牙、音量、亮度、系统占用和媒体控制。
@@ -16,9 +17,8 @@
 - `components/TrayItem.qml`：单个托盘图标的 hover、右键菜单、键盘焦点、单击/双击消歧、激活行为与每应用通知角标。
 - `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名，执行唯一匹配、受限 QQ 归属与稳定排序。
 - `scripts/focus-tray-item.sh`：按托盘 `id/title/tooltipTitle` 对 niri 窗口进行确定性评分和最近聚焦；通知卡片继续使用 `focus-notification-source.sh`。回归 fixture 位于 `scripts/test-focus-tray-item.sh`。
-- `bar-layout-check.qml`：2048/1280/1024/980/979/800/660 宽度的几何、阈值与退让顺序门禁。
+- `bar-layout-check.qml`：2048/1280/1024/1008/1007/800/660 宽度的几何、阈值、反 R 角排除间距与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
-- `tests/EdgeIntegratedBar.qml`、`tests/edge-integrated-preview.qml`、`tests/shell.qml`、`tests/edge-integrated-layout-check.qml`：与生产 Bar 完全隔离的 Edge-Integrated Contoured Bar 视觉原型、固定 mock 预览与 2048/1600/1280/800 布局门禁，呈现左/中/右三功能区；右侧以单一连续右岛承载 Metrics/Tray/Power，仅保留细铜色内部分隔。三岛均采用 rail-attached 下伸轮廓：约 9px 连续深色 rail，连接曲线水平 `joinWidth` 为 18–20px（仅表示水平宽度），四分之一椭圆 cubic 从 `railBottom` 延伸到 `visibleBottom`，垂直高度覆盖完整岛体下伸高度并直接接平底；不含短圆角后的垂直侧边、独立 `bottomRadius`、胶囊顶边、金色顶部描边或 literal triangle。左岛贴左边仅右转角，中岛双侧转角，右岛贴右边仅左转角。`tests/shell.qml` 是目录启动入口，指向预览文件；仅用于测试和设计验证，不是现行生产视觉契约。
 
 ## 依赖
 依赖 Quickshell 0.3、QtQuick、SystemTray；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，频谱使用 Cava，天气沿用 Waybar weather 脚本。
@@ -35,5 +35,5 @@
 - [2026-08-08] `TrayItem` 左键单击延迟消歧，双击调用独立托盘聚焦脚本，避免破坏通知卡片既有聚焦语义。
 - [2026-08-08] 托盘来源计数恢复为持久历史裁剪池；`append/count/list/clear` 均返回并更新 `sourceCounts`，QQ 仅匹配唯一空标签 `chrome_status_icon_1`，VCP tooltip 非空时不会串号。
 - [2026-08-08] 自动门禁通过：Python 通知历史、offscreen 托盘/存储/布局检查、托盘聚焦 fixture、锁屏 `qmllint` 与 `git diff --check`；真实托盘与锁屏认证仍需人工验收。
-- [2026-08-09] `tests/` Edge-Integrated Contoured Bar 原型使用固定 mock 呈现左/中/右三功能区，右侧统一为单一连续右岛并以细铜色分隔内部；它与生产 Bar 隔离，不应被视为现行生产视觉契约。
-- [2026-08-09] `tests/` 原型轮廓改为 rail-attached 下伸结构：约 9px 连续深色 rail，连接曲线水平 `joinWidth` 为 18–20px（仅表示水平宽度），四分之一椭圆 cubic 从 `railBottom` 延伸到 `visibleBottom`，垂直高度覆盖完整岛体下伸高度并直接接平底；已删除短圆角后的垂直侧边、独立 `bottomRadius`、胶囊顶边、金色顶部描边与 literal triangle。左岛贴屏幕左边且只保留右转角，中岛双侧转角，右岛贴屏幕右边且只保留左转角；响应式边界继续由 2048/1600/1280/800 门禁覆盖，全量 QML lint 与布局门禁通过，实机截图为 `/tmp/tests-full-height-corners.png`。
+- [2026-08-09] 已移除的 `tests/` Edge-Integrated 原型只验证了贴顶布局框架与连续右岛；其单段椭圆不是最终目标几何，不再是活动测试入口。
+- [2026-08-25] 生产 Bar 顶部及左右边距归零并采用 Brainitech/Brain_Shell 的 `40px` 高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。全宽单路径避免接缝；System 的 Metrics/Tray/Power 共用连续外表面，Tray 展开面仍保持独立背景。

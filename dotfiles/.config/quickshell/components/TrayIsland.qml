@@ -26,6 +26,7 @@ Rectangle {
     property int notificationCount: 0
     property var notificationSourceCounts: []
     property bool expanded: false
+    property bool integratedSurface: false
     property bool reducedMotion: false
     // QAbstractItemModel/UntypedObjectModel 保持同一个对象引用，单靠
     // `trayItems` 绑定不会在注册/注销时重算排序；该版本号显式驱动重排。
@@ -101,9 +102,9 @@ Rectangle {
         + horizontalPadding
     implicitHeight: Config.BarTuning.islandHeight
     width: implicitWidth
-    color: zenInk
-    border.color: zenMist
-    border.width: Config.BarTuning.islandBorderWidth
+    color: integratedSurface ? "transparent" : zenInk
+    border.color: integratedSurface ? "transparent" : zenMist
+    border.width: integratedSurface ? 0 : Config.BarTuning.islandBorderWidth
     radius: Config.Theme.radiusMedium
     clip: false
 
@@ -132,6 +133,7 @@ Rectangle {
     }
 
     Rectangle {
+        visible: !trayIsland.integratedSurface
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right

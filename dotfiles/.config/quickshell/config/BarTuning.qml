@@ -12,20 +12,30 @@ QtObject {
     // 1. 顶栏整体位置与岛面外框
     // ═══════════════════════════════════════════════════════
 
-    // 控制：所有岛的高度，同时决定顶栏窗口高度。
+    // 控制：所有岛内部内容区域的高度。
     property int islandHeight: 40
-    // 控制：所有岛的圆角半径。
+    // 控制：顶部连接带与岛体共同占用的顶栏窗口总高度。
+    property int barHeight: 40
+    // 控制：从屏幕顶边向下连续铺满的连接带厚度。
+    property int barTopBorderWidth: 6
+    // 控制：岛屿上部内凹与下部外凸圆角的共同半径。
+    property int barNotchRadius: 15
+    // 控制：相邻岛主体之间的最小间距，给两侧反 R 角各留出 15px。
+    property int barExclusionGap: 34
+    // 控制：内容在贴顶岛体内的垂直位置。
+    property int islandContentTop: 0
+    // 控制：岛内 hover 等局部反馈的圆角半径。
     property int islandRadius: 6
     // 控制：岛面外边框宽度。
     property int islandBorderWidth: 1
     // 控制：岛内顶部白色高光线高度。
     property int islandTopHighlightHeight: 1
-    // 控制：三个主岛之间要求保留的最小安全间距。
+    // 控制：三个主岛内容之间的基础交互安全间距。
     property int islandGap: 8
     // 控制：整条 Bar 距屏幕顶部的位置。
-    property int barMarginTop: 4
+    property int barMarginTop: 0
     // 控制：左岛和右岛距屏幕左右边缘的位置。
-    property int barMarginSide: 4
+    property int barMarginSide: 0
     // 控制：左岛水平偏移，正值向右、负值向左。
     property int leftIslandOffsetX: 0
     // 控制：中岛相对屏幕中心偏移，正值向右、负值向左。

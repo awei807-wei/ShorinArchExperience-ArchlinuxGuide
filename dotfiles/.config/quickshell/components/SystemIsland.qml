@@ -12,6 +12,7 @@ Row {
     property int notificationHistoryCount: 0
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
+    property bool integratedSurface: false
     property color metricsSurface: Config.Theme.surface
     property color utilitySurface: Config.Theme.surface
     property color hoverSurface: Config.Theme.surfaceContainer
@@ -58,10 +59,10 @@ Row {
         spectrumActive: systemIsland.metricsState ? systemIsland.metricsState.cavaActive : false
         showSegments: systemIsland.showSegments
         reducedMotion: systemIsland.reducedMotion
-        surfaceColor: systemIsland.metricsSurface
+        surfaceColor: systemIsland.integratedSurface ? "transparent" : systemIsland.metricsSurface
         hoverColor: systemIsland.hoverSurface
-        borderColor: systemIsland.borderColor
-        highlightColor: systemIsland.highlightColor
+        borderColor: systemIsland.integratedSurface ? "transparent" : systemIsland.borderColor
+        highlightColor: systemIsland.integratedSurface ? "transparent" : systemIsland.highlightColor
         textSoft: systemIsland.textSoft
         textDim: systemIsland.textDim
         lineSoft: systemIsland.lineSoft
@@ -99,6 +100,7 @@ Row {
             expanded: systemIsland.trayPanelExpanded
             reducedMotion: systemIsland.reducedMotion
             highlightColor: systemIsland.highlightColor
+            integratedSurface: systemIsland.integratedSurface
             monoFont: systemIsland.monoFont
             onToggleRequested: (panelWidth) => {
                 return systemIsland.toggleTrayPanel(panelWidth);
@@ -117,10 +119,10 @@ Row {
             width: Config.BarTuning.powerIslandWidth
             height: Config.BarTuning.islandHeight
             reducedMotion: systemIsland.reducedMotion
-            surfaceColor: systemIsland.utilitySurface
+            surfaceColor: systemIsland.integratedSurface ? "transparent" : systemIsland.utilitySurface
             hoverColor: Config.Theme.surfaceContainer
-            borderColor: systemIsland.borderColor
-            highlightColor: systemIsland.highlightColor
+            borderColor: systemIsland.integratedSurface ? "transparent" : systemIsland.borderColor
+            highlightColor: systemIsland.integratedSurface ? "transparent" : systemIsland.highlightColor
             iconColor: systemIsland.textDim
             iconHoverColor: systemIsland.textSoft
         }

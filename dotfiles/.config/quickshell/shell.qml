@@ -47,6 +47,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     // 所有 Bar 位置、宽度、字号与内部间距统一在 config/BarTuning.qml 手动调整。
     // ═══════════════════════════════════════════════════════
     readonly property real islandHeight: Config.BarTuning.islandHeight
+    readonly property real barHeight: Config.BarTuning.barHeight
     readonly property real trayPowerGap: Config.BarTuning.trayPowerGap
     readonly property int trayDirectIconLimit: 3              // 折叠态直接显示的托盘应用图标上限
     readonly property real barMarginTop: Config.BarTuning.barMarginTop
@@ -796,7 +797,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     left: true // 贴左
                     right: true // 贴右（形成整条顶栏）
                 }
-                implicitHeight: configRoot.islandHeight // 顶栏高度（与岛屿高度一致）
+                implicitHeight: configRoot.barHeight // 顶部连接带与下伸岛体共同占用的顶栏高度
                 margins.top: configRoot.barMarginTop // 距离屏幕顶部的留白
                 margins.left: configRoot.barMarginSide // 左边距
                 margins.right: configRoot.barMarginSide // 右边距
@@ -880,7 +881,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 visible: configRoot.activeNotifications.length > 0
                 exclusiveZone: -1
                 anchors { top: true; right: true }
-                margins.top: configRoot.barMarginTop + configRoot.islandHeight + configRoot.baseUnit * 0.5
+                margins.top: configRoot.barMarginTop + configRoot.barHeight + configRoot.baseUnit * 0.5
                 margins.right: configRoot.barMarginSide + configRoot.baseUnit * 0.4
                 implicitWidth: configRoot.notificationPopupWidth
                 implicitHeight: notificationColumn.implicitHeight

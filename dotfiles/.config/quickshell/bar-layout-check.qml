@@ -78,6 +78,12 @@ ShellRoot {
         const mode = expectedLayoutMode(target.width);
         expectEqual(target.layoutMode, mode, label + " layout mode");
         expectEqual(target.islandHeight, Config.BarTuning.islandHeight, label + " island height");
+        expectEqual(target.barHeight, Config.BarTuning.barHeight, label + " bar height");
+        expectEqual(target.height, Config.BarTuning.barHeight, label + " rendered bar height");
+        expectEqual(target.topBorderWidth, Config.BarTuning.barTopBorderWidth, label + " top border width");
+        expectEqual(target.notchRadius, Config.BarTuning.barNotchRadius, label + " notch radius");
+        expectEqual(target.exclusionGap, Config.BarTuning.barExclusionGap, label + " exclusion gap");
+        expectEqual(target.islandContentTop, Config.BarTuning.islandContentTop, label + " content top");
         expectEqual(target.actualTrayIconLimit, mode <= 1 ? target.trayDirectIconLimit : 0, label + " direct tray icon limit");
         expectEqual(target.trayVisible, mode < 3, label + " tray visibility");
         expectEqual(target.metricDetailsVisible, mode < 3, label + " metric detail visibility");
@@ -93,6 +99,33 @@ ShellRoot {
         }
         expectEqual(target.systemSpacing, Config.BarTuning.metricsUtilityGap, label + " metrics/utility gap");
         expectEqual(target.utilitySpacing, Config.BarTuning.trayPowerGap, label + " tray/power gap");
+        expectEqual(target.contextContourLeft, 0,
+                    label + " left contour flush edge");
+        expectEqual(target.contextContourRight,
+                    target.contextRight + target.notchRadius,
+                    label + " left contour right flare");
+        expectEqual(target.clockContourLeft,
+                    target.clockLeft - target.notchRadius,
+                    label + " clock contour left flare");
+        expectEqual(target.clockContourRight,
+                    target.clockRight + target.notchRadius,
+                    label + " clock contour right flare");
+        expectEqual(target.systemContourLeft,
+                    target.systemLeft - target.notchRadius,
+                    label + " system contour left flare");
+        expectEqual(target.systemContourRight,
+                    target.width,
+                    label + " system contour flush edge");
+        expect(target.contextContourRight <= target.clockContourLeft,
+               label + " left/center contour overlap: "
+               + target.contextContourRight + " > " + target.clockContourLeft);
+        expect(target.clockContourRight <= target.systemContourLeft,
+               label + " center/right contour overlap: "
+               + target.clockContourRight + " > " + target.systemContourLeft);
+        expect(target.contextRight + target.exclusionGap <= target.clockLeft,
+               label + " left/center exclusion gap");
+        expect(target.clockRight + target.exclusionGap <= target.systemLeft,
+               label + " center/right exclusion gap");
         expectNoOverlap(target, label);
     }
 
@@ -101,6 +134,20 @@ ShellRoot {
         expect(Config.BarTuning.traySurfaceMinWidth > Config.BarTuning.compactMinWidth, "tray-surface threshold must exceed compact threshold");
         expect(Config.BarTuning.compactMinWidth > Config.BarTuning.minimumSupportedWidth, "compact threshold must exceed minimum supported width");
         expect(Config.BarTuning.trayIconSize <= Config.BarTuning.trayItemWidth, "tray icon must fit inside its slot");
+        expectEqual(Config.BarTuning.barMarginTop, 0, "bar touches screen top");
+        expectEqual(Config.BarTuning.barMarginSide, 0, "bar touches both screen sides");
+        expect(Config.BarTuning.barTopBorderWidth > 0,
+               "top border must remain visible");
+        expect(Config.BarTuning.barTopBorderWidth + 2 * Config.BarTuning.barNotchRadius
+               <= Config.BarTuning.barHeight,
+               "paired notch radii must fit inside bar height");
+        expect(Config.BarTuning.barNotchRadius > 0,
+               "reverse contour must have a positive radius");
+        expect(Config.BarTuning.barExclusionGap >= 2 * Config.BarTuning.barNotchRadius,
+               "exclusion gap must contain both reverse corners");
+        expect(Config.BarTuning.islandContentTop + Config.BarTuning.islandHeight
+               <= Config.BarTuning.barHeight,
+               "island content must fit inside bar window");
         checkBar(wide, "2048");
         checkBar(standard, "1280");
         checkBar(compact, "1024");
@@ -121,13 +168,13 @@ ShellRoot {
 
     Item {
         width: 2048
-        height: (Config.BarTuning.islandHeight + 4) * 7
+        height: (Config.BarTuning.barHeight + 4) * 7
 
         Bar {
             id: wide
 
             width: 2048
-            height: Config.BarTuning.islandHeight
+            height: Config.BarTuning.barHeight
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -136,8 +183,8 @@ ShellRoot {
             id: standard
 
             width: 1280
-            height: Config.BarTuning.islandHeight
-            y: Config.BarTuning.islandHeight + 4
+            height: Config.BarTuning.barHeight
+            y: Config.BarTuning.barHeight + 4
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -146,8 +193,8 @@ ShellRoot {
             id: compact
 
             width: 1024
-            height: Config.BarTuning.islandHeight
-            y: (Config.BarTuning.islandHeight + 4) * 2
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 2
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -156,8 +203,8 @@ ShellRoot {
             id: narrow
 
             width: 800
-            height: Config.BarTuning.islandHeight
-            y: (Config.BarTuning.islandHeight + 4) * 3
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 3
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -166,8 +213,8 @@ ShellRoot {
             id: ultra
 
             width: Config.BarTuning.minimumSupportedWidth
-            height: Config.BarTuning.islandHeight
-            y: (Config.BarTuning.islandHeight + 4) * 4
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 4
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -176,8 +223,8 @@ ShellRoot {
             id: modeTwoEdge
 
             width: Config.BarTuning.traySurfaceMinWidth
-            height: Config.BarTuning.islandHeight
-            y: (Config.BarTuning.islandHeight + 4) * 5
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 5
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }
@@ -186,8 +233,8 @@ ShellRoot {
             id: modeThreeEdge
 
             width: Config.BarTuning.traySurfaceMinWidth - 1
-            height: Config.BarTuning.islandHeight
-            y: (Config.BarTuning.islandHeight + 4) * 6
+            height: Config.BarTuning.barHeight
+            y: (Config.BarTuning.barHeight + 4) * 6
             trayDirectIconLimit: 3
             notificationHistoryCount: 1
         }

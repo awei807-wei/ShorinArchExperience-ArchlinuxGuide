@@ -29,6 +29,11 @@ Rectangle {
     readonly property int centerIslandOffsetX: Config.BarTuning.centerIslandOffsetX
     readonly property int rightIslandOffsetX: Config.BarTuning.rightIslandOffsetX
     readonly property int islandHeight: Config.BarTuning.islandHeight
+    readonly property int barHeight: Config.BarTuning.barHeight
+    readonly property int topBorderWidth: Config.BarTuning.barTopBorderWidth
+    readonly property int notchRadius: Config.BarTuning.barNotchRadius
+    readonly property int exclusionGap: Config.BarTuning.barExclusionGap
+    readonly property int islandContentTop: Config.BarTuning.islandContentTop
     readonly property int islandGap: Config.BarTuning.islandGap
     readonly property int minimumSupportedWidth: Config.BarTuning.minimumSupportedWidth
     readonly property int layoutMode: width >= Config.BarTuning.fullTrayMinWidth ? 0 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4))
@@ -54,10 +59,21 @@ Rectangle {
     readonly property real contextRight: contextIslandItem.x + contextIslandItem.width
     readonly property real contextWidth: contextIslandItem.width
     readonly property real clockLeft: clockIslandItem.x
-    readonly property real clockRight: clockIslandItem.x + clockIslandItem.width
+    readonly property real clockRight: clockLeft + clockIslandItem.width
     readonly property real clockWidth: clockIslandItem.width
     readonly property real systemLeft: systemIslandItem.x
     readonly property real systemWidth: systemIslandItem.width
+    readonly property real centeredClockLeft: (width - clockWidth) / 2 + centerIslandOffsetX
+    readonly property real minimumClockLeft: contextRight + exclusionGap
+    readonly property real maximumClockLeft: systemLeft - exclusionGap - clockWidth
+    readonly property real resolvedClockLeft: Math.max(minimumClockLeft,
+                                                       Math.min(centeredClockLeft, maximumClockLeft))
+    readonly property real contextContourLeft: 0
+    readonly property real contextContourRight: contextRight + notchRadius
+    readonly property real clockContourLeft: clockLeft - notchRadius
+    readonly property real clockContourRight: clockRight + notchRadius
+    readonly property real systemContourLeft: systemLeft - notchRadius
+    readonly property real systemContourRight: width
     readonly property int metricsWidth: systemIslandItem.metricsWidth
     readonly property real trayWidth: systemIslandItem.trayWidth
     readonly property int systemSpacing: systemIslandItem.spacing
@@ -72,24 +88,37 @@ Rectangle {
     signal trayPanelResizeRequested(real panelWidth)
     signal trayPanelCloseRequested()
 
-    implicitHeight: islandHeight
+    implicitHeight: barHeight
     color: "transparent"
+
+    BarContour {
+        id: barContour
+
+        anchors.fill: parent
+        leftWidth: bar.contextRight
+        centerWidth: clockIslandItem.width
+        centerOffset: bar.clockLeft - (bar.width - clockIslandItem.width) / 2
+        rightWidth: bar.width - bar.systemLeft
+        notchHeight: bar.barHeight
+        notchRadius: bar.notchRadius
+        topBorderWidth: bar.topBorderWidth
+        surfaceColor: bar.panelSurface
+    }
 
     ContextIsland {
         id: contextIslandItem
 
+        x: bar.leftIslandOffsetX
+        y: bar.islandContentTop
         width: implicitWidth
         height: bar.islandHeight
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.leftMargin: bar.leftIslandOffsetX
         contextState: Core.TopBarState
         niriState: Core.Niri
         screen: bar.currentScreen
         responsiveLevel: bar.layoutMode
-        surfaceColor: bar.panelSurface
-        borderColor: bar.panelBorder
-        highlightColor: bar.panelHighlight
+        surfaceColor: "transparent"
+        borderColor: "transparent"
+        highlightColor: "transparent"
         textColor: bar.textPrimary
         textSoft: bar.textSecondary
         textDim: bar.textDim
@@ -103,17 +132,16 @@ Rectangle {
     ClockIsland {
         id: clockIslandItem
 
+        x: bar.resolvedClockLeft
+        y: bar.islandContentTop
         width: implicitWidth
         height: bar.islandHeight
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: bar.centerIslandOffsetX
         responsiveLevel: bar.layoutMode
         reducedMotion: Core.TopBarState.reducedMotion
-        surfaceColor: bar.panelSurface
+        surfaceColor: "transparent"
         hoverColor: bar.hoverSurface
-        borderColor: bar.panelBorder
-        highlightColor: bar.panelHighlight
+        borderColor: "transparent"
+        highlightColor: "transparent"
         textColor: bar.textPrimary
         textSoft: bar.textSecondary
         textDim: bar.textDim
@@ -125,11 +153,11 @@ Rectangle {
     SystemIsland {
         id: systemIslandItem
 
-        width: contentWidth
-        height: bar.islandHeight
-        anchors.top: parent.top
         anchors.right: parent.right
         anchors.rightMargin: -bar.rightIslandOffsetX
+        y: bar.islandContentTop
+        width: contentWidth
+        height: bar.islandHeight
         metricsState: Core.TopBarState
         panelWindow: bar.panelWindow
         responsiveLevel: bar.layoutMode
@@ -138,6 +166,7 @@ Rectangle {
         notificationHistoryCount: bar.notificationHistoryCount
         notificationSourceCounts: bar.notificationSourceCounts
         trayPanelExpanded: bar.trayPanelExpanded
+        integratedSurface: true
         metricsSurface: bar.secondarySurface
         utilitySurface: bar.utilitySurface
         hoverSurface: bar.hoverSurface
@@ -160,5 +189,4 @@ Rectangle {
         }
         onCloseTrayPanel: bar.trayPanelCloseRequested()
     }
-
 }

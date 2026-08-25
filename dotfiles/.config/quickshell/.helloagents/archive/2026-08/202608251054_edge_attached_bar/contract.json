@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "顶部和左右窗口边距、6px 连接带首行像素与屏幕三边连接",
+    "三段上内凹/下外凸成对圆角的方向、切线连续性与抗锯齿接缝",
+    "2048、1280、1024、1008、1007、800、660px 响应式主体与34px排除间距",
+    "Metrics、Tray、Power 连续表面与 Tray 展开回归",
+    "真实 niri 会话加载日志和截图"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202608251054_edge_attached_bar/plan.md",
+      ".helloagents/DESIGN.md",
+      "Brainitech/Brain_Shell 的 SeamlessBarShape.qml 与 Metrics.qml",
+      "用户提供的参考截图"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "用户提供的目标仓库源码与现有设计系统已确定视觉方向。",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "本次直接改变常驻桌面 Bar 的外轮廓和屏幕边缘连接，静态检查无法验证接缝与真实合成效果。",
+      "screens": [
+        "当前 2048px niri 主屏",
+        "1280px 布局门禁",
+        "1024px 布局门禁",
+        "800px 布局门禁",
+        "660px 最小支持宽度"
+      ],
+      "states": [
+        "Context / Clock / System 默认态",
+        "Metrics 与 Power hover",
+        "Tray 折叠与展开",
+        "透明间隔和顶部连接带接缝"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "范围明确且已有代码与实屏验证链路，不需要额外外部决策。",
+    "focus": [],
+    "preferredSources": []
+  }
+}

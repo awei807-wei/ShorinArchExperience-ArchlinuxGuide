@@ -1,7 +1,8 @@
 # 变更日志
 
-## [未发布] - 2026-08-09
+## [未发布] - 2026-08-25
 ### 新增
+- **[Bar]**: 新增生产级 `BarContour`，以单个 Qt Quick Canvas 路径绘制全宽顶部连接带与左/中/右三段无接缝反 R 角轮廓。
 - **[控制中心]**: 音量卡片新增 PipeWire 音频输出设备选择，可过滤硬件 sink、稳定显示当前默认输出并写入首选默认设备。
 - **[控制中心]**: 新增音频输出模型与卡片展开交互的隔离自动化检查。
 - **[Tray]**: 新增基于持久通知历史来源计数的托盘稳定排序与每应用危险色角标，计数相同时保持 SystemTray 注册顺序；历史总计与应用角标共享同一裁剪后来源池。
@@ -10,8 +11,9 @@
 - **[Bar 测试原型]**: 新增与生产 Bar 隔离的 `tests/` Edge-Integrated Contoured Bar 预览，包含左/中/右三功能区，右侧以单一连续右岛承载 Metrics/Tray/Power，并通过细铜色分隔与固定 mock 保持信息层级，不接入生产服务。
 
 ### 变更
+- **[Bar]**: 顶部和左右窗口边距由 `4px` 归零；按 Brainitech/Brain_Shell 源码采用 `40px` 总高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。System 的 Metrics/Tray/Power 改为共享连续右区外表面，内部交互与 Tray 展开面保持独立反馈。
 - **[控制中心]**: 设备候选改为在音量卡片内部向下展开，文字整行居中、当前项勾选贴右，选择后自动收起且不覆盖亮度卡片。
-- **[Bar 测试原型]**: 将 Metrics/Tray/Power 收敛为单一连续右岛，并把三岛轮廓改为 rail-attached 下伸结构：约 9px 连续深色 rail，rail 下方连接曲线的水平 `joinWidth` 为 18–20px（仅表示水平宽度），使用四分之一椭圆 cubic 从 `railBottom` 延伸到 `visibleBottom`，垂直高度覆盖完整岛体下伸高度并直接接平底；已移除短圆角后的垂直侧边和独立 `bottomRadius`，不再使用独立胶囊顶边、金色顶部描边或 literal triangle。左岛贴屏幕左边且只保留右转角，中岛保留双侧转角，右岛贴屏幕右边且只保留左转角；本轮仅修改 `tests` 原型，不改生产 Bar。
+- **[Bar 测试原型]**: 旧 Edge-Integrated 原型用于验证贴顶装配和连续右岛；其整段四分之一椭圆已由 Brain_Shell 源码确认的成对圆角拓扑替代，且删除中的 `tests/` 不再作为生产门禁。
 - **[Tray]**: 折叠宽度按实际应用数动态收缩，最多显示 3 个直接应用图标；身份字段延迟更新时通过 revision 触发重新排序。
 - **[锁屏]**: PAM 用户从运行时用户名和环境变量解析，缺少用户名时显式报告认证失败，不再回退到硬编码用户。
 - **[Tray]**: 左键单击延迟到系统双击间隔后激活，双击改为调用独立托盘窗口聚焦脚本；右键菜单不会触发激活或聚焦。
@@ -23,6 +25,8 @@
 - **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
 
 ### 验证
+- 生产 `BarContour` 与 `Bar.qml` QML lint 通过；2048/1280/1024/1008/1007/800/660px Bar 布局、Tray 状态、Tray 交互与 `git diff --check` 通过；当前 3840×2160、1.5× niri 实屏热重载无新增 Bar 绑定错误，截图确认顶部间隔为零、成对反 R 角方向正确且连接带无接缝。
+- `qmllint` 对既有复杂 `TrayIsland.qml` 仍以 `255` 且无诊断文本退出；未将其记为静态检查通过，改由真实 Quickshell 热重载、Tray 状态和 Tray 交互运行门禁覆盖本次集成表面变更。
 - 音频输出模型、音量卡片展开/收起、相关 QML lint、Bar/Tray/通知/锁屏离屏门禁、通知历史 11 项、托盘聚焦 fixture、Edge-Integrated 布局与 `git diff --check` 通过；真实 Wayland 会话视觉验收通过。
 - 自动门禁通过：Python 通知历史 11 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
 - 锁屏布局门禁通过：`power-controls-check.qml` 在不启动 `WlSessionLock`、`Process` 或系统命令的前提下验证两个圆按钮尺寸/垂直中心、确定性 glyph 字体、图标填充对齐和展开菜单锚定；高 DPI/真实锁屏墨迹中心仍需人工视觉复验。
