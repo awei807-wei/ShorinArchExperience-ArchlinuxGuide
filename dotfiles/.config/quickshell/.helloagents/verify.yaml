@@ -22,8 +22,13 @@ commands:
   - qmllint -I /usr/lib/qt6/qml components/RightPanelPageSwitcher.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryPage.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryHeader.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryList.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryView.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryEmptyState.qml
   - qmllint -I /usr/lib/qt6/qml components/NotificationHistoryStatusState.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationSourceRail.qml
+  - qmllint -I /usr/lib/qt6/qml components/NotificationSourceTab.qml
+  - qmllint -I /usr/lib/qt6/qml components/TrayNotificationModel.js
   - qmllint -I /usr/lib/qt6/qml components/UnifiedRightPanel.qml
   - qmllint -I /usr/lib/qt6/qml components/RightPanelHost.qml
   - quickshell --no-color -p audio-output-model-check.qml
@@ -32,6 +37,8 @@ commands:
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-state-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-animation-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-panel-state-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-source-model-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-source-icon-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-state-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-interaction-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-store-check.qml

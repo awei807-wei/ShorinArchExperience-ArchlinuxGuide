@@ -7,6 +7,9 @@
 - **[右侧子面板]**: 新增状态与动画门禁，覆盖同入口开关、固定高度跨页切换、双向卡片位移与缩放、退场中反向重开、减弱动效与统一尺寸 token。
 - **[通知]**: 新增固定视口的 History 页面；通知卡片最小高 `88px`、图标区 `36×36px`，隐藏空正文、desktopEntry 与内部 ID 等调试字段，内容溢出时由列表内部滚动。
 - **[通知]**: 将 History 标题、空态和加载/错误状态拆为独立组件，页面主文件保持列表、持久化状态与滚动职责。
+- **[通知]**: 新增按 Desktop Entry / 应用名别名聚合的历史来源模型与固定 `ALL` 的横向应用筛选栏；托盘来源复用顶栏排序，普通来源按最近通知排序。
+- **[通知]**: 托盘来源支持左键筛选和原生右键菜单，菜单沿 `RightPanelHost → UnifiedRightPanel → History` 传入当前 `PanelWindow` 作为 `QsMenuAnchor` 锚点。
+- **[通知测试]**: 新增来源模型与图标显示门禁，覆盖别名与同托盘合并、排序、歧义保护、QQ 兜底、托盘生命周期、菜单归属、筛选选择恢复及 URL 图标/首字母互斥显示。
 - **[控制中心]**: 音量卡片新增 PipeWire 音频输出设备选择，可过滤硬件 sink、稳定显示当前默认输出并写入首选默认设备。
 - **[控制中心]**: 新增音频输出模型与卡片展开交互的隔离自动化检查。
 - **[Tray]**: 新增基于持久通知历史来源计数的托盘稳定排序与每应用危险色角标，计数相同时保持 SystemTray 注册顺序；历史总计与应用角标共享同一裁剪后来源池。
@@ -29,6 +32,8 @@
 - **[通知]**: 修复同 ID 通知替换后旧对象 `closed/expire` 误删新对象的活动队列竞态，清理改按 QObject identity。
 - **[通知]**: 替换通知进入时先跨应用清理旧分组，旧对象关闭不会删除新应用分组；键盘激活、隐藏和销毁托盘项会取消待执行单击计时器。
 - **[通知]**: 恢复历史存储 `append/count/list/clear` 的 `sourceCounts` 响应并贯穿 Bar；来源按规范化身份聚合，QQ 仅在唯一空标签 `chrome_status_icon_1` 候选下归属，避免与 VCP 串号。
+- **[通知]**: 历史快照新增向后兼容的可选 `appIcon` 字段并限制为 `512` 字符，不提升 schema 版本；来源图标依次使用实时托盘图标、最新持久图标、主题图标和首字母。
+- **[通知]**: History 标题显示当前过滤数量与来源副标题，清理动作明确为全量 `Clear all`；来源刷新优先按键和别名保留当前选择，来源消失才回退 `ALL`。
 
 ### 修复
 - **[右侧子面板]**: 修复宽、高与 Bar 错峰时，连体轮廓在 `16–52px` 高度内退化成凹口的问题。外壳改为固定最终尺寸单 Canvas，viewport 在 surface 允许时从 `54px` 安全高度揭示；同时捕获触发屏幕的右岛起始/目标颈宽并只平移固定 Canvas，使常规与窄屏 flare 都和 Bar 逐帧对齐，其他屏幕不再误展开。
@@ -38,19 +43,21 @@
 - **[右侧子面板]**: 移除覆盖右岛下半部的 `304×16px` 重复颈部填充；主体从 Bar `40px` 底边开始，仅在颈部边界左右各保留 `16px` 衔接区，分别形成反 R 弧并消除旧外凸角的月牙缺口。History 打开时不再展开全部 Tray 图标。
 - **[右侧子面板]**: 页签底部增加完整 flare 安全区，选中背景不再越过面板左下圆角；外部点击层和面板合并为一个窗口，单次点击即可关闭。
 - **[Tray]**: 焦点项隐藏时不再动态关闭 `activeFocusOnTab`，消除页面展开/收起期间的 Qt 焦点警告。
+- **[通知]**: 修复 `Image.source` 为 URL 时使用 `.length` 导致已加载图标仍被首字母覆盖的问题，History 来源栏与通知卡片现在正确显示 QQ 实时托盘图标和 Kitty 持久图标。
 - **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
 
 ### 验证
 - 右面板动画门禁覆盖 `0/5/35/75/100%` 共享进度、`54px` 安全高度、固定 Canvas 尺寸/半径、常规与受限目标下的 Bar/flare 逐帧同宽、关闭中跨屏从 `0` 重播、退场 mask、同屏半途反向及减弱动效；560px 最小面板在高对比背景下完成 1×/1.5× 中间帧人工对照，未再出现退化凹口或透明度叠接。
 - History↔Control 回归新增外壳/裁剪高度不变、双向卡片位移、缩放端点与就位后输入断言；`right-panel-animation-check.qml`、相关 `qmllint`、高对比背景下的切换中间帧截图与 `git diff --check` 通过。
 - 生产 `BarContour` 与 `Bar.qml` QML lint 通过；2048/1280/1024/1008/1007/800/660px Bar 布局、Tray 状态、Tray 交互与 `git diff --check` 通过；当前 3840×2160、1.5× niri 实屏热重载无新增 Bar 绑定错误，截图确认顶部间隔为零、成对反 R 角方向正确且连接带无接缝。
-- 统一右侧面板及拆分后的 Control/History 组件静态检查通过；右面板状态、分阶段动画、Control 默认内容完整容纳、通知页状态、Bar 多宽度布局、Tray 状态/交互、音频输出模型/选择、通知历史 11 项、托盘聚焦 fixture 与 `git diff --check` 通过。当前 Wayland 会话连续热重载成功且无新增绑定错误。
+- 统一右侧面板及拆分后的 Control/History 组件静态检查通过；右面板状态、分阶段动画、Control 默认内容完整容纳、通知页状态、Bar 多宽度布局、Tray 状态/交互、音频输出模型/选择、通知历史 13 项、托盘聚焦 fixture 与 `git diff --check` 通过。当前 Wayland 会话连续热重载成功且无新增绑定错误。
 - `qmllint` 对既有复杂 `TrayIsland.qml` 仍以 `255` 且无诊断文本退出；未将其记为静态检查通过，改由真实 Quickshell 热重载、Tray 状态和 Tray 交互运行门禁覆盖本次集成表面变更。
-- 音频输出模型、音量卡片展开/收起、相关 QML lint、Bar/Tray/通知/锁屏离屏门禁、通知历史 11 项、托盘聚焦 fixture、Edge-Integrated 布局与 `git diff --check` 通过；真实 Wayland 会话视觉验收通过。
-- 自动门禁通过：Python 通知历史 11 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
+- 音频输出模型、音量卡片展开/收起、相关 QML lint、Bar/Tray/通知/锁屏离屏门禁、通知历史 13 项、托盘聚焦 fixture、Edge-Integrated 布局与 `git diff --check` 通过；真实 Wayland 会话视觉验收通过。
+- 自动门禁通过：Python 通知历史 13 项、offscreen 托盘交互/托盘状态（含 Fcitx/VCP/飞书/QQ 来源、QQ 歧义拒绝与清空复位）/存储/布局检查、托盘聚焦匹配 fixture、`qmllint lockscreen/shell.qml` 与 `git diff --check`。
+- 通知来源模型、筛选保留/回退和 `appIcon` 新旧记录往返门禁通过；当前 niri 实屏确认 QQ 使用实时企鹅图标、Kitty 使用持久图标，QQ 来源右键打开其真实“显示 / 状态 / 退出 QQ / 关于”菜单且保持当前筛选不跳动。
 - 锁屏布局门禁通过：`power-controls-check.qml` 在不启动 `WlSessionLock`、`Process` 或系统命令的前提下验证两个圆按钮尺寸/垂直中心、确定性 glyph 字体、图标填充对齐和展开菜单锚定；高 DPI/真实锁屏墨迹中心仍需人工视觉复验。
 - Edge-Integrated Bar 原型门禁通过：固定 mock 下覆盖 2048/1600/1280/800 宽度，验证左/中/右三功能区、连续右岛与 full-height rail-attached 下伸轮廓的边界及内容不溢出；全量 QML lint 与布局门禁通过，实机截图记录于 `/tmp/tests-full-height-corners.png`，预览不会连接生产采集链路。
-- 真实托盘双击聚焦、通知角标/排序、右键菜单、键盘焦点以及错误密码/正确密码解锁仍待人工验收。
+- 真实顶栏托盘双击聚焦、通知角标/排序、键盘焦点以及错误密码/正确密码解锁仍待人工验收；History 来源栏的 QQ 原生右键菜单已完成实机验收。
 
 ## [0.1.0] - 2026-07-28
 ### 新增

@@ -90,38 +90,227 @@ function uniqueQqFallbackMatch(items, desktopEntry, appName) {
     return matches.length === 1 ? matches[0] : -1
 }
 
+/** 使用顶栏同一套身份与歧义规则，返回来源对应的唯一托盘索引。 */
+function trayIndexForSource(items, desktopEntry, appName) {
+    const baseItems = itemArray(items)
+    const hasDesktopEntry = validSourceIdentity(desktopEntry)
+    let matchedIndex = uniqueDesktopMatch(baseItems, desktopEntry)
+
+    // Desktop Entry 有多个候选时，不允许退化到更宽松的 appName 匹配。
+    if (hasDesktopEntry && matchedIndex < 0) {
+        const identity = normalizedIdentity(desktopEntry)
+        const matches = baseItems.filter(item =>
+            normalizedIdentity(itemIdentity(item)) === identity)
+        if (matches.length > 1)
+            return -1
+    }
+    if (matchedIndex < 0)
+        matchedIndex = uniqueApplicationMatch(baseItems, appName)
+    if (matchedIndex < 0)
+        matchedIndex = uniqueQqFallbackMatch(baseItems, desktopEntry, appName)
+    return matchedIndex
+}
+
 function notificationCountsForItems(items, sources) {
-    const counts = items.map(() => 0)
+    const baseItems = itemArray(items)
+    const counts = baseItems.map(() => 0)
     const sourceList = Array.isArray(sources) ? sources : []
     for (const source of sourceList) {
         const count = Math.max(0, Number(source && source.count) || 0)
         if (count === 0)
             continue
-        const desktopEntry = source && source.desktopEntry
-        const appName = source && source.appName
-        const hasDesktopEntry = validSourceIdentity(desktopEntry)
-        const desktopMatch = uniqueDesktopMatch(items, desktopEntry)
-
-        // Prefer Desktop Entry, but never fall through from an ambiguous
-        // Desktop Entry to a looser app-name match. That would attribute a
-        // notification to an arbitrary tray item when several IDs normalize
-        // to the same value.
-        let matchedIndex = desktopMatch
-        if (hasDesktopEntry && desktopMatch < 0) {
-            const desktopIdentity = normalizedIdentity(desktopEntry)
-            const desktopMatches = items.filter(item =>
-                normalizedIdentity(itemIdentity(item)) === desktopIdentity)
-            if (desktopMatches.length > 1)
-                continue
-        }
-        if (matchedIndex < 0)
-            matchedIndex = uniqueApplicationMatch(items, appName)
-        if (matchedIndex < 0)
-            matchedIndex = uniqueQqFallbackMatch(items, desktopEntry, appName)
+        const matchedIndex = trayIndexForSource(
+            baseItems, source && source.desktopEntry, source && source.appName)
         if (matchedIndex >= 0)
             counts[matchedIndex] += count
     }
     return counts
+}
+
+function historyAliases(entry) {
+    const aliases = []
+    if (validSourceIdentity(entry && entry.desktopEntry))
+        aliases.push("desktop:" + normalizedIdentity(entry.desktopEntry))
+    if (validSourceIdentity(entry && entry.appName))
+        aliases.push("app:" + normalizedIdentity(entry.appName))
+    return aliases.length > 0 ? aliases : ["fallback:notification"]
+}
+
+function aliasesOverlap(left, right) {
+    return left.some(alias => right.indexOf(alias) >= 0)
+}
+
+function entryTimestamp(entry) {
+    const timestamp = Number(entry && entry.timestamp)
+    return isFinite(timestamp) ? timestamp : 0
+}
+
+function mergeHistoryGroup(target, source) {
+    for (const alias of source.aliases) {
+        if (target.aliases.indexOf(alias) < 0)
+            target.aliases.push(alias)
+    }
+    target.records = target.records.concat(source.records)
+}
+
+function aggregateHistoryGroups(entries) {
+    const groups = []
+    for (let index = 0; index < entries.length; index++) {
+        const candidate = {
+            "aliases": historyAliases(entries[index]),
+            "records": [{"entry": entries[index], "index": index}]
+        }
+        const matches = []
+        for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            if (aliasesOverlap(groups[groupIndex].aliases, candidate.aliases))
+                matches.push(groupIndex)
+        }
+        if (matches.length === 0) {
+            groups.push(candidate)
+            continue
+        }
+        const target = groups[matches[0]]
+        mergeHistoryGroup(target, candidate)
+        for (let matchIndex = matches.length - 1; matchIndex > 0; matchIndex--) {
+            const sourceIndex = matches[matchIndex]
+            mergeHistoryGroup(target, groups[sourceIndex])
+            groups.splice(sourceIndex, 1)
+        }
+    }
+    return groups
+}
+
+function historyGroupDetails(group) {
+    const chronological = group.records.slice().sort((left, right) => {
+        const difference = entryTimestamp(right.entry) - entryTimestamp(left.entry)
+        return difference !== 0 ? difference : left.index - right.index
+    })
+    const entries = group.records.slice().sort((left, right) =>
+        left.index - right.index).map(record => record.entry)
+    let desktopEntry = ""
+    let appName = ""
+    let appIcon = ""
+    let label = ""
+    for (const record of chronological) {
+        const entry = record.entry || {}
+        desktopEntry = desktopEntry || String(entry.desktopEntry || "").trim()
+        appName = appName || String(entry.appName || "").trim()
+        appIcon = appIcon || String(entry.appIcon || "").trim()
+        if (!label && validSourceIdentity(entry.appName))
+            label = String(entry.appName).trim()
+    }
+    if (!label && validSourceIdentity(desktopEntry))
+        label = String(desktopEntry).replace(/\.desktop$/i, "").trim()
+    const aliases = group.aliases.slice().sort()
+    const desktopAliases = aliases.filter(alias => alias.startsWith("desktop:"))
+    return {
+        "key": desktopAliases.length > 0 ? desktopAliases[0] : aliases[0],
+        "aliases": aliases,
+        "label": label || appName || "Notification",
+        "desktopEntry": desktopEntry,
+        "appName": appName,
+        "appIcon": appIcon,
+        "entries": entries,
+        "count": entries.length,
+        "latestTimestamp": chronological.length > 0
+            ? entryTimestamp(chronological[0].entry) : 0
+    }
+}
+
+function trayIndexForHistoryGroup(items, group) {
+    const matches = []
+    for (const record of group.records) {
+        const entry = record.entry || {}
+        const index = trayIndexForSource(items, entry.desktopEntry, entry.appName)
+        if (index >= 0 && matches.indexOf(index) < 0)
+            matches.push(index)
+    }
+    return matches.length === 1 ? matches[0] : -1
+}
+
+/** 将历史记录计算为可供 QML 消费的有序来源数组，并在首位插入 ALL。 */
+function buildHistorySources(entries, trayItems, sourceCounts) {
+    const allEntries = Array.isArray(entries) ? entries.slice() : []
+    const baseItems = itemArray(trayItems)
+    const groups = aggregateHistoryGroups(allEntries)
+    for (const group of groups)
+        group.trayIndex = trayIndexForHistoryGroup(baseItems, group)
+
+    // 身份字符串不同但落到同一活跃托盘对象时，再合并为一个视觉来源。
+    const consolidated = []
+    for (const group of groups) {
+        const target = group.trayIndex < 0 ? null : consolidated.find(item =>
+            item.trayIndex === group.trayIndex)
+        if (target) {
+            mergeHistoryGroup(target, group)
+        } else {
+            consolidated.push(group)
+        }
+    }
+
+    const orderedTrayItems = sortedItems(baseItems, sourceCounts)
+    const sources = consolidated.map(group => {
+        const details = historyGroupDetails(group)
+        const trayItem = group.trayIndex >= 0 ? baseItems[group.trayIndex] : null
+        details.trayItem = trayItem
+        details.trayBacked = trayItem !== null
+        details.trayIndex = group.trayIndex
+        details.trayOrder = trayItem ? orderedTrayItems.indexOf(trayItem) : -1
+        details.iconSource = String(
+            (trayItem && trayItem.icon) || details.appIcon || "")
+        return details
+    })
+    sources.sort((left, right) => {
+        if (left.trayBacked !== right.trayBacked)
+            return left.trayBacked ? -1 : 1
+        if (left.trayBacked)
+            return left.trayOrder - right.trayOrder
+        const timeDifference = right.latestTimestamp - left.latestTimestamp
+        return timeDifference !== 0
+            ? timeDifference : left.label.localeCompare(right.label)
+    })
+    sources.unshift({
+        "key": "__all__",
+        "aliases": ["__all__"],
+        "label": "ALL",
+        "desktopEntry": "",
+        "appName": "",
+        "appIcon": "",
+        "entries": allEntries,
+        "count": allEntries.length,
+        "latestTimestamp": allEntries.reduce((latest, entry) =>
+            Math.max(latest, entryTimestamp(entry)), 0),
+        "trayItem": null,
+        "trayBacked": false,
+        "trayIndex": -1,
+        "trayOrder": -1,
+        "iconSource": ""
+    })
+    return sources
+}
+
+/** 按稳定来源键查找来源；不存在时返回 null。 */
+function sourceForKey(sources, key) {
+    const sourceList = Array.isArray(sources) ? sources : []
+    for (const source of sourceList) {
+        if (source && source.key === key)
+            return source
+    }
+    return null
+}
+
+/** 重建来源后按精确键、别名交集、ALL 的顺序恢复选择。 */
+function sourceKeyForSelection(sources, previousKey, previousAliases) {
+    const exact = sourceForKey(sources, previousKey)
+    if (exact)
+        return exact.key
+    const aliases = Array.isArray(previousAliases) ? previousAliases : []
+    for (const source of (Array.isArray(sources) ? sources : [])) {
+        if (source && aliasesOverlap(source.aliases || [], aliases))
+            return source.key
+    }
+    const allSource = sourceForKey(sources, "__all__")
+    return allSource ? allSource.key : "__all__"
 }
 
 function removeNotificationByIdentity(notifications, target) {

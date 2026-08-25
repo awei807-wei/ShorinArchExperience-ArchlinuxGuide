@@ -7,6 +7,9 @@ Item {
     id: historyPanel
 
     property var store: null
+    property var menuWindow: null
+    property var trayItems: []
+    property int trayModelRevision: 0
     property bool open: false
     property bool embedded: false
     property bool reducedMotion: false
@@ -27,6 +30,9 @@ Item {
     property alias panelState: historyPage.panelState
     property alias detailMessage: historyPage.detailMessage
     property alias feedbackMessage: historyPage.feedbackMessage
+    property alias selectedSourceKey: historyPage.selectedSourceKey
+    readonly property var sources: historyPage.sources
+    readonly property var filteredEntries: historyPage.filteredEntries
     readonly property var currentEntry: historyPage.currentEntry
     readonly property int desiredPanelHeight: historyPage.desiredPanelHeight
 
@@ -57,11 +63,18 @@ Item {
         historyPage.clearAll()
     }
 
+    function selectSource(key) {
+        historyPage.selectSource(key)
+    }
+
     NotificationHistoryPage {
         id: historyPage
 
         anchors.fill: parent
         store: historyPanel.store
+        menuWindow: historyPanel.menuWindow
+        trayItems: historyPanel.trayItems
+        trayModelRevision: historyPanel.trayModelRevision
         open: historyPanel.open
         embedded: historyPanel.embedded
         reducedMotion: historyPanel.reducedMotion

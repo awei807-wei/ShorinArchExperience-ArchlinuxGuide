@@ -5,7 +5,9 @@ import QtQuick
 Item {
     id: header
 
-    property int entryCount: 0
+    property int totalEntryCount: 0
+    property int visibleEntryCount: 0
+    property string activeSourceLabel: "ALL"
     property string panelState: "idle"
     property string feedbackMessage: ""
     property int horizontalPadding: Config.BarTuning.rightPanelPaddingH ?? 24
@@ -37,7 +39,9 @@ Item {
         anchors.left: titleText.left
         anchors.top: titleText.bottom
         anchors.topMargin: 2
-        text: "Recent notifications"
+        text: header.activeSourceLabel === "ALL"
+            ? "Recent notifications"
+            : header.activeSourceLabel + " notifications"
         color: header.zenSmoke
         font.family: "JetBrains Mono"
         font.pixelSize: 11
@@ -51,7 +55,7 @@ Item {
 
         Text {
             text: header.feedbackMessage.length > 0
-                ? header.feedbackMessage : String(header.entryCount)
+                ? header.feedbackMessage : String(header.visibleEntryCount)
             color: header.feedbackMessage.indexOf("ERROR") >= 0
                 ? header.zenDanger
                 : (header.feedbackMessage.length > 0
@@ -62,7 +66,7 @@ Item {
         }
 
         Rectangle {
-            width: 66
+            width: 82
             height: 30
             radius: height / 2
             color: clearMouse.containsMouse
@@ -73,12 +77,13 @@ Item {
             border.width: 1
             border.color: clearMouse.containsMouse
                 ? header.zenDanger : header.zenMist
-            opacity: header.entryCount > 0 && header.panelState !== "clearing"
+            opacity: header.totalEntryCount > 0
+                && header.panelState !== "clearing"
                 ? 1 : 0.42
 
             Text {
                 anchors.centerIn: parent
-                text: header.panelState === "clearing" ? "CLEARING" : "Clear"
+                text: header.panelState === "clearing" ? "CLEARING" : "Clear all"
                 color: header.panelState === "clearing"
                     ? header.zenSmoke : header.zenDanger
                 font.family: "JetBrains Mono"
@@ -91,7 +96,7 @@ Item {
                 id: clearMouse
 
                 anchors.fill: parent
-                enabled: header.entryCount > 0
+                enabled: header.totalEntryCount > 0
                     && header.panelState !== "clearing"
                 hoverEnabled: true
                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor

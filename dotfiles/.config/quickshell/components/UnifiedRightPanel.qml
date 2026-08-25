@@ -8,6 +8,9 @@ Item {
 
     required property var shellRoot
     required property var store
+    property var menuWindow: null
+    property var trayItems: []
+    property int trayModelRevision: 0
 
     property bool open: false
     property int page: 0
@@ -224,6 +227,9 @@ Item {
 
                             anchors.fill: parent
                             store: root.store
+                            menuWindow: root.menuWindow
+                            trayItems: root.trayItems
+                            trayModelRevision: root.trayModelRevision
                             embedded: true
                             open: root.open && root.page === 1
                             visible: true

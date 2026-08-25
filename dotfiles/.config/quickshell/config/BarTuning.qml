@@ -82,6 +82,15 @@ QtObject {
     property int notificationCardMinHeight: 88
     property int notificationCardGap: 10
     property int notificationCardRadius: 14
+    property int notificationSourceRailHeight: 52
+    property int notificationSourceRailGap: 10
+    property int notificationSourceAllWidth: 68
+    property int notificationSourceControlHeight: 38
+    property int notificationSourceSlotSize: 42
+    property int notificationSourceIconFrameSize: 38
+    property int notificationSourceIconSize: 26
+    property int notificationSourceGap: 8
+    property int notificationSourceBadgeHeight: 15
 
     property int rightPanelControlHeaderHeight: 84
     property int rightPanelControlToggleHeight: 100

@@ -48,6 +48,7 @@ class NotificationHistoryTest(unittest.TestCase):
             "id": index,
             "appName": f"应用-{index}",
             "desktopEntry": f"app-{index}.desktop",
+            "appIcon": f"app-{index}-icon",
             "summary": f"标题-{index}",
             "body": body,
             "urgency": "Normal",
@@ -67,6 +68,27 @@ class NotificationHistoryTest(unittest.TestCase):
         self.assertEqual(len(entries[1]["appName"]), 128)
         self.assertEqual(len(entries[1]["summary"]), 256)
         self.assertEqual(len(entries[1]["body"]), 2048)
+
+    def test_app_icon_round_trip_and_field_limit(self) -> None:
+        snapshot = self.snapshot(1)
+        snapshot["appIcon"] = "图标" * 300
+        self.run_command("append", snapshot)
+
+        entry = self.run_command("list")["notifications"][0]
+        self.assertEqual(len(entry["appIcon"]), 512)
+        self.assertEqual(entry["appIcon"], ("图标" * 300)[:512])
+
+    def test_legacy_entry_without_app_icon_is_compatible(self) -> None:
+        legacy_entry = self.snapshot(1)
+        legacy_entry.pop("appIcon")
+        self.history_path.parent.mkdir(parents=True)
+        self.history_path.write_text(
+            json.dumps({"version": 1, "notifications": [legacy_entry]}),
+            encoding="utf-8",
+        )
+
+        entry = self.run_command("list")["notifications"][0]
+        self.assertEqual(entry["appIcon"], "")
 
     def test_source_counts_follow_final_history_for_all_operations(self) -> None:
         first = self.snapshot(1)

@@ -173,7 +173,7 @@ Rectangle {
                 height: 24
                 source: notificationCard.iconSource
                 asynchronous: true
-                visible: source.length > 0 && status === Image.Ready
+                visible: status === Image.Ready
             }
 
             Text {

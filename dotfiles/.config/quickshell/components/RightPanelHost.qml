@@ -11,6 +11,8 @@ Scope {
     required property var shellRoot
     required property var controller
     required property var store
+    property var trayItems: []
+    property int trayModelRevision: 0
 
     readonly property real barBottom:
         shellRoot.barMarginTop + shellRoot.barHeight
@@ -122,6 +124,9 @@ Scope {
                     height: panelWindow.panelContentHeight
                     shellRoot: host.shellRoot
                     store: host.store
+                    menuWindow: panelWindow
+                    trayItems: host.trayItems
+                    trayModelRevision: host.trayModelRevision
                     open: host.controller.open
                         && panelWindow.panelActiveOnScreen
                     page: host.controller.page

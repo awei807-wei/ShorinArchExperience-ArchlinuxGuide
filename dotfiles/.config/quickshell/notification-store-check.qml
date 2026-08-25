@@ -34,6 +34,8 @@ ShellRoot {
             testRoot.expectEqual(entries[1].id, 8, "second newest entry")
             testRoot.expectEqual(entries[2].id, 7, "third newest entry")
             testRoot.expectEqual(entries[3].id, 0, "active append is retained")
+            testRoot.expectEqual(entries[0].appIcon, "app-9-icon",
+                "app icon round trip")
             testRoot.stage = 3
             store.clearHistory()
         }
@@ -82,6 +84,7 @@ ShellRoot {
                         "id": index,
                         "appName": "Application " + index,
                         "desktopEntry": "app-" + index + ".desktop",
+                        "appIcon": "app-" + index + "-icon",
                         "summary": "Notification " + index,
                         "body": "Body " + index,
                         "urgency": "Normal",

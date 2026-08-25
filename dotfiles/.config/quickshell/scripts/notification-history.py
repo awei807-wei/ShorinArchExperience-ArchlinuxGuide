@@ -22,6 +22,7 @@ MAX_CORRUPT_BACKUPS = 3
 FIELD_LIMITS = {
     "appName": 128,
     "desktopEntry": 128,
+    "appIcon": 512,
     "summary": 256,
     "body": 2048,
     "urgency": 32,
@@ -119,6 +120,7 @@ def sanitize_notification(value: Any) -> dict[str, Any] | None:
         "desktopEntry": clean_text(
             value.get("desktopEntry"), FIELD_LIMITS["desktopEntry"]
         ),
+        "appIcon": clean_text(value.get("appIcon"), FIELD_LIMITS["appIcon"]),
         "summary": clean_text(value.get("summary"), FIELD_LIMITS["summary"]),
         "body": clean_text(value.get("body"), FIELD_LIMITS["body"]),
         "urgency": clean_text(value.get("urgency"), FIELD_LIMITS["urgency"])

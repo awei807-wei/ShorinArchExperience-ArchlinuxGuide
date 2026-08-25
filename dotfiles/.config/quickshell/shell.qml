@@ -332,6 +332,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         )
     }
 
+    SystemTrayModelBridge {
+        id: notificationTrayBridge
+    }
+
     RightPanelController {
         id: rightPanelController
         reducedMotion: Core.TopBarState.reducedMotion
@@ -355,6 +359,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 "id": notification.id,
                 "appName": notification.appName || "",
                 "desktopEntry": notification.desktopEntry || "",
+                "appIcon": notification.appIcon || "",
                 "summary": notification.summary || "",
                 "body": notification.body || "",
                 "urgency": urgency,
@@ -866,6 +871,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         shellRoot: configRoot
         controller: rightPanelController
         store: notificationHistoryStore
+        trayItems: notificationTrayBridge.items
+        trayModelRevision: notificationTrayBridge.revision
     }
 
     // ===== TEMP NOTIFICATION POPUPS =====

@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "source": "conversation",
+  "originCommand": "direct-request",
+  "qaMode": "deep",
+  "qaFocus": [
+    "通知来源别名与同托盘二次合并",
+    "顶栏共用匹配、歧义保护与QQ特殊兜底",
+    "托盘优先及普通来源最近时间排序",
+    "appIcon新旧记录兼容与图标回退顺序",
+    "筛选选择保留、删除回退和快速切换动效",
+    "PanelWindow菜单锚点与非托盘来源右键边界",
+    "真实QQ和Kitty图标及QQ原生菜单"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "visualValidation": {
+      "required": true,
+      "screens": ["当前niri主屏"],
+      "states": [
+        "ALL和应用来源",
+        "托盘与普通来源",
+        "当前来源筛选",
+        "多通知内部滚动",
+        "QQ原生右键菜单"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "需求和现有统一匹配层边界明确，无独立顾问依赖。",
+    "focus": []
+  }
+}
