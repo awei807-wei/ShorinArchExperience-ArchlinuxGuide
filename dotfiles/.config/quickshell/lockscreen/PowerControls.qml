@@ -1,7 +1,7 @@
 import QtQuick
 import "config" as Config
 
-// 右上角锁屏电源与 idle 控制。该组件只负责布局和输入信号，系统命令仍由 shell.qml 执行。
+// 右上角锁屏操作胶囊。组件只负责布局和输入信号，系统命令仍由 shell.qml 执行。
 Item {
     id: root
 
@@ -10,123 +10,195 @@ Item {
     property bool idleEnabled: true
     property bool idleToggleBusy: false
     property bool reducedMotion: false
+    property color accent: Config.Theme.accent
     property color textPrimary: Config.Theme.textPrimary
     property color textSecondary: Config.Theme.textSecondary
     property color bgGlass: Qt.rgba(0.078, 0.078, 0.098, 0.72)
-    property string iconFontFamily: "JetBrainsMono Nerd Font"
 
-    readonly property real buttonDiameter: root.unit * 2.8
-    readonly property real buttonSpacing: root.unit * 0.55
-    readonly property real menuGap: root.unit * 0.75
-    readonly property Item topButtonsItem: topButtons
+    readonly property real railWidth: 96
+    readonly property real railHeight: 44
+    readonly property real controlWidth: 42
+    readonly property real controlHeight: 40
+    readonly property real iconSize: 18
+    readonly property real dividerHeight: 20
+    readonly property real menuGap: 12
+    readonly property Item topButtonsItem: topControlRail
     readonly property Item powerButtonItem: powerButton
     readonly property Item idleToggleButtonItem: idleToggleButton
-    readonly property Text powerIconItem: powerIcon
-    readonly property Text idleIconItem: idleIcon
+    readonly property LockGlyph powerIconItem: powerIcon
+    readonly property LockGlyph idleIconItem: idleIcon
     readonly property Item powerMenuItem: powerMenu
 
     signal powerMenuToggleRequested()
     signal idleToggleRequested(bool enabled)
     signal powerActionRequested(string action)
 
-    width: Math.max(topButtons.implicitWidth, powerMenu.width)
-    height: topButtons.height + (root.powerMenuVisible ? root.powerMenuItem.implicitHeight + root.menuGap : 0)
+    width: Math.max(topControlRail.width, powerMenu.width)
+    height: topControlRail.height
+        + (root.powerMenuVisible ? powerMenu.implicitHeight + root.menuGap : 0)
 
-    Row {
-        id: topButtons
+    Rectangle {
+        id: topControlRail
+
         anchors.top: parent.top
         anchors.right: parent.right
-        width: implicitWidth
-        height: root.buttonDiameter
-        spacing: root.buttonSpacing
+        width: root.railWidth
+        height: root.railHeight
+        radius: height / 2
+        color: Qt.rgba(root.bgGlass.r, root.bgGlass.g, root.bgGlass.b, 0.62)
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, 0.10)
 
-        Rectangle {
-            id: powerButton
-            width: root.buttonDiameter
-            height: root.buttonDiameter
-            radius: width / 2
-            color: powerButtonArea.containsMouse
-                ? Qt.rgba(1, 1, 1, 0.1)
-                : Qt.rgba(1, 1, 1, 0.05)
-            border.color: Qt.rgba(1, 1, 1, 0.1)
+        Row {
+            anchors.centerIn: parent
+            spacing: 5
 
-            Behavior on color {
-                enabled: !root.reducedMotion
-                ColorAnimation { duration: Config.Theme.animFast }
-            }
+            Item {
+                id: powerButton
 
-            Text {
-                id: powerIcon
-                anchors.fill: parent
-                text: "\uf011"
-                color: root.textSecondary
-                font.family: root.iconFontFamily
-                font.pixelSize: root.unit * 1.2
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-            }
+                width: root.controlWidth
+                height: root.controlHeight
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: "电源菜单"
 
-            MouseArea {
-                id: powerButtonArea
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: function(mouse) {
-                    root.powerMenuToggleRequested()
-                    mouse.accepted = true
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Return
+                            || event.key === Qt.Key_Enter
+                            || event.key === Qt.Key_Space) {
+                        root.powerMenuToggleRequested()
+                        event.accepted = true
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: width / 2
+                    color: powerHover.hovered
+                        ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+                    border.width: powerButton.activeFocus ? 1 : 0
+                    border.color: root.textSecondary
+
+                    Behavior on color {
+                        enabled: !root.reducedMotion
+                        ColorAnimation { duration: Config.Theme.animFast }
+                    }
+                }
+
+                LockGlyph {
+                    id: powerIcon
+
+                    anchors.centerIn: parent
+                    width: root.iconSize
+                    height: root.iconSize
+                    name: "power"
+                    iconColor: root.textSecondary
+                }
+
+                HoverHandler {
+                    id: powerHover
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: {
+                        powerButton.forceActiveFocus()
+                        root.powerMenuToggleRequested()
+                    }
                 }
             }
-        }
 
-        Rectangle {
-            id: idleToggleButton
-            width: root.buttonDiameter
-            height: root.buttonDiameter
-            radius: width / 2
-            color: idleToggleArea.containsMouse
-                ? Qt.rgba(1, 1, 1, 0.1)
-                : Qt.rgba(1, 1, 1, 0.05)
-            border.color: Qt.rgba(1, 1, 1, 0.1)
-            opacity: root.idleToggleBusy ? 0.66 : 1.0
-
-            Behavior on color {
-                enabled: !root.reducedMotion
-                ColorAnimation { duration: Config.Theme.animFast }
+            Rectangle {
+                width: 1
+                height: root.dividerHeight
+                anchors.verticalCenter: parent.verticalCenter
+                color: Qt.rgba(1, 1, 1, 0.10)
             }
 
-            Text {
-                id: idleIcon
-                anchors.fill: parent
-                // 保持旧状态语义：idle 开启时显示带斜线图标，关闭时显示普通 eye。
-                text: root.idleEnabled ? "\uf070" : "\uf06e"
-                color: root.textSecondary
-                font.family: root.iconFontFamily
-                font.pixelSize: root.unit * 1.05
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                opacity: root.idleEnabled ? 0.72 : 0.98
-            }
+            Item {
+                id: idleToggleButton
 
-            MouseArea {
-                id: idleToggleArea
-                anchors.fill: parent
-                hoverEnabled: true
+                width: root.controlWidth
+                height: root.controlHeight
                 enabled: !root.idleToggleBusy
-                onClicked: root.idleToggleRequested(!root.idleEnabled)
+                opacity: root.idleToggleBusy ? 0.56 : 1
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: root.idleEnabled
+                    ? "关闭自动息屏" : "开启自动息屏"
+
+                Behavior on opacity {
+                    enabled: !root.reducedMotion
+                    NumberAnimation { duration: Config.Theme.animFast }
+                }
+
+                Keys.onPressed: event => {
+                    if (idleToggleButton.enabled
+                            && (event.key === Qt.Key_Return
+                                || event.key === Qt.Key_Enter
+                                || event.key === Qt.Key_Space)) {
+                        root.idleToggleRequested(!root.idleEnabled)
+                        event.accepted = true
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: width / 2
+                    color: idleHover.hovered
+                        ? Qt.rgba(1, 1, 1, 0.09) : "transparent"
+                    border.width: idleToggleButton.activeFocus ? 1 : 0
+                    border.color: root.idleEnabled
+                        ? root.textSecondary : root.accent
+
+                    Behavior on color {
+                        enabled: !root.reducedMotion
+                        ColorAnimation { duration: Config.Theme.animFast }
+                    }
+                }
+
+                LockGlyph {
+                    id: idleIcon
+
+                    anchors.centerIn: parent
+                    width: root.iconSize
+                    height: root.iconSize
+                    name: root.idleEnabled ? "eye-off" : "eye"
+                    iconColor: root.idleEnabled
+                        ? root.textSecondary : root.accent
+                }
+
+                HoverHandler {
+                    id: idleHover
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    enabled: !root.idleToggleBusy
+                    onTapped: {
+                        idleToggleButton.forceActiveFocus()
+                        root.idleToggleRequested(!root.idleEnabled)
+                    }
+                }
             }
         }
     }
 
     Rectangle {
         id: powerMenu
-        anchors.top: topButtons.bottom
+
+        anchors.top: topControlRail.bottom
         anchors.topMargin: root.menuGap
         anchors.right: parent.right
-        width: Math.max(topButtons.implicitWidth, contentColumn.implicitWidth)
+        width: Math.max(root.railWidth, contentColumn.implicitWidth + root.unit * 2)
         implicitHeight: contentColumn.height + root.unit * 2
         height: root.powerMenuVisible ? implicitHeight : 0
         radius: Config.Theme.radiusMedium
         clip: true
         color: root.bgGlass
+        border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.08)
         opacity: root.powerMenuVisible ? 1 : 0
         visible: root.powerMenuVisible || opacity > 0
@@ -134,15 +206,23 @@ Item {
 
         Behavior on opacity {
             enabled: !root.reducedMotion
-            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Config.Theme.animNormal
+                easing.type: Easing.OutCubic
+            }
         }
+
         Behavior on height {
             enabled: !root.reducedMotion
-            NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: Config.Theme.animNormal
+                easing.type: Easing.OutCubic
+            }
         }
 
         Column {
             id: contentColumn
+
             anchors.top: parent.top
             anchors.topMargin: root.unit
             anchors.horizontalCenter: parent.horizontalCenter
@@ -150,54 +230,60 @@ Item {
 
             Repeater {
                 model: [
-                    { text: "关机", icon: "ⵚ", action: "poweroff" },
-                    { text: "休眠", icon: "⯕", action: "suspend" },
-                    { text: "重启", icon: "↺", action: "reboot" }
+                    { text: "关机", action: "poweroff" },
+                    { text: "休眠", action: "suspend" },
+                    { text: "重启", action: "reboot" }
                 ]
+
                 delegate: Rectangle {
-                    implicitWidth: itemRow.implicitWidth + root.unit * 1.6
+                    id: menuAction
+
+                    required property var modelData
+
+                    implicitWidth: actionLabel.implicitWidth + root.unit * 1.6
                     width: implicitWidth
                     height: root.unit * 1.8
                     radius: Config.Theme.radiusSmall
-                    color: itemArea.containsMouse
-                        ? Qt.rgba(1, 1, 1, 0.05)
-                        : "transparent"
+                    color: actionHover.hovered
+                        ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: modelData.text
 
                     Behavior on color {
                         enabled: !root.reducedMotion
                         ColorAnimation { duration: Config.Theme.animFast }
                     }
 
-                    Row {
-                        id: itemRow
-                        anchors.left: parent.left
-                        anchors.leftMargin: root.unit * 0.8
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: root.unit * 1.5
-                        spacing: root.unit * 0.6
-
-                        Text {
-                            text: modelData.icon
-                            font.pixelSize: root.unit
-                            color: root.textSecondary
-                            height: parent.height
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                        Text {
-                            text: modelData.text
-                            font.pixelSize: root.unit * 0.9
-                            font.family: "Source Han Sans CN"
-                            color: root.textPrimary
-                            height: parent.height
-                            verticalAlignment: Text.AlignVCenter
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Return
+                                || event.key === Qt.Key_Enter
+                                || event.key === Qt.Key_Space) {
+                            root.powerActionRequested(modelData.action)
+                            event.accepted = true
                         }
                     }
 
-                    MouseArea {
-                        id: itemArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: root.powerActionRequested(modelData.action)
+                    Text {
+                        id: actionLabel
+
+                        anchors.centerIn: parent
+                        text: modelData.text
+                        color: root.textPrimary
+                        font.family: "Source Han Sans CN"
+                        font.pixelSize: root.unit * 0.9
+                    }
+
+                    HoverHandler {
+                        id: actionHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        onTapped: {
+                            menuAction.forceActiveFocus()
+                            root.powerActionRequested(modelData.action)
+                        }
                     }
                 }
             }

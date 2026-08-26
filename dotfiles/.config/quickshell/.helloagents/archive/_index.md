@@ -9,3 +9,4 @@
 | 2026-08-25 | `202608251054_edge_attached_bar` | Brain_Shell 同款贴顶连接带、成对反 R 角三岛轮廓与窄屏排除间距闭环 |
 | 2026-08-25 | `202608251143_unified_right_panel` | 304px右岛颈部、固定外窗三阶段生长、Control/History常驻双页与内容自适应闭环 |
 | 2026-08-26 | `202608260325_notification_source_filter` | 通知来源别名聚合、History 应用筛选、appIcon 持久化与原生托盘菜单闭环 |
+| 2026-08-26 | `202608261343_lockscreen_auth_controls` | 锁屏一体化凭据控件、固定坐标 Canvas 操作图标与隔离布局/视觉质量闭环 |

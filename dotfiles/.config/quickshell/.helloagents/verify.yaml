@@ -43,6 +43,14 @@ commands:
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-state-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-interaction-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-store-check.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/LockGlyph.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/LockscreenAuth.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/PowerControls.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/shell.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/power-controls-check.qml
+  - qmllint -I /usr/lib/qt6/qml lockscreen/lockscreen-auth-layout-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p lockscreen/power-controls-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p lockscreen/lockscreen-auth-layout-check.qml
   - python3 scripts/test-notification-history.py
   - bash scripts/test-focus-tray-item.sh
   - git diff --check

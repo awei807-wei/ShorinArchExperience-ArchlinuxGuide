@@ -26,7 +26,6 @@ ShellRoot {
     property color textPrimary: Config.Theme.textPrimary
     property color textSecondary: Config.Theme.textSecondary
     property color tintColor: Qt.rgba(0.1, 0.08, 0.05, 0.4)
-    property color fieldBg: Qt.rgba(0, 0, 0, 0.18)
     property color buttonText: "#141414"
     property color errorColor: Config.Theme.danger
     readonly property string idleFlagUrl: root.fileUrl(homeDir + "/.local/state/quickshell/idle_enabled")
@@ -95,7 +94,6 @@ ShellRoot {
             if (colors.surface_container) root.bgGlass = root.colorFromHex(colors.surface_container, 0.76)
             if (colors.surface) {
                 root.tintColor = root.colorFromHex(colors.surface, 0.4)
-                root.fieldBg = root.colorFromHex(colors.surface, 0.18)
             }
         } catch (e) {
             console.log("[lockscreen] dynamic color parse failed: " + e)
@@ -126,23 +124,22 @@ ShellRoot {
     }
 
     function hasPasswordField() {
-        return typeof passwordInput !== "undefined" && passwordInput !== null
+        return typeof authPanel !== "undefined" && authPanel !== null
     }
 
     function focusPasswordField() {
         if (!root.hasPasswordField()) return
-        passwordInput.forceActiveFocus()
+        authPanel.focusPasswordField()
     }
 
     function selectPasswordField() {
         if (!root.hasPasswordField()) return
-        passwordInput.selectAll()
+        authPanel.selectPasswordField()
     }
 
     function triggerUnlockErrorWobble() {
-        if (root.reducedMotion) return
-        if (typeof unlockErrorWobble === "undefined" || unlockErrorWobble === null) return
-        unlockErrorWobble.restart()
+        if (!root.hasPasswordField()) return
+        authPanel.triggerErrorWobble()
     }
 
     function triggerAuthFailure(message, keepInput) {
@@ -151,7 +148,7 @@ ShellRoot {
 
         if (!keepInput) {
             root.passwordText = ""
-            if (root.hasPasswordField()) passwordInput.text = ""
+            if (root.hasPasswordField()) authPanel.clearPassword()
         } else {
             root.selectPasswordField()
         }
@@ -330,7 +327,14 @@ ShellRoot {
     
     property string wallpaperPath: ""
     property string hostname: ""
-    property string username: ""
+    property string username: {
+        const user = String(
+            Quickshell.env("USER")
+            || Quickshell.env("LOGNAME")
+            || ""
+        ).trim()
+        return user
+    }
     property string networkName: ""
     property int batteryLevel: 0
     property bool powerMenuVisible: false
@@ -348,7 +352,7 @@ ShellRoot {
     Process {
         id: usernameProc
         command: ["sh", "-c", "whoami"]
-        running: true
+        running: root.username.length === 0
         stdout: SplitParser {
             onRead: function(data) { root.username = data.trim() }
         }
@@ -414,7 +418,7 @@ ShellRoot {
             if (result === PamResult.Success) {
                 root.resetAuthState()
                 root.passwordText = ""
-                if (root.hasPasswordField()) passwordInput.text = ""
+                if (root.hasPasswordField()) authPanel.clearPassword()
                 root.finishUnlock()
                 return
             }
@@ -604,13 +608,14 @@ ShellRoot {
                 z: 20
                 anchors.top: parent.top
                 anchors.right: parent.right
-                anchors.topMargin: root.u * 1
-                anchors.rightMargin: root.u * 4
+                anchors.topMargin: 20
+                anchors.rightMargin: 24
                 unit: root.u
                 powerMenuVisible: root.powerMenuVisible
                 idleEnabled: root.idleEnabled
                 idleToggleBusy: root.idleToggleBusy
                 reducedMotion: root.reducedMotion
+                accent: root.accent
                 textPrimary: root.textPrimary
                 textSecondary: root.textSecondary
                 bgGlass: root.bgGlass
@@ -630,7 +635,7 @@ ShellRoot {
             // 中央核心面板
             Column {
                 anchors.centerIn: parent
-                spacing: root.u * 4
+                spacing: 40
                 
                 // 动态时钟
                 Column {
@@ -665,266 +670,55 @@ ShellRoot {
                     }
                 }
 
-                // 认证卡片
-                Rectangle {
-                    width: root.u * 24
-                    height: root.u * 18
-                    radius: root.u
-                    color: "transparent"
-                    border.width: 0
-                    border.color: "transparent"
-                    
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: root.u * 1.5
-                        width: parent.width - root.u * 4
-                        
-                        Column {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: root.u * 0.8
-                            Rectangle {
-                                width: root.u * 5
-                                height: root.u * 5
-                                radius: width / 2
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                gradient: Gradient {
-                                    GradientStop { position: 0; color: root.accent }
-                                    GradientStop { position: 1; color: Qt.darker(root.accent, 1.22) }
-                                }
-                                Text {
-                                    anchors.centerIn: parent
-                                    font.pixelSize: root.u * 1.8
-                                    color: root.buttonText
-                                    text: root.username.substring(0, 2).toUpperCase()
-                                }
-                            }
-                            Text {
-                                text: root.username
-                                color: root.textPrimary
-                                font.pixelSize: root.u * 1.2
-                                font.weight: Font.Medium
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
-                        }
+                // 认证控件
+                LockscreenAuth {
+                    id: authPanel
 
-                        Item {
-                            width: parent.width
-                            height: root.u * 3.2
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    username: root.username
+                    pamActive: pam.active
+                    responseVisible: pam.responseVisible
+                    authFailed: root.authFailed
+                    authStatusText: root.authStatusText
+                    reducedMotion: root.reducedMotion
+                    bgGlass: root.bgGlass
+                    accent: root.accent
+                    textPrimary: root.textPrimary
+                    textSecondary: root.textSecondary
+                    buttonText: root.buttonText
+                    errorColor: root.errorColor
 
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: 0
-                                color: root.fieldBg
-                                border.width: 0
-                            }
+                    onPasswordTextChanged: {
+                        if (root.passwordText !== passwordText)
+                            root.passwordText = passwordText
+                    }
 
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                height: root.authFailed || passwordInput.activeFocus ? 2 : 1
-                                color: root.authFailed
-                                    ? root.errorColor
-                                    : (passwordInput.activeFocus ? root.accent : root.colorFromHex(root.accent, 0.72))
-                                opacity: root.authFailed ? 1.0 : (passwordInput.activeFocus ? 0.98 : 0.48)
+                    onPasswordEdited: {
+                        if (!pam.active)
+                            root.resetAuthState()
+                    }
 
-                                Behavior on height {
-                                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                                }
-                                Behavior on color {
-                                    ColorAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                                }
-                                Behavior on opacity {
-                                    NumberAnimation { duration: Config.Theme.animNormal; easing.type: Easing.OutCubic }
-                                }
-                            }
+                    onSubmitRequested: root.beginUnlock()
 
-                            TextInput {
-                                id: passwordInput
-                                anchors.fill: parent
-                                anchors.leftMargin: root.u * 0.8
-                                anchors.rightMargin: root.u * 0.8
-                                anchors.topMargin: root.u * 0.7
-                                anchors.bottomMargin: root.u * 0.55
-                                focus: true
-                                enabled: !pam.active
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: root.u * 1.1
-                                color: root.textPrimary
-                                text: root.passwordText
-                                echoMode: pam.responseVisible ? TextInput.Normal : TextInput.Password
-                                inputMethodHints: Qt.ImhHiddenText | Qt.ImhNoPredictiveText | Qt.ImhSensitiveData
-                                onAccepted: root.beginUnlock()
-                                onTextChanged: {
-                                    if (root.passwordText !== text) root.passwordText = text
-                                }
-                                onTextEdited: {
-                                    if (!pam.active) root.resetAuthState()
-                                }
-                                Keys.onEscapePressed: {
-                                    root.powerMenuVisible = false
-                                    root.passwordText = ""
-                                    passwordInput.text = ""
-                                    root.resetAuthState()
-                                }
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                anchors.verticalCenterOffset: -root.u * 0.1
-                                visible: !root.passwordText && !passwordInput.activeFocus && !pam.active
-                                text: pam.message && pam.responseRequired ? pam.message : "输入密码"
-                                color: root.textSecondary
-                                font.pixelSize: root.u
-                            }
-                        }
-
-                        Text {
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                            text: root.authStatusText
-                            visible: text.length > 0 && !pam.active
-                            color: root.authFailed ? root.errorColor : root.textSecondary
-                            font.family: "Source Han Sans CN"
-                            font.pixelSize: root.u * 0.75
-                            wrapMode: Text.WordWrap
-                        }
-
-                        Rectangle {
-                            id: unlockButton
-                            width: parent.width
-                            height: root.u * 2.85
-                            radius: 0
-                            transformOrigin: Item.Center
-                            opacity: pam.active ? 0.86 : 1.0
-                            property color fillColor: unlockArea.pressed
-                                ? Qt.darker(root.accent, 1.18)
-                                : (unlockArea.containsMouse ? Qt.lighter(root.accent, 1.05) : root.accent)
-                            property color outlineColor: root.colorFromHex(
-                                root.buttonText === "#141414" ? "#000000" : "#ffffff",
-                                unlockArea.containsMouse ? 0.18 : 0.10
-                            )
-                            color: fillColor
-                            border.width: 1
-                            border.color: outlineColor
-                            scale: unlockArea.pressed ? 0.995 : 1.0
-
-                            Behavior on fillColor {
-                                ColorAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
-                            }
-                            Behavior on outlineColor {
-                                ColorAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
-                            }
-                            Behavior on scale {
-                                NumberAnimation { duration: root.reducedMotion ? 0 : Config.Theme.animFast; easing.type: Easing.OutCubic }
-                            }
-
-                            SequentialAnimation {
-                                id: unlockErrorWobble
-                                running: false
-
-                                PropertyAnimation { target: unlockButton; property: "rotation"; to: -7; duration: 42; easing.type: Easing.OutCubic }
-                                PropertyAnimation { target: unlockButton; property: "rotation"; to: 6; duration: 56; easing.type: Easing.OutCubic }
-                                PropertyAnimation { target: unlockButton; property: "rotation"; to: -5; duration: 52; easing.type: Easing.OutCubic }
-                                PropertyAnimation { target: unlockButton; property: "rotation"; to: 3; duration: 48; easing.type: Easing.OutCubic }
-                                PropertyAnimation { target: unlockButton; property: "rotation"; to: 0; duration: 58; easing.type: Easing.OutCubic }
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                visible: !pam.active
-                                text: "解锁会话"
-                                color: root.buttonText
-                                font.weight: Font.Bold
-                                font.pixelSize: root.u * 1.0
-                                font.letterSpacing: 1.2
-                            }
-
-                            Item {
-                                id: unlockLoadingContent
-                                anchors.centerIn: parent
-                                visible: pam.active
-                                width: loadingSpinner.width + root.u * 0.55 + loadingLabel.implicitWidth
-                                height: loadingSpinner.height > loadingLabel.implicitHeight
-                                    ? loadingSpinner.height
-                                    : loadingLabel.implicitHeight
-
-                                Item {
-                                    id: loadingSpinner
-                                    anchors.left: parent.left
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    width: root.u * 1.0
-                                    height: root.u * 1.0
-                                    transformOrigin: Item.Center
-
-                                    RotationAnimation on rotation {
-                                        from: 0
-                                        to: 360
-                                        duration: 850
-                                        loops: Animation.Infinite
-                                        running: pam.active
-                                    }
-
-                                    Repeater {
-                                        model: 8
-                                        delegate: Item {
-                                            width: loadingSpinner.width
-                                            height: loadingSpinner.height
-                                            anchors.centerIn: parent
-                                            rotation: index * 45
-
-                                            Rectangle {
-                                                width: root.u * 0.12
-                                                height: root.u * 0.28
-                                                radius: width / 2
-                                                color: root.buttonText
-                                                opacity: 0.22 + index * 0.09
-                                                anchors.top: parent.top
-                                                anchors.horizontalCenter: parent.horizontalCenter
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Text {
-                                    id: loadingLabel
-                                    anchors.left: loadingSpinner.right
-                                    anchors.leftMargin: root.u * 0.55
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.verticalCenterOffset: -root.u * 0.03
-                                    text: "验证中"
-                                    color: root.buttonText
-                                    font.weight: Font.Bold
-                                    font.pixelSize: root.u * 0.96
-                                    font.letterSpacing: 1.0
-                                }
-                            }
-
-                            MouseArea {
-                                id: unlockArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                enabled: !pam.active
-                                onClicked: root.beginUnlock()
-                            }
-                        }
-
+                    onEscapeRequested: {
+                        root.powerMenuVisible = false
+                        root.passwordText = ""
+                        authPanel.clearPassword()
+                        root.resetAuthState()
                     }
                 }
+
             }
 
             // 底部状态栏
-            Row {
+            Text {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: root.u * 2.5
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: root.u * 3
-                Row {
-                    spacing: root.u * 0.5
-                    Text { text: "ⓛ"; color: root.textSecondary; font.pixelSize: root.u; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                    Text { text: "已锁定"; color: root.textSecondary; font.family: "Source Han Sans CN"; font.pixelSize: root.u * 0.9; height: root.u * 1.5; verticalAlignment: Text.AlignVCenter }
-                }
+                text: "已锁定"
+                color: root.textSecondary
+                font.family: "Source Han Sans CN"
+                font.pixelSize: root.u * 0.9
             }
 
             MouseArea {

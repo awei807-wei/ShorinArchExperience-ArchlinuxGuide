@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "PAM 密码同步、提交与错误后焦点恢复边界不变",
+    "空密码聚焦提示、busy 禁用和状态槽高度稳定",
+    "Canvas 图标名称、尺寸、中心与旧字体码点清零",
+    "隔离检查不得启动 WlSessionLock 或系统动作"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202608261343_lockscreen_auth_controls/plan.md",
+      ".helloagents/DESIGN.md",
+      "hello-ui"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "用户已明确给出终局结构、尺寸和视觉方向，无需另行探索审美方向。",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "认证区与右上角控件均为结构性视觉重做，需要隔离渲染确认几何和关键状态。",
+      "screens": [
+        "360px 锁屏认证组件",
+        "96px 右上角操作胶囊"
+      ],
+      "states": [
+        "空密码聚焦",
+        "PAM busy",
+        "认证失败",
+        "idle 开启与关闭"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "实现边界与技术路径已由用户明确，现有 QML 组件测试足以独立验证。",
+    "focus": [],
+    "preferredSources": []
+  }
+}
