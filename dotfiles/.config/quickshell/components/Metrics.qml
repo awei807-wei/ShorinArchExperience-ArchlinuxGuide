@@ -11,8 +11,6 @@ Rectangle {
     property int memoryPercent: 0
     property int cpuPercent: 0
     property int volumePercent: 0
-    property string spectrumBars: ""
-    property bool spectrumActive: false
     property bool showSegments: true
     property bool reducedMotion: false
     property color surfaceColor: Config.Theme.surface
@@ -83,18 +81,6 @@ Rectangle {
         color: metrics.accentColor
         opacity: Config.BarTuning.metricsAccentOpacity
         z: 4
-    }
-
-    Spectrum {
-        anchors.fill: parent
-        anchors.topMargin: Config.BarTuning.spectrumTopInset
-        anchors.leftMargin: metrics.outerPadding
-        anchors.rightMargin: metrics.outerPadding
-        anchors.bottomMargin: Config.BarTuning.spectrumBottomInset
-        bars: metrics.spectrumBars
-        active: metrics.spectrumActive
-        reducedMotion: metrics.reducedMotion
-        z: 0
     }
 
     Row {

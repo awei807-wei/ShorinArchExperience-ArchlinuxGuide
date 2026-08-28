@@ -5,7 +5,7 @@
 
 ## 关键文件
 - `config/BarTuning.qml`：唯一像素微调入口，集中管理三岛位置、宽度、字号、内部间距与响应式阈值。
-- `Bar.qml`：三语义区装配、稳定视觉 token 与响应式宽度预算。
+- `Bar.qml`：三语义区装配、稳定视觉 token、响应式宽度预算，以及位于右岛轮廓与内容之间的 Cava 暗纹层。
 - `components/BarContour.qml`：以单个 Canvas 路径绘制全宽顶部连接带和三段反 R 角岛屿轮廓。
 - `components/ScreenEdgeBorder.qml`、`ScreenEdgeBorderHost.qml`：把 Bar 方形外端以 `17px` 内凹角融入两侧 `6px` 屏幕轨道，复刻 Brain_Shell `Border.qml` 的实际外缘结构。
 - `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、触发屏幕、右岛起始/目标颈宽、唯一 `rightPanelProgress` 与退场窗口生命周期。
@@ -21,6 +21,7 @@
 - `components/ContextIsland.qml`：桌面环境路由与 Context 内容契约。
 - `components/ClockIsland.qml`：时间、日期与轻量音量反馈；不再占用顶栏宽度显示天气。
 - `components/SystemIsland.qml`：Metrics、Tray 与 Power 的右侧系统集群。
+- `components/Spectrum.qml`：把 32 路 Cava 数据均匀映射为固定窄柱，作为整个右岛的不接收输入的低对比背景。
 - `components/TrayIsland.qml`：消费持久通知历史来源计数，稳定排序托盘应用，维护动态槽位、复合入口和总数角标，并通过单个进程调用托盘窗口聚焦脚本。
 - `components/TrayItem.qml`：单个托盘图标的 hover、右键菜单、键盘焦点、单击/双击消歧、激活行为与每应用通知角标。
 - `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名，执行唯一匹配、受限 QQ 归属与稳定排序。
@@ -54,3 +55,4 @@
 - [2026-08-25] 固定宿主上移 flare 时不能再次填充整块右岛颈部：主体仍从 `40px` Bar 底边开始，向上衔接只覆盖颈部边界左右各 `16px`；左侧形成反 R 弧，右侧消除右岛旧外凸角留下的月牙缺口，同时避开 Metrics/Tray/Power。History 切页也不得触发 Tray 全量图标展开。
 - [2026-08-25] 页面切换不能 resize 线程化 Canvas：裁剪区会先变化，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
 - [2026-08-26] 连体外壳不能让宽度、高度与 Bar 错峰：`16–52px` 低高度无法容纳 flare 与两个 `18px` 圆角，会产生 GIF 中的凹口。最终实现使用一条 `300ms InOutCubic` 进度，Canvas 始终保持最终拓扑，viewport 在 surface 允许时从 `54px` 安全高度揭示；前 `10%` 只展开 Bar，内容从 `52%` 后进入。Controller 从触发屏幕捕获右岛起始/目标宽度，固定 Canvas 只做水平平移，使常规与窄屏受限颈部都逐帧一致；其他屏幕实例保持关闭。
+- [2026-08-28] Cava 频谱属于整个右岛的材质层，不属于 Metrics 内容层：由 `Bar` 按活动右岛颈宽铺设在 `BarContour` 与交互组件之间，32 根 `2px` 窄柱等距分布。静止和活动态都保持低对比，Metrics、Tray 与 Power 的输入和 hover 反馈始终位于其上。

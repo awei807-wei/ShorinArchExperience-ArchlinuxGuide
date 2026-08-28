@@ -19,6 +19,7 @@
 - **[Bar 测试原型]**: 新增与生产 Bar 隔离的 `tests/` Edge-Integrated Contoured Bar 预览，包含左/中/右三功能区，右侧以单一连续右岛承载 Metrics/Tray/Power，并通过细铜色分隔与固定 mock 保持信息层级，不接入生产服务。
 
 ### 变更
+- **[右岛]**: Cava 频谱从 Metrics 局部背景移到完整右岛轮廓层，32 根固定窄柱随当前颈宽等距铺开；静止时作为底部暗刻度，活动时仅改变柱高，并保持在 Metrics、Tray、Power 交互层下方。
 - **[Bar]**: 顶部和左右窗口边距由 `4px` 归零；按 Brainitech/Brain_Shell 源码采用 `40px` 总高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。System 的 Metrics/Tray/Power 改为共享连续右区外表面，内部交互与 Tray 展开面保持独立反馈。
 - **[Bar]**: 左右外端改用 Brain_Shell `Border.qml` 的融边结构：Bar 保持方形接缝，以 `17px` 内凹角收束到 `6px` 屏幕侧边轨道。
 - **[右侧子面板]**: 控制中心与通知历史改为同一窗口内的两个互斥页面；Metrics 打开控制页，Tray 复合入口打开通知页，同入口再次点击关闭，跨入口直接切页。
@@ -52,6 +53,7 @@
 - **[Bar 测试原型]**: 新增 `tests/shell.qml` 到 `edge-integrated-preview.qml` 的相对符号链接，使通过 `quickshell -p tests/` 或 `~/.config/quickshell/tests/` 目录入口启动预览时能够正确找到 shell 文件。
 
 ### 验证
+- 右岛频谱暗纹实屏检查通过：静止态以低对比暗刻度贯穿 Metrics、Tray 与 Power，内容、hover 和点击层保持在其上；`Bar.qml`、`SystemIsland.qml`、`BarTuning.qml` 静态检查及 Bar 布局、右面板状态/动画、Tray 交互门禁通过。`qmllint` 对 `Metrics.qml`、`Spectrum.qml` 以 `255` 且无诊断文本退出，未记为静态检查通过，由真实热重载与上述运行门禁覆盖。
 - 右面板动画门禁覆盖 `0/5/35/75/100%` 共享进度、`54px` 安全高度、固定 Canvas 尺寸/半径、常规与受限目标下的 Bar/flare 逐帧同宽、关闭中跨屏从 `0` 重播、退场 mask、同屏半途反向及减弱动效；560px 最小面板在高对比背景下完成 1×/1.5× 中间帧人工对照，未再出现退化凹口或透明度叠接。
 - History↔Control 回归新增外壳/裁剪高度不变、双向卡片位移、缩放端点与就位后输入断言；`right-panel-animation-check.qml`、相关 `qmllint`、高对比背景下的切换中间帧截图与 `git diff --check` 通过。
 - 生产 `BarContour` 与 `Bar.qml` QML lint 通过；2048/1280/1024/1008/1007/800/660px Bar 布局、Tray 状态、Tray 交互与 `git diff --check` 通过；当前 3840×2160、1.5× niri 实屏热重载无新增 Bar 绑定错误，截图确认顶部间隔为零、成对反 R 角方向正确且连接带无接缝。

@@ -12,7 +12,13 @@ Item {
     property color barColor: Config.Theme.textMuted
     property color topLineColor: Config.Theme.outlineVariant
     readonly property int barCount: Config.BarTuning.spectrumBarCount
-    readonly property int barGap: Config.BarTuning.spectrumBarGap
+    readonly property real barWidth: Math.max(1, Math.min(
+        Config.BarTuning.spectrumBarWidth,
+        width / Math.max(1, barCount)
+    ))
+    readonly property real barGap: barCount > 1
+        ? Math.max(0, (width - barCount * barWidth) / (barCount - 1))
+        : 0
 
     opacity: active
         ? Config.BarTuning.spectrumActiveOpacity : Config.BarTuning.spectrumInactiveOpacity
@@ -39,8 +45,7 @@ Item {
                 id: spectrumBar
 
                 required property int index
-                width: Math.max(1, (spectrum.width
-                    - (spectrum.barCount - 1) * spectrum.barGap) / spectrum.barCount)
+                width: spectrum.barWidth
                 height: spectrum.height
 
                 Rectangle {

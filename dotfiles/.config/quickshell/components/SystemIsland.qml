@@ -60,8 +60,6 @@ Row {
         memoryPercent: systemIsland.metricsState ? systemIsland.metricsState.memPercent : 0
         cpuPercent: systemIsland.metricsState ? systemIsland.metricsState.cpuPercent : 0
         volumePercent: systemIsland.volumePercent
-        spectrumBars: systemIsland.metricsState ? systemIsland.metricsState.cavaData : ""
-        spectrumActive: systemIsland.metricsState ? systemIsland.metricsState.cavaActive : false
         showSegments: systemIsland.showSegments
         reducedMotion: systemIsland.reducedMotion
         surfaceColor: systemIsland.integratedSurface ? "transparent" : systemIsland.metricsSurface

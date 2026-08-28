@@ -137,6 +137,27 @@ Rectangle {
         surfaceColor: bar.panelSurface
     }
 
+    // Cava 只作为整个右岛的低对比底纹；它位于轮廓之上、所有交互内容之下，
+    // 因此不会截获 Metrics、Tray 或 Power 的输入。
+    Spectrum {
+        id: rightIslandSpectrum
+
+        x: bar.width - bar.animatedRightContourWidth
+            + Config.BarTuning.spectrumHorizontalInset
+        y: bar.islandContentTop + Config.BarTuning.spectrumTopInset
+        width: Math.max(0, bar.animatedRightContourWidth
+            - 2 * Config.BarTuning.spectrumHorizontalInset)
+        height: Math.max(0, bar.islandHeight
+            - Config.BarTuning.spectrumTopInset
+            - Config.BarTuning.spectrumBottomInset)
+        visible: width > 0 && height > 0
+        bars: Core.TopBarState.cavaData
+        active: Core.TopBarState.cavaActive
+        reducedMotion: Core.TopBarState.reducedMotion
+        barColor: bar.textDim
+        topLineColor: bar.lineSecondary
+    }
+
     ContextIsland {
         id: contextIslandItem
 

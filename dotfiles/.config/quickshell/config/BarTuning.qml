@@ -331,26 +331,28 @@ QtObject {
     // 控制：单格中数值占比。
     property real metricsValueWidthRatio: 0.57
 
-    // 控制：频谱背景距 Metrics 顶部的位置。
+    // 控制：右岛频谱暗纹距左右边缘的位置。
+    property int spectrumHorizontalInset: 8
+    // 控制：频谱暗纹距右岛顶部的位置。
     property int spectrumTopInset: 7
-    // 控制：频谱背景距 Metrics 底部的位置。
+    // 控制：频谱暗纹距右岛底部的位置。
     property int spectrumBottomInset: 4
     // 控制：频谱柱数量。
     property int spectrumBarCount: 32
-    // 控制：频谱柱之间的间距。
-    property int spectrumBarGap: 2
+    // 控制：频谱暗纹单柱宽度；柱间距随右岛宽度均匀分配。
+    property int spectrumBarWidth: 2
     // 控制：最低频谱柱高度。
     property int spectrumMinBarHeight: 6
     // 控制：频谱柱从最低到最高额外增加的高度。
     property int spectrumBarHeightRange: 16
     // 控制：有音频时整个频谱层透明度。
-    property real spectrumActiveOpacity: 0.62
+    property real spectrumActiveOpacity: 0.38
     // 控制：无音频时整个频谱层透明度。
-    property real spectrumInactiveOpacity: 0.06
+    property real spectrumInactiveOpacity: 0.22
     // 控制：有音频时单柱透明度。
-    property real spectrumActiveBarOpacity: 0.34
+    property real spectrumActiveBarOpacity: 0.26
     // 控制：无音频时单柱透明度。
-    property real spectrumInactiveBarOpacity: 0.20
+    property real spectrumInactiveBarOpacity: 0.18
 
     // ═══════════════════════════════════════════════════════
     // 8. Tray 与 Power
