@@ -340,7 +340,7 @@ QtObject {
     // 控制：频谱柱数量。
     property int spectrumBarCount: 32
     // 控制：频谱暗纹单柱宽度；柱间距随右岛宽度均匀分配。
-    property int spectrumBarWidth: 3
+    property real spectrumBarWidth: 3.6
     // 控制：最低频谱柱高度。
     property int spectrumMinBarHeight: 6
     // 控制：频谱柱从最低到最高额外增加的高度。
