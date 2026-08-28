@@ -19,7 +19,7 @@
 - **[Bar 测试原型]**: 新增与生产 Bar 隔离的 `tests/` Edge-Integrated Contoured Bar 预览，包含左/中/右三功能区，右侧以单一连续右岛承载 Metrics/Tray/Power，并通过细铜色分隔与固定 mock 保持信息层级，不接入生产服务。
 
 ### 变更
-- **[右岛]**: Cava 频谱从 Metrics 局部背景移到完整右岛轮廓层，32 根固定窄柱随当前颈宽等距铺开；静止时作为底部暗刻度，活动时仅改变柱高，并保持在 Metrics、Tray、Power 交互层下方。
+- **[右岛]**: Cava 频谱从 Metrics 局部背景移到完整右岛轮廓层，32 根 `3px` 柱体随当前颈宽等距铺开；静止时作为底部暗刻度，活动时仅改变柱高，并保持在 Metrics、Tray、Power 交互层下方。
 - **[Bar]**: 顶部和左右窗口边距由 `4px` 归零；按 Brainitech/Brain_Shell 源码采用 `40px` 总高度、`6px` 顶部连接带、`15px` 上内凹/下外凸圆角与 `34px` 排除间距。System 的 Metrics/Tray/Power 改为共享连续右区外表面，内部交互与 Tray 展开面保持独立反馈。
 - **[Bar]**: 左右外端改用 Brain_Shell `Border.qml` 的融边结构：Bar 保持方形接缝，以 `17px` 内凹角收束到 `6px` 屏幕侧边轨道。
 - **[右侧子面板]**: 控制中心与通知历史改为同一窗口内的两个互斥页面；Metrics 打开控制页，Tray 复合入口打开通知页，同入口再次点击关闭，跨入口直接切页。
