@@ -13,10 +13,10 @@ Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级�
 - 主表面：`rgba(10,12,13,.94)`；次级与工具表面保持 `86%–88%` 不透明度。
 - 边框与高光：白色 `8.5%` 边框、白色 `4.5%` 顶部内高光；不使用外发光或 hover 抬升。
 - 文本：主文字 `#E7E9EA`、次文字 `#A7ABAD`、弱文字 `#6D7376`。
-- 唯一常规强调色：低饱和冰蓝 `#8FB3C5`；固定用于 Bar 校准标记、当前工作区与 NET 主仪表，不随 Matugen 改色。
-- 仪表：开启段 `#747B7F`、关闭段 `#3C4143`；危险/通知徽标继续使用统一低饱和暗红。
-- 字体：JetBrains Mono 承担时间、数字、标签与状态值；中文由系统 CJK 字体回退。字号不随屏幕宽度整体缩放。
-- 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，宽屏 Metrics 标签和值使用 `7px`，日期与星期保持 `7px` 以下的次级层级；天气只在右侧控制中心标题栏显示。
+- 唯一常规强调色：低饱和冰蓝 `#8FB3C5`；固定用于 Bar 校准标记与当前工作区，不随 Matugen 改色。
+- 右岛遥测：标签固定 `#52525b`，数值固定 `#f4f4f5`，斜杠栅栏固定 `#27272a`；无电池硬件时 BAT 固定显示 `100%` 并使用健康绿 `#10b981`。危险/通知徽标继续使用统一低饱和暗红。
+- 字体：JetBrains Mono 承担时间与常规状态值；右岛遥测单独使用屏显优化的窄体等宽 Consolas，以原生渲染和完整 hinting 保持小字号锐利，不对字形做缩放或负字距压缩。中文由系统 CJK 字体回退。字号不随屏幕宽度整体缩放。
+- 排版层级：时间固定 `18px` 并作为最强主信息；Context 使用 `7/9/7px` 标签、范围值与状态，Metrics 使用 `9px` SemiBold 标签与 `11px` Bold 数值，日期与星期保持 `7px` 以下的次级层级；天气只在右侧控制中心标题栏显示。
 
 ## 独立锁屏
 - 中央认证区宽 `360px`；`48×48px` 圆角身份块与用户名/说明组成横向身份行，距凭据框 `16px`。头像只使用主题强调色的低透明表面和细边框，不使用整块高饱和渐变。
@@ -26,18 +26,18 @@ Bar 采用 Swiss editorial 的网格秩序、工业音频设备的状态层级�
 - 电源菜单只保留“关机 / 休眠 / 重启”文字。认证表现组件和操作胶囊只暴露状态、方法与动作信号，不持有 PAM、idle-control 或 systemctl 副作用。
 
 ## 像素微调入口
-Bar 的位置、窗口/内容高度、顶部连接带、反 R 角半径、右侧子面板几何与时序、排除间距、字号、内部间距、工作区短线、控制中心天气、频谱透明度、Tray 图标槽位和 Power 图标尺寸统一由 `config/BarTuning.qml` 管理。该文件按“整体位置 → 右侧子面板 → 响应式阈值 → Context → Clock → 控制中心标题栏 → Metrics/频谱 → Tray/Power”分区，并为每个参数标注实际控制位置；手动调整时不应再修改组件内部常量。
+Bar 的位置、窗口/内容高度、顶部连接带、反 R 角半径、右侧子面板几何与时序、排除间距、字号、内部间距、工作区短线、控制中心天气、Tray 图标槽位和 Power 图标尺寸统一由 `config/BarTuning.qml` 管理。该文件按“整体位置 → 右侧子面板 → 响应式阈值 → Context → Clock → 控制中心标题栏 → Metrics → Tray/Power”分区，并为每个参数标注实际控制位置；手动调整时不应再修改组件内部常量。
 
 布局测试直接读取同一配置，因此正常的像素微调无需同步改写测试期望。响应式阈值必须保持从大到小排列，Tray 图标尺寸不得超过槽位尺寸，所有支持宽度仍需满足三岛最小安全间距。
 
 ## 布局策略
-Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、System 右对齐，Clock 在空间充足时相对屏幕真实居中；窄屏下仅向左避让，以维持目标几何要求的 `34px` 排除间距。宽屏基准为 Context `200px`、Clock `240px`、Metrics `288px`、Tray `104px`、Power `38px`；Metrics 与工具组间距 `8px`，Tray 与 Power 间距 `4px`。响应式只做稳定宽度预算和内容退让，不缩放 40px 高度：
+Bar 保持 Context / Clock / System 三个语义区域：Context 左对齐、System 右对齐，Clock 在空间充足时相对屏幕真实居中；窄屏下仅向左避让，以维持目标几何要求的 `34px` 排除间距。右岛关闭态固定 `240px`：Metrics 使用从直出 Tray 槽位与工具留白回收的预算扩至 `164px`，由 CPU / RAM / BAT 三个等宽单元和两个 `10px` 斜杠栅栏组成；Metrics 与复合 Tray 入口间距 `12px`，Tray 与 Power 间距 `4px`。Tray 外壳为 `30×40px`、复合入口命中区为 `24×24px`，Power 命中区为 `30×40px`。响应式只做稳定宽度预算和内容退让，不缩放 40px 高度：
 
-1. `<1273px` 隐藏 Tray 直接图标，保留复合入口。
-2. `<1008px` 隐藏 Tray 表面与分段仪表，并压缩 Context、Clock 和 Metrics。
-3. `<760px` 进入超紧凑宽度预算，继续保留四项主指标值。
+1. 所有宽度均隐藏 Tray 直接图标，只保留复合入口，把固定预算优先让给遥测可读性。
+2. `<1008px` 压缩 Context 与 Clock，Metrics 尺寸保持不变。
+3. `<760px` 进入超紧凑宽度预算，继续完整保留三项遥测。
 
-Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
+Context、Clock 和 CPU/RAM/BAT 主值不可隐藏。
 
 ## 组件与模式
 - `ContextIsland` 根据会话加载 `NiriContext`、`HyprlandContext`、`DesktopContext` 或 `FallbackContext`，统一外观但不伪造不可获得的数据。
@@ -48,7 +48,7 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 - `RightPanelHost` 为每屏保留固定最大透明外窗，但只显示触发屏幕实例；`UnifiedRightPanel` 只改变右锚定 reveal viewport。打开时外部点击区负责一次关闭，退场开始后 mask 立即缩回可见主体并避开由 Bar 持有的 `16px` 重叠 flare。Escape 走同一关闭状态机。
 - `ImportedControlCenterPanel` 与 `NotificationHistoryPage` 的嵌入模式只保留页面内容；两页保持实例化，在固定外壳内通过透明度、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放完成整页卡片切换，禁止叠加旧窗口背景、阴影或第二套开关动画。Control 页使用 `12px` 卡片节奏，默认内容必须在 `760px` 面板内完整显示。
 - 控制中心音量卡片在滑条与百分比之间使用 `34px` 方形箭头按钮；展开时卡片自身向下增高并在分隔线下显示居中的音频输出设备列表，后续卡片随布局下移。当前设备使用低对比强调底色和右侧勾选，选择后立即收起并恢复 `86px` 高度。
-- `SystemIsland` 组合 `Metrics`、低权重 `TrayIsland` 和独立 `Power`，三者共用一个连续右区外轮廓，并保留内部 hover 与焦点反馈；History 只切换壳内页面，不得触发 Tray 全量图标横向展开。频谱铺在整个右岛轮廓与交互内容之间，只使用中性灰低对比暗纹，不得接收输入或覆盖 hover、焦点反馈。
+- `SystemIsland` 组合 `Metrics`、低权重 `TrayIsland` 和独立 `Power`，三者共用一个连续右区外轮廓，并保留内部 hover 与焦点反馈；Metrics 只显示 CPU / RAM / BAT，标签和值水平基线对齐，固定值槽与等宽字体共同消除数字跳动。右岛背景必须保持纯净深色，不渲染频谱、动态柱或其他会穿透文字的底纹。History 只切换壳内页面，不得触发 Tray 全量图标横向展开。
 - 托盘复合入口的隐藏应用数与通知历史角标分别表达，禁止合并计数。
 - 通知历史作为 `HISTORY` 页使用顶部起排的真实 ListView：卡片最小高 `88px`、间距 `10px`，正文为空时隐藏，普通界面不展示 desktopEntry、内部 ID 或空正文占位。0 条时显示 `220px` 空态；内容超过固定页面视口后由列表内部滚动。
 - History 来源栏无条件呈现全部当前系统托盘项，并继续呈现有历史的普通来源。`ALL` 固定在最左；托盘来源使用实时 `trayItem.icon`，按历史通知数升序，同数保持 SystemTray 注册顺序，0 条来源仍可筛选并显示来源级空态。普通来源位于托盘区之后，按最近通知时间排序并依次尝试持久化 `appIcon`、Desktop Entry 主题图标、应用名主题图标与首字母。左键只筛选，右键只在 `trayItem.hasMenu` 时打开原生应用菜单，不得顺带切换来源或为普通来源伪造菜单。
@@ -63,7 +63,7 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 - 音频输出：PipeWire 同步中或无设备时禁用展开按钮；多设备列表限制可见行数并允许滚动，长名称省略，当前项同时使用文字权重、底色和勾选表达。
 
 ## 记忆点
-贴住屏幕顶边的连续连接带与三段下伸反 R 角是 Bar 的首要轮廓记忆点：左区右侧和右区左侧保留成对反 R 角，中区双侧成对；左右外端不使用普通凸圆角，而是从方形岛底以内凹角收束到屏幕侧边细轨。右侧子面板从右岛底边连续“生长”，而不是悬浮在 Bar 下方。Context 与 Metrics 保留 1px 冰蓝校准标记；Clock 不使用主题色横条，由放大的时间建立视觉中心。整个右岛使用 32 段等距窄柱频谱作为约 5% 有效对比的背景纹理，音频静止时收成一排暗刻度，活动时只改变柱高，不成为独立视觉焦点。
+贴住屏幕顶边的连续连接带与三段下伸反 R 角是 Bar 的首要轮廓记忆点：左区右侧和右区左侧保留成对反 R 角，中区双侧成对；左右外端不使用普通凸圆角，而是从方形岛底以内凹角收束到屏幕侧边细轨。右侧子面板从右岛底边连续“生长”，而不是悬浮在 Bar 下方。Context 与 Metrics 保留 1px 冰蓝校准标记；Clock 不使用主题色横条，由放大的时间建立视觉中心。右岛以无动态底纹的纯净深色表面承托高反差遥测文字。
 
 ## 动效策略
 常规交互反馈限定为 `120–180ms` 的颜色与轻量过渡。右侧子面板的连接几何只允许一条 `300ms InOutCubic` 时间轴：右岛宽度、面板 viewport 宽高与退场 mask 读取同一 `rightPanelProgress`，不得再叠加 `Behavior` 或独立宽高缓动。前 `10%` 只让右岛响应，面板主体随后从 `54px` 安全高度淡入；内容仅由同一进度派生，并从 `52%` 后淡入、上移 `8px`。页面切换只做 `90/150ms` 交叉淡入淡出、方向相反的 `28px` 位移和一次 `0.985→1` 卡片缩放，外壳不参与；History 来源切换只允许列表先用 `60ms` 淡到 `0.35`、换模型后用 `120ms` 淡回，不重播逐卡飞入。关闭到端点后保留 `20ms` 提交最后一帧再隐藏窗口。`QUICKSHELL_REDUCE_MOTION=1` 时直接到端点。
@@ -72,13 +72,13 @@ Context、Clock 和 NET/MEM/CPU/VOL 主值不可隐藏。
 状态不能只靠颜色：工作区同时使用文字与短线长度，指标同时显示标签和值。工作区、托盘、History 来源和主入口支持键盘聚焦与 Enter/Space；来源菜单同时支持 Menu 键，只有具备原生菜单的来源在悬停时显示菜单能力提示。焦点指示采用短校准线，避免覆盖整个紧凑控件。文字与表面对比必须在实际缩放下可读。
 
 ## 内容语气
-使用短促、可验证的系统语言，例如 `RANGE`、`WS 03`、`NET 1.8M`、`HISTORY`、`COPIED`、`EMPTY`。不使用营销文案、拟人提示或无信息量状态。
+使用短促、可验证的系统语言，例如 `RANGE`、`WS 03`、`CPU 28%`、`HISTORY`、`COPIED`、`EMPTY`。不使用营销文案、拟人提示或无信息量状态。
 
 ## 禁止事项
-禁止紫白渐变、大圆角胶囊、把三个语义区重新做成独立浮动卡片、用单段椭圆、普通圆角或三角形替代成对反 R 角、发光边框、RGB、玻璃拟态、3D 按钮、emoji 图标、字体字符图标、白底卡片堆叠、可见调试网格、频谱前景化、通知与托盘计数混算、自动清空真实历史。
+禁止紫白渐变、大圆角胶囊、把三个语义区重新做成独立浮动卡片、用单段椭圆、普通圆角或三角形替代成对反 R 角、发光边框、RGB、玻璃拟态、3D 按钮、emoji 图标、字体字符图标、白底卡片堆叠、可见调试网格、在遥测文字后叠加频谱或动态底纹、通知与托盘计数混算、自动清空真实历史。
 
 ## 约束定义
-Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；天气不占用 Bar 宽度，Tray 直接图标和分段仪表必须严格按优先级退让。
+Bar 只使用一个常规强调色和一个危险语义色；顶层语义区固定为三个。Power 保持独立表面但归属于 System；天气不占用 Bar 宽度，Tray 只保留复合入口，不与遥测争夺关闭态宽度。
 
 ## 实现备注
-Bar 的几何与排版 token 位于 `config/BarTuning.qml`，岛间反向轮廓由 `components/BarContour.qml` 使用单个 Qt Quick Canvas 路径绘制，左右外端通过 `ScreenEdgeBorder` 复刻 Brain_Shell `Border.qml` 的侧边轨道融角，稳定颜色 token 位于 `Bar.qml`；几何拓扑与 `40/15/6/34px` 参数取自 Brainitech/Brain_Shell 的 `SeamlessBarShape.qml`、`Border.qml` 与 `Metrics.qml`（MIT，提交 `f90fc9c6bdfb25568c731ea1158d3f8e4b7a6e20`）。右面板采用按触发屏幕路由的固定窗口、单一 Controller 进度、固定最终尺寸 Canvas、右锚定 reveal viewport、常驻页面和紧凑单指示器分页条。Controller 从触发 Bar 同时捕获起始与受布局约束的目标颈宽；Canvas 不随动画 resize 或改变圆角拓扑，只按这两个端点水平平移，使 flare 与 Bar 的活动颈部逐帧对齐。viewport 负责揭示，内容只派生透明度与轻位移；跨页不改变外壳几何或纹理。History 的托盘模型由 `SystemTrayModelBridge` 注入，来源计算复用 `TrayNotificationModel.js`；原生菜单只通过 `QsMenuAnchor + trayItem.menu` 打开，`anchor.window` 必须使用 `RightPanelHost` 当前屏幕的 `PanelWindow`。环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供。视觉验收覆盖 2048/1280/1024/1008/1007/800/660 宽度、560px 最小面板、1×/1.5× 中间帧及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。
+Bar 的几何与排版 token 位于 `config/BarTuning.qml`，岛间反向轮廓由 `components/BarContour.qml` 使用单个 Qt Quick Canvas 路径绘制，左右外端通过 `ScreenEdgeBorder` 复刻 Brain_Shell `Border.qml` 的侧边轨道融角，稳定颜色 token 位于 `Bar.qml`；几何拓扑与 `40/15/6/34px` 参数取自 Brainitech/Brain_Shell 的 `SeamlessBarShape.qml`、`Border.qml` 与 `Metrics.qml`（MIT，提交 `f90fc9c6bdfb25568c731ea1158d3f8e4b7a6e20`）。右面板采用按触发屏幕路由的固定窗口、单一 Controller 进度、固定最终尺寸 Canvas、右锚定 reveal viewport、常驻页面和紧凑单指示器分页条。Controller 从触发 Bar 同时捕获起始与受布局约束的目标颈宽；Canvas 不随动画 resize 或改变圆角拓扑，只按这两个端点水平平移，使 flare 与 Bar 的活动颈部逐帧对齐。viewport 负责揭示，内容只派生透明度与轻位移；跨页不改变外壳几何或纹理。History 的托盘模型由 `SystemTrayModelBridge` 注入，来源计算复用 `TrayNotificationModel.js`；原生菜单只通过 `QsMenuAnchor + trayItem.menu` 打开，`anchor.window` 必须使用 `RightPanelHost` 当前屏幕的 `PanelWindow`。环境与系统采集由 `Niri.qml`、`services/TopBarState.qml` 单例提供，其中 BAT 直接读取 Quickshell UPower 的显示设备并对无硬件状态执行稳定兜底。视觉验收覆盖 2048/1280/1024/1008/1007/800/660 宽度、560px 最小面板、1×/1.5× 中间帧及当前 niri 实屏，状态测试必须启用独立测试路径，禁止写入真实通知历史。

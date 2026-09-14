@@ -32,9 +32,6 @@ ShellRoot {
     }
 
     function expectedLayoutMode(targetWidth) {
-        if (targetWidth >= Config.BarTuning.fullTrayMinWidth)
-            return 0;
-
         if (targetWidth >= Config.BarTuning.traySurfaceMinWidth)
             return 2;
 
@@ -83,16 +80,14 @@ ShellRoot {
                              Config.BarTuning.rightIslandDirectIconLimit),
                     label + " direct tray icon limit");
         expectEqual(target.trayVisible, true, label + " tray visibility");
-        expectEqual(target.metricDetailsVisible, false,
-                    label + " metric detail visibility");
         expectEqual(target.contextWidth, expectedContextWidth(mode), label + " context width");
         expectEqual(target.clockWidth, expectedClockWidth(mode), label + " clock width");
         expectEqual(target.metricsWidth, expectedMetricsWidth(mode), label + " metrics width");
         expectEqual(target.systemWidth, expectedSystemWidth(target, mode), label + " system width");
         expect(target.trayWidth >= Config.BarTuning.trayMinimumWidth,
                label + " dynamic tray minimum width");
-        expect(target.systemWidth >= 218 && target.systemWidth <= 240,
-               label + " closed right island width budget");
+        expectEqual(target.systemWidth, 240,
+                    label + " fixed closed right island width budget");
         expectEqual(target.systemSpacing, Config.BarTuning.metricsUtilityGap, label + " metrics/utility gap");
         expectEqual(target.utilitySpacing, Config.BarTuning.trayPowerGap, label + " tray/power gap");
         expectEqual(target.contextContourLeft, 0,
@@ -126,10 +121,23 @@ ShellRoot {
     }
 
     function runChecks() {
-        expect(Config.BarTuning.fullTrayMinWidth > Config.BarTuning.traySurfaceMinWidth, "full-tray threshold must exceed tray-surface threshold");
         expect(Config.BarTuning.traySurfaceMinWidth > Config.BarTuning.compactMinWidth, "tray-surface threshold must exceed compact threshold");
         expect(Config.BarTuning.compactMinWidth > Config.BarTuning.minimumSupportedWidth, "compact threshold must exceed minimum supported width");
         expect(Config.BarTuning.trayIconSize <= Config.BarTuning.trayItemWidth, "tray icon must fit inside its slot");
+        expectEqual(Config.BarTuning.rightIslandDirectIconLimit, 0,
+                    "right island keeps only the composite tray entry");
+        expectEqual(Config.BarTuning.metricsUtilityGap, 12,
+                    "telemetry keeps a 12px gap before tray/power tools");
+        expectEqual(Config.BarTuning.trayCompositeWidth, 30,
+                    "composite tray entry yields width to telemetry");
+        expect(Config.BarTuning.trayItemWidth
+               + 2 * Config.BarTuning.trayCompositeHitSlop >= 24,
+               "composite tray entry keeps a 24px pointer target");
+        expect(Config.BarTuning.trayCompositeHitSlop
+               <= Config.BarTuning.trayHorizontalPadding / 2,
+               "expanded tray target remains inside its 30px shell");
+        expectEqual(Config.BarTuning.powerIslandWidth, 30,
+                    "power entry yields width to telemetry");
         expectEqual(Config.BarTuning.barMarginTop, 0, "bar touches screen top");
         expectEqual(Config.BarTuning.barMarginSide, 0, "bar touches both screen sides");
         expect(Config.BarTuning.barTopBorderWidth > 0,

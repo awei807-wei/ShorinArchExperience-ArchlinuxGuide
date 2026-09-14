@@ -328,94 +328,55 @@
     }
 
     .metrics {
-      width: 288px;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      align-items: stretch;
-      padding: 0 8px;
-      isolation: isolate;
-    }
-
-    .spectrum-underlay {
-      position: absolute;
-      inset: 7px 8px 4px 8px;
+      width: 164px;
       display: flex;
-      align-items: flex-end;
-      gap: 2px;
-      z-index: 0;
-      opacity: .16;
-      pointer-events: none;
-      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.78) 45%, rgba(0,0,0,1) 100%);
-    }
-
-    .spectrum-underlay i {
-      flex: 1 1 auto;
-      height: 8px;
-      background: linear-gradient(180deg, rgba(118,129,136,.06), rgba(118,129,136,.34));
-      border-top: 1px solid rgba(180,194,202,.06);
-      transition: height 180ms ease;
+      align-items: center;
+      padding: 0 4px;
+      font-family: Consolas, var(--font-mono);
+      font-variant-numeric: tabular-nums;
     }
 
     .metric {
-      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
       display: flex;
-      flex-direction: column;
+      align-items: baseline;
       justify-content: center;
-      padding: 0 6px;
-      font-family: var(--font-mono);
-      font-variant-numeric: tabular-nums;
+      gap: 3px;
+      line-height: 1;
       z-index: 2;
     }
 
-    .metric + .metric::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 10px;
-      width: 1px;
-      height: 17px;
-      background: var(--line-soft);
-    }
-
-    .metric-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 5px;
+    .metric-separator {
+      flex: 0 0 10px;
+      width: 10px;
+      color: #27272a;
+      font-size: 10px;
+      font-weight: 500;
+      text-align: center;
       line-height: 1;
     }
 
     .metric-label {
-      color: var(--text-dim);
-      font-size: 7px;
-      letter-spacing: .071em;
+      color: #52525b;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .5px;
     }
 
     .metric-value {
-      color: var(--text-soft);
-      font-size: 7px;
-      font-weight: 500;
-      letter-spacing: .007em;
+      width: 25px;
+      color: #f4f4f5;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
     }
 
-    .segments {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 2px;
-      margin-top: 6px;
-      height: 2px;
-    }
-
-    .segments i {
-      display: block;
-      background: #3c4143;
-    }
-
-    .segments i.on { background: #747b7f; }
-    .metric.network .segments i.on { background: var(--accent); }
+    .metric-value.battery-fallback { color: #10b981; }
 
     .tray {
-      width: 104px;
+      width: 30px;
+      margin-left: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -463,7 +424,7 @@
     }
 
     .power {
-      width: 38px;
+      width: 30px;
       margin-left: -4px;
       display: grid;
       place-items: center;
@@ -589,46 +550,24 @@
       <div class="bar-group right-group">
         <section class="island secondary metrics" aria-label="System metrics">
           <span class="micro-mark" aria-hidden="true"></span>
-          <div class="spectrum-underlay" id="spectrumUnderlay" aria-hidden="true"></div>
-
-          <div class="metric network">
-            <div class="metric-head"><span class="metric-label">NET</span><span class="metric-value">1.8M</span></div>
-            <div class="segments" aria-hidden="true">
-              <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i>
-            </div>
-          </div>
 
           <div class="metric">
-            <div class="metric-head"><span class="metric-label">MEM</span><span class="metric-value">58%</span></div>
-            <div class="segments" aria-hidden="true">
-              <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i>
-            </div>
+            <span class="metric-label">CPU</span><span class="metric-value">28%</span>
           </div>
+          <span class="metric-separator" aria-hidden="true">/</span>
 
           <div class="metric">
-            <div class="metric-head"><span class="metric-label">CPU</span><span class="metric-value">06%</span></div>
-            <div class="segments" aria-hidden="true">
-              <i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-            </div>
+            <span class="metric-label">RAM</span><span class="metric-value">62%</span>
           </div>
+          <span class="metric-separator" aria-hidden="true">/</span>
 
           <div class="metric">
-            <div class="metric-head"><span class="metric-label">VOL</span><span class="metric-value">100</span></div>
-            <div class="segments" aria-hidden="true">
-              <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
-            </div>
+            <span class="metric-label">BAT</span><span class="metric-value battery-fallback">100%</span>
           </div>
         </section>
 
         <section class="island utility tray" aria-label="System tray">
-          <span class="tray-icon" title="Terminal" aria-label="Terminal">
-            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2 3 2 2-2 2M5.5 8h3.5"/></svg>
-          </span>
-          <span class="tray-icon" title="Network tunnel" aria-label="Network tunnel">
-            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5 10 3v2.8c0 2.2-1.5 3.9-4 4.7-2.5-.8-4-2.5-4-4.7V3Z"/><path d="M4.2 6 5.4 7.2 8 4.7"/></svg>
-          </span>
-          <span class="tray-icon" title="Bluetooth" aria-label="Bluetooth">BT</span>
-          <span class="tray-count" aria-label="Two more tray items">+2</span>
+          <span class="tray-count" aria-label="Five tray items">+5</span>
         </section>
 
         <button class="island utility power" type="button" aria-label="Power menu" title="Power menu">
@@ -653,7 +592,6 @@
     const contextLabel = document.querySelector('#contextLabel');
     const contextValue = document.querySelector('#contextValue');
     const contextSub = document.querySelector('#contextSub');
-    const spectrumUnderlay = document.querySelector('#spectrumUnderlay');
     let toastTimer;
 
     const params = new URLSearchParams(location.search);
@@ -742,28 +680,6 @@
       }
     }
 
-    function seedSpectrum() {
-      for (let i = 0; i < 32; i += 1) {
-        const bar = document.createElement('i');
-        bar.style.height = `${8 + Math.round(Math.random() * 10)}px`;
-        spectrumUnderlay.appendChild(bar);
-      }
-    }
-
-    function animateSpectrum() {
-      const bars = [...spectrumUnderlay.children];
-      let phase = 0;
-      setInterval(() => {
-        phase += 0.38;
-        bars.forEach((bar, index) => {
-          const wave = Math.sin((index * 0.45) + phase) * 0.5 + 0.5;
-          const drift = Math.sin((index * 0.17) + phase * 0.55) * 0.5 + 0.5;
-          const height = 6 + Math.round((wave * 10) + (drift * 6));
-          bar.style.height = `${height}px`;
-        });
-      }, 180);
-    }
-
     function stepWorkspace(direction) {
       state.active += direction;
       if (state.active < 1) state.active = state.total;
@@ -783,8 +699,6 @@
       if (key === 'c') cycleContext();
     });
 
-    seedSpectrum();
-    animateSpectrum();
     renderContext();
     fitStage();
   </script>

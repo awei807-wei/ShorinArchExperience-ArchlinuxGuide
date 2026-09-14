@@ -65,10 +65,10 @@ QtObject {
     property int rightPanelRadius: 18
     property int rightPanelFlare: 16
 
-    // 关闭态右岛只承载压缩状态、一个直接 Tray 项、复合入口与电源。
-    // 最坏宽度为 130 + 8 + 60 + 4 + 38 = 240px。
-    property int rightIslandMetricsWidth: 130
-    property int rightIslandDirectIconLimit: 1
+    // 关闭态把原直出 Tray 槽位与工具横向留白让给清晰遥测；复合入口保留。
+    // 固定宽度为 164 + 12 + 30 + 4 + 30 = 240px。
+    property int rightIslandMetricsWidth: 164
+    property int rightIslandDirectIconLimit: 0
 
     property int rightPanelPaddingH: 24
     property int rightPanelPaddingTop: 18
@@ -121,9 +121,7 @@ QtObject {
     // 3. 响应式切换阈值（屏幕宽度 px）
     // ═══════════════════════════════════════════════════════
 
-    // 控制：达到此宽度后显示 Tray 直接图标。
-    property int fullTrayMinWidth: 1273
-    // 控制：达到此宽度后保留 Tray 表面；更窄时只保留 Power。
+    // 控制：达到此宽度后 Context 与 Clock 使用常规档；更窄时使用紧凑档。
     property int traySurfaceMinWidth: 1008
     // 控制：达到此宽度后使用紧凑档；更窄进入超紧凑档。
     property int compactMinWidth: 760
@@ -269,90 +267,33 @@ QtObject {
     property int clockWeatherFontSize: 12
 
     // ═══════════════════════════════════════════════════════
-    // 7. 右侧 Metrics 与频谱
+    // 7. 右侧 Metrics
     // ═══════════════════════════════════════════════════════
 
-    // 控制：Metrics 常规宽度。
-    property int metricsWidth: 288
-    // 控制：Metrics 在 760–979px 档的宽度。
-    property int metricsCompactWidth: 220
-    // 控制：Metrics 在 <760px 档的宽度。
-    property int metricsUltraWidth: 176
     // 控制：Metrics 与 Tray/Power 工具组之间的距离。
-    property int metricsUtilityGap: 8
-    // 控制：Metrics 小于此宽度时启用紧凑内排版。
-    property int metricsCompactLayoutThreshold: 270
-    // 控制：Metrics 小于此宽度时使用更小字号。
-    property int metricsSmallFontThreshold: 180
-    // 控制：Metrics 常规左右内边距。
-    property int metricsOuterPadding: 8
-    // 控制：Metrics 紧凑左右内边距。
-    property int metricsCompactOuterPadding: 6
-    // 控制：Metrics 常规标签和值字号。
-    property int metricsFontSize: 7
-    // 控制：Metrics 超紧凑字号。
-    property int metricsSmallFontSize: 6
+    property int metricsUtilityGap: 12
+    // 控制：三段遥测内容的左右内边距；4px 在当前 1.5× 缩放下落在整物理像素。
+    property int metricsHorizontalPadding: 4
+    // 控制：CPU/RAM/BAT 标签和值之间的基线间距。
+    property int metricsLabelValueGap: 3
+    // 控制：两个斜杠栅栏各自占用的等宽槽位。
+    property int metricsSeparatorWidth: 10
+    // 控制：暗色 CPU/RAM/BAT 标签字号。
+    property int metricsLabelFontSize: 9
+    // 控制：高反差百分比数字字号。
+    property int metricsValueFontSize: 11
+    // 控制：遥测专用的窄体等宽字体；Consolas 无需压缩字距即可落入固定预算。
+    property string metricsFontFamily: "Consolas"
+    // 控制：斜杠栅栏字号。
+    property int metricsSeparatorFontSize: 10
+    // 控制：遥测标签字距。
+    property real metricsLabelLetterSpacing: 0.5
     // 控制：Metrics 顶部冰蓝短线 X 位置。
     property int metricsAccentX: 12
     // 控制：Metrics 顶部冰蓝短线宽度。
     property int metricsAccentWidth: 20
     // 控制：Metrics 顶部冰蓝短线透明度。
     property real metricsAccentOpacity: 0.9
-    // 控制：四项指标竖分隔线的顶部位置。
-    property int metricsDividerY: 10
-    // 控制：四项指标竖分隔线高度。
-    property int metricsDividerHeight: 17
-    // 控制：显示分段仪表时文字的常规 Y 位置。
-    property int metricsTextY: 8
-    // 控制：显示分段仪表时文字的紧凑 Y 位置。
-    property int metricsCompactTextY: 9
-    // 控制：隐藏分段仪表时文字的常规 Y 位置。
-    property int metricsTextYWithoutSegments: 14
-    // 控制：隐藏分段仪表时文字的紧凑 Y 位置。
-    property int metricsCompactTextYWithoutSegments: 15
-    // 控制：显示分段仪表时单格常规左右内边距。
-    property int metricsCellPadding: 6
-    // 控制：显示分段仪表时单格紧凑左右内边距。
-    property int metricsCompactCellPadding: 4
-    // 控制：隐藏分段仪表时单格常规左右内边距。
-    property int metricsCellPaddingWithoutSegments: 5
-    // 控制：隐藏分段仪表时单格紧凑左右内边距。
-    property int metricsCompactCellPaddingWithoutSegments: 3
-    // 控制：分段仪表距 Metrics 顶部的位置。
-    property int metricsSegmentY: 26
-    // 控制：每项指标的分段数量。
-    property int metricsSegmentCount: 8
-    // 控制：分段仪表高度。
-    property int metricsSegmentHeight: 2
-    // 控制：分段之间的间距。
-    property int metricsSegmentGap: 2
-    // 控制：单格中标签占比。
-    property real metricsLabelWidthRatio: 0.38
-    // 控制：单格中数值占比。
-    property real metricsValueWidthRatio: 0.57
-
-    // 控制：右岛频谱暗纹距左右边缘的位置。
-    property int spectrumHorizontalInset: 8
-    // 控制：频谱暗纹距右岛顶部的位置。
-    property int spectrumTopInset: 7
-    // 控制：频谱暗纹距右岛底部的位置。
-    property int spectrumBottomInset: 4
-    // 控制：频谱柱数量。
-    property int spectrumBarCount: 32
-    // 控制：频谱暗纹单柱宽度；柱间距随右岛宽度均匀分配。
-    property real spectrumBarWidth: 3.8
-    // 控制：最低频谱柱高度。
-    property int spectrumMinBarHeight: 6
-    // 控制：频谱柱从最低到最高额外增加的高度。
-    property int spectrumBarHeightRange: 16
-    // 控制：有音频时整个频谱层透明度。
-    property real spectrumActiveOpacity: 0.38
-    // 控制：无音频时整个频谱层透明度。
-    property real spectrumInactiveOpacity: 0.22
-    // 控制：有音频时单柱透明度。
-    property real spectrumActiveBarOpacity: 0.26
-    // 控制：无音频时单柱透明度。
-    property real spectrumInactiveBarOpacity: 0.18
 
     // ═══════════════════════════════════════════════════════
     // 8. Tray 与 Power
@@ -368,12 +309,14 @@ QtObject {
     property int trayIconSize: 18
     // 控制：Tray 图标槽位之间的间距。
     property int trayItemGap: 4
-    // 控制：Tray 左右内边距总和。
-    property int trayHorizontalPadding: 20
+    // 控制：Tray 左右内边距总和；30px 槽仍保留 18px 图标与 6px 单侧留白。
+    property int trayHorizontalPadding: 12
     // 控制：Tray 展开最小宽度的单位倍数。
     property int trayExpandedMinUnits: 18
     // 控制：“+2”复合入口字号。
     property int trayCompositeFontSize: 10
+    // 控制：复合入口在 18px 可见图标外扩的命中/焦点范围；3px 对应 24×24px。
+    property int trayCompositeHitSlop: 3
     // 控制：通知角标相对槽位顶部的位置。
     property int trayBadgeTopOffset: -4
     // 控制：通知角标相对槽位右侧的位置。
@@ -386,8 +329,8 @@ QtObject {
     property int trayCollapseFontSize: 9
     // 控制：空 Tray 的省略符字号。
     property int trayEmptyFontSize: 6
-    // 控制：Power 岛宽度。
-    property int powerIslandWidth: 38
+    // 控制：Power 岛宽度；30×40px 点击区保持紧凑且不低于 24px 可用性下限。
+    property int powerIslandWidth: 30
     // 控制：Power 细线图标宽高。
     property int powerGlyphSize: 14
     // 控制：Power 图标线宽。
@@ -403,12 +346,10 @@ QtObject {
     readonly property int trayExpandedMinWidth: trayUnit * trayExpandedMinUnits
     // 宽屏布局以最坏情况（3 个软件图标 + 复合入口）预留防重叠预算；
     // Tray 实际宽度仍由当前项目数动态决定。
-    readonly property int systemWideWidth: metricsWidth + metricsUtilityGap
-        + trayMaximumCollapsedWidth + trayPowerGap + powerIslandWidth
-    readonly property int systemCollapsedTrayWidth: metricsWidth + metricsUtilityGap
-        + trayCompositeWidth + trayPowerGap + powerIslandWidth
-    readonly property int systemCompactWidth: metricsCompactWidth
-        + metricsUtilityGap + powerIslandWidth
-    readonly property int systemUltraWidth: metricsUltraWidth
-        + metricsUtilityGap + powerIslandWidth
+    readonly property int systemMaximumWidth: rightIslandMetricsWidth
+        + metricsUtilityGap + trayMaximumCollapsedWidth
+        + trayPowerGap + powerIslandWidth
+    readonly property int systemCollapsedTrayWidth: rightIslandMetricsWidth
+        + metricsUtilityGap + trayCompositeWidth
+        + trayPowerGap + powerIslandWidth
 }

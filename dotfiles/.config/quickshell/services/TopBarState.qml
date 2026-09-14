@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
 
 Singleton {
     id: topBarState
@@ -48,16 +49,15 @@ Singleton {
 
     property int cpuPercent: 0
     property int memPercent: 0
-    property real networkBytesPerSecond: 0
-    property string networkRateText: "--"
-    property int networkLevel: 0
     property real previousCpuIdle: 0
     property real previousCpuTotal: 0
     property real memTotal: 0
     property real memAvailable: 0
-    property real previousNetworkBytes: -1
-    property real previousNetworkTimestamp: 0
-    property real networkSampleBytes: 0
+    readonly property var battery: UPower.displayDevice
+    readonly property bool batteryAvailable: battery !== null
+        && battery.ready && battery.isPresent
+    readonly property int batteryPercent: batteryAvailable
+        ? clampPercent(battery.percentage * 100) : 100
 
     property string weatherText: "--°C"
     property string lastValidWeather: ""
@@ -66,12 +66,6 @@ Singleton {
     readonly property int weatherMaxRetries: 3
     readonly property string weatherScriptPath: env("HOME")
         + "/.config/waybar/scripts/weather.py"
-
-    property string cavaData: "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁"
-    property bool cavaActive: false
-    property string pendingCavaData: ""
-    property bool pendingCavaActive: false
-    property bool cavaParseErrorLogged: false
 
     function env(name) {
         const value = Quickshell.env(name)
@@ -82,37 +76,11 @@ Singleton {
         return Math.max(0, Math.min(100, Math.round(value)))
     }
 
-    function formatRate(bytesPerSecond) {
-        if (bytesPerSecond >= 1024 * 1024) {
-            const value = bytesPerSecond / (1024 * 1024)
-            return value.toFixed(value >= 10 ? 0 : 1) + "M"
-        }
-        if (bytesPerSecond >= 1024) {
-            const value = bytesPerSecond / 1024
-            return value.toFixed(value >= 10 ? 0 : 1) + "K"
-        }
-        return Math.round(bytesPerSecond) + "B"
-    }
-
-    function rateLevel(bytesPerSecond) {
-        const thresholds = [1, 1024, 8192, 32768, 131072, 524288, 2097152, 8388608]
-        let level = 0
-        for (let index = 0; index < thresholds.length; index += 1) {
-            if (bytesPerSecond >= thresholds[index])
-                level = index + 1
-        }
-        return level
-    }
-
     function refreshMetrics() {
         if (!cpuProcess.running)
             cpuProcess.running = true
         if (!memoryProcess.running)
             memoryProcess.running = true
-        if (!networkProcess.running) {
-            networkSampleBytes = 0
-            networkProcess.running = true
-        }
     }
 
     function startWeatherFetch(resetRetries) {
@@ -124,16 +92,10 @@ Singleton {
         weatherProcess.running = true
     }
 
-    function startCava() {
-        if (!cavaProcess.running)
-            cavaProcess.running = true
-    }
-
     Component.onCompleted: {
         if (!testMode) {
             refreshMetrics()
             weatherStartTimer.start()
-            startCava()
         }
     }
 
@@ -191,37 +153,6 @@ Singleton {
                     topBarState.memPercent = topBarState.clampPercent(
                         (topBarState.memTotal - topBarState.memAvailable) * 100 / topBarState.memTotal)
                 }
-            }
-        }
-    }
-
-    Process {
-        id: networkProcess
-        command: ["cat", "/proc/net/dev"]
-        onExited: {
-            const now = Date.now()
-            if (topBarState.previousNetworkBytes >= 0 && topBarState.previousNetworkTimestamp > 0) {
-                const elapsedSeconds = Math.max(0.001,
-                    (now - topBarState.previousNetworkTimestamp) / 1000)
-                const byteDelta = Math.max(0,
-                    topBarState.networkSampleBytes - topBarState.previousNetworkBytes)
-                topBarState.networkBytesPerSecond = byteDelta / elapsedSeconds
-                topBarState.networkRateText = topBarState.formatRate(topBarState.networkBytesPerSecond)
-                topBarState.networkLevel = topBarState.rateLevel(topBarState.networkBytesPerSecond)
-            }
-            topBarState.previousNetworkBytes = topBarState.networkSampleBytes
-            topBarState.previousNetworkTimestamp = now
-        }
-        stdout: SplitParser {
-            onRead: data => {
-                const match = data.match(/^\s*([^:]+):\s*(.*)$/)
-                if (!match || match[1].trim() === "lo")
-                    return
-
-                const fields = match[2].trim().split(/\s+/)
-                const received = Number(fields[0]) || 0
-                const transmitted = Number(fields[8]) || 0
-                topBarState.networkSampleBytes += received + transmitted
             }
         }
     }
@@ -295,46 +226,4 @@ Singleton {
         onTriggered: topBarState.startWeatherFetch(true)
     }
 
-    Process {
-        id: cavaProcess
-        command: [Quickshell.shellDir + "/scripts/cava.sh"]
-        onExited: {
-            if (!topBarState.testMode)
-                cavaRetryTimer.restart()
-        }
-        stdout: SplitParser {
-            onRead: data => {
-                try {
-                    const payload = JSON.parse(data)
-                    if (typeof payload.bars === "string" && payload.bars !== "")
-                        topBarState.pendingCavaData = payload.bars
-                    topBarState.pendingCavaActive = payload.active === true
-                } catch (error) {
-                    if (!topBarState.cavaParseErrorLogged) {
-                        topBarState.cavaParseErrorLogged = true
-                        console.warn("[TopBarState] invalid cava payload: " + error)
-                    }
-                }
-            }
-        }
-    }
-
-    Timer {
-        id: cavaFrameTimer
-        interval: 180
-        running: !topBarState.testMode && !topBarState.reducedMotion
-        repeat: true
-        onTriggered: {
-            if (topBarState.pendingCavaData !== "")
-                topBarState.cavaData = topBarState.pendingCavaData
-            topBarState.cavaActive = topBarState.pendingCavaActive
-        }
-    }
-
-    Timer {
-        id: cavaRetryTimer
-        interval: 10000
-        repeat: false
-        onTriggered: topBarState.startCava()
-    }
 }

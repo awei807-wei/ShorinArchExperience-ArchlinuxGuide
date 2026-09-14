@@ -7,7 +7,6 @@ Row {
     property var metricsState: null
     property var panelWindow: null
     property int responsiveLevel: 0
-    property int volumePercent: 0
     property int requestedTrayIconLimit: 3
     property int notificationHistoryCount: 0
     property var notificationSourceCounts: []
@@ -22,15 +21,12 @@ Row {
     property color textDim: Config.Theme.textMuted
     property color lineSoft: Config.Theme.outlineVariant
     property color accentColor: Config.Theme.accent
-    property color segmentOn: Config.Theme.textMuted
-    property color segmentOff: Config.Theme.surfaceContainer
     property color dangerColor: Config.Theme.danger
     property string monoFont: "JetBrains Mono"
     readonly property bool reducedMotion: metricsState ? metricsState.reducedMotion : false
-    // 右岛的内容预算独立于完整面板：常态保持 220–240px，
-    // 因而 304px 展开态只是一段稳定颈部，不会被业务内容反向撑宽。
+    // 右岛内容预算独立于完整面板：关闭态固定 240px，展开态的
+    // 304px 宽度只是一段稳定颈部，不会被业务内容反向撑宽。
     readonly property bool showTray: true
-    readonly property bool showSegments: false
     readonly property int metricsWidth: Config.BarTuning.rightIslandMetricsWidth
     readonly property int trayIconLimit: Math.min(
         requestedTrayIconLimit,
@@ -55,24 +51,18 @@ Row {
 
         width: systemIsland.metricsWidth
         height: Config.BarTuning.islandHeight
-        networkValue: systemIsland.metricsState ? systemIsland.metricsState.networkRateText : "--"
-        networkLevel: systemIsland.metricsState ? systemIsland.metricsState.networkLevel : 0
-        memoryPercent: systemIsland.metricsState ? systemIsland.metricsState.memPercent : 0
         cpuPercent: systemIsland.metricsState ? systemIsland.metricsState.cpuPercent : 0
-        volumePercent: systemIsland.volumePercent
-        showSegments: systemIsland.showSegments
+        memoryPercent: systemIsland.metricsState ? systemIsland.metricsState.memPercent : 0
+        batteryPercent: systemIsland.metricsState
+            ? systemIsland.metricsState.batteryPercent : 100
+        batteryAvailable: systemIsland.metricsState
+            ? systemIsland.metricsState.batteryAvailable : false
         reducedMotion: systemIsland.reducedMotion
         surfaceColor: systemIsland.integratedSurface ? "transparent" : systemIsland.metricsSurface
         hoverColor: systemIsland.hoverSurface
         borderColor: systemIsland.integratedSurface ? "transparent" : systemIsland.borderColor
         highlightColor: systemIsland.integratedSurface ? "transparent" : systemIsland.highlightColor
-        textSoft: systemIsland.textSoft
-        textDim: systemIsland.textDim
-        lineSoft: systemIsland.lineSoft
         accentColor: systemIsland.accentColor
-        segmentOn: systemIsland.segmentOn
-        segmentOff: systemIsland.segmentOff
-        monoFont: systemIsland.monoFont
         onClicked: systemIsland.toggleSystemPanel()
     }
 

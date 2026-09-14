@@ -5,7 +5,7 @@
 
 ## 关键文件
 - `config/BarTuning.qml`：唯一像素微调入口，集中管理三岛位置、宽度、字号、内部间距与响应式阈值。
-- `Bar.qml`：三语义区装配、稳定视觉 token、响应式宽度预算，以及位于右岛轮廓与内容之间的 Cava 暗纹层。
+- `Bar.qml`：三语义区装配、稳定视觉 token 与响应式宽度预算；右岛保持无动态底纹的纯净深色表面。
 - `components/BarContour.qml`：以单个 Canvas 路径绘制全宽顶部连接带和三段反 R 角岛屿轮廓。
 - `components/ScreenEdgeBorder.qml`、`ScreenEdgeBorderHost.qml`：把 Bar 方形外端以 `17px` 内凹角融入两侧 `6px` 屏幕轨道，复刻 Brain_Shell `Border.qml` 的实际外缘结构。
 - `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、触发屏幕、右岛起始/目标颈宽、唯一 `rightPanelProgress` 与退场窗口生命周期。
@@ -16,12 +16,13 @@
 - `components/RightPanelTabs.qml`、`RightPanelPageSwitcher.qml`：目标 `296×38px`、最小面板下不超过主体 `50%` 的单指示器分页轨道及 `58px` 页脚层。
 - `components/NotificationHistoryPage.qml`：History 与 Control 共用固定面板高度，通知溢出时由 ListView 内部滚动；标题、空态及加载/错误状态分别由 `NotificationHistoryHeader`、`NotificationHistoryEmptyState`、`NotificationHistoryStatusState` 承担。
 - `Niri.qml`：共享 niri workspace 数据、事件流与聚焦动作。
-- `services/TopBarState.qml`：共享 CPU、MEM、NET、天气和 Cava 数据。
+- `services/TopBarState.qml`：共享 CPU、RAM、BAT 和天气数据；BAT 通过 Quickshell UPower 读取并覆盖无电池环境。
 - `components/ImportedControlCenterPanel.qml`：右岛当前调用的唯一控制中心，在标题栏显示时间、日期与天气，并提供网络、蓝牙、音量、亮度、系统占用和媒体控制；按钮与媒体卡分别由 `ControlCenterHeaderButton`、`ControlCenterMediaCard` 承担。
 - `components/ContextIsland.qml`：桌面环境路由与 Context 内容契约。
 - `components/ClockIsland.qml`：时间、日期与轻量音量反馈；不再占用顶栏宽度显示天气。
-- `components/SystemIsland.qml`：Metrics、Tray 与 Power 的右侧系统集群。
-- `components/Spectrum.qml`：把 32 路 Cava 数据均匀映射为固定窄柱，作为整个右岛的不接收输入的低对比背景。
+- `components/SystemIsland.qml`：Metrics、Tray 与 Power 的右侧系统集群，负责把共享 CPU/RAM/BAT 状态注入固定宽度遥测岛。
+- `components/Metrics.qml`：在 `164px` 固定预算内呈现 CPU / RAM / BAT 三段等宽遥测、暗色斜杠栅栏和无电池健康绿兜底。
+- `components/TelemetryMetricCell.qml`：保证标签与数值原生像素渲染、水平基线对齐及固定值槽宽度，不通过图层缩放压缩字形。
 - `components/TrayIsland.qml`：消费持久通知历史来源计数，稳定排序托盘应用，维护动态槽位、复合入口和总数角标，并通过单个进程调用托盘窗口聚焦脚本。
 - `components/TrayItem.qml`：单个托盘图标的 hover、右键菜单、键盘焦点、单击/双击消歧、激活行为与每应用通知角标。
 - `components/TrayNotificationModel.js`：规范化 Desktop Entry/应用名，执行唯一匹配、受限 QQ 归属与稳定排序。
@@ -32,10 +33,10 @@
 - `right-panel-animation-check.qml`：共享进度、`54px` 安全揭示、固定 Canvas 拓扑、常规/受限目标下的 Bar/flare 逐帧对齐、双向页面卡片过渡、半途反向与减弱动效门禁。
 
 ## 依赖
-依赖 Quickshell 0.3、QtQuick、SystemTray；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，频谱使用 Cava，天气沿用 Waybar weather 脚本。
+依赖 Quickshell 0.3、QtQuick、SystemTray 与 UPower；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，天气沿用 Waybar weather 脚本。
 
 ## 经验
-- [2026-07-28] 多屏 Bar 的长驻采集必须放在单例中，视图只按 screen/output 过滤；否则每块屏幕都会重复启动事件流和频谱进程。
+- [2026-07-28] 多屏 Bar 的长驻采集必须放在单例中，视图只按 screen/output 过滤；否则每块屏幕都会重复启动事件流和系统采集进程。
 - [2026-07-28] QML 紧凑组件应避开内建 `state` 命名，并用显式 Loader 绑定与 `ComponentBehavior: Bound` 固化作用域，不能只以运行时可加载作为静态质量标准。
 - [2026-07-28] 会写持久数据的状态检查必须注入独立临时路径；视觉/布局测试同时使用 `QUICKSHELL_TEST_MODE=1`，避免触发真实采集和用户数据链路。
 - [2026-07-28] 紧凑 Bar 应同时调整外框宽度、内部列宽、字体和溢出约束；只压缩 `implicitWidth` 会导致 Workspace 标记、指标值或 Tray 槽位越界。Tray 与 Power 保持独立表面，但可用 `4px` 二级间距形成统一工具组。
@@ -55,4 +56,4 @@
 - [2026-08-25] 固定宿主上移 flare 时不能再次填充整块右岛颈部：主体仍从 `40px` Bar 底边开始，向上衔接只覆盖颈部边界左右各 `16px`；左侧形成反 R 弧，右侧消除右岛旧外凸角留下的月牙缺口，同时避开 Metrics/Tray/Power。History 切页也不得触发 Tray 全量图标展开。
 - [2026-08-25] 页面切换不能 resize 线程化 Canvas：裁剪区会先变化，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
 - [2026-08-26] 连体外壳不能让宽度、高度与 Bar 错峰：`16–52px` 低高度无法容纳 flare 与两个 `18px` 圆角，会产生 GIF 中的凹口。最终实现使用一条 `300ms InOutCubic` 进度，Canvas 始终保持最终拓扑，viewport 在 surface 允许时从 `54px` 安全高度揭示；前 `10%` 只展开 Bar，内容从 `52%` 后进入。Controller 从触发屏幕捕获右岛起始/目标宽度，固定 Canvas 只做水平平移，使常规与窄屏受限颈部都逐帧一致；其他屏幕实例保持关闭。
-- [2026-08-28] Cava 频谱属于整个右岛的材质层，不属于 Metrics 内容层：由 `Bar` 按活动右岛颈宽铺设在 `BarContour` 与交互组件之间，32 根 `3.8px` 柱体等距分布。静止和活动态都保持低对比，Metrics、Tray 与 Power 的输入和 hover 反馈始终位于其上。
+- [2026-09-14] Metrics 不应靠缩小、缩放或负字距硬压缩字形承载四项监控。右岛总预算保持 `240px`，隐藏直出 Tray 槽并将 `164px` 分配给 CPU / RAM / BAT 三个等宽固定值槽，使用 `9/11px` Consolas 原生渲染等宽字、完整 hinting、两个 `10px` 斜杠栅栏与 `12px` 工具组间距。Tray 外壳为 `30×40px`，其复合入口命中区扩至 `24×24px`，Power 命中区为 `30×40px`。网络吞吐与 Cava 采集随展示一并删除；UPower 未就绪或无电池时 BAT 必须常驻为绿色 `100%`，避免布局坍塌。

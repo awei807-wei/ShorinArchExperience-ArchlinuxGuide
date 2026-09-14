@@ -3,6 +3,10 @@
 # Format: simple list only (one command per line, no YAML advanced syntax)
 
 commands:
+  - qmllint -I /usr/lib/qt6/qml config/BarTuning.qml
+  - qmllint -I /usr/lib/qt6/qml services/TopBarState.qml
+  - qmllint -I /usr/lib/qt6/qml components/Metrics.qml
+  - qmllint -I /usr/lib/qt6/qml components/TelemetryMetricCell.qml
   - qmllint -I /usr/lib/qt6/qml components/BarContour.qml
   - qmllint -I /usr/lib/qt6/qml components/ScreenEdgeBorder.qml
   - qmllint -I /usr/lib/qt6/qml components/ScreenEdgeBorderHost.qml
@@ -35,6 +39,7 @@ commands:
   - quickshell --no-color -p audio-output-model-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p audio-output-selector-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p bar-layout-check.qml
+  - QUICKSHELL_TEST_MODE=1 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p telemetry-layout-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-state-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-animation-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-panel-state-check.qml
@@ -51,6 +56,7 @@ commands:
   - qmllint -I /usr/lib/qt6/qml lockscreen/lockscreen-auth-layout-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p lockscreen/power-controls-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p lockscreen/lockscreen-auth-layout-check.qml
+  - xmllint --html --noout preview.html
   - python3 scripts/test-notification-history.py
   - bash scripts/test-focus-tray-item.sh
   - git diff --check

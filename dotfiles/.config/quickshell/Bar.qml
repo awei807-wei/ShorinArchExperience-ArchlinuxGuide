@@ -40,9 +40,9 @@ Rectangle {
     readonly property int islandContentTop: Config.BarTuning.islandContentTop
     readonly property int islandGap: Config.BarTuning.islandGap
     readonly property int minimumSupportedWidth: Config.BarTuning.minimumSupportedWidth
-    readonly property int layoutMode: width >= Config.BarTuning.fullTrayMinWidth ? 0 : (width >= Config.BarTuning.traySurfaceMinWidth ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4))
+    readonly property int layoutMode: width >= Config.BarTuning.traySurfaceMinWidth
+        ? 2 : (width >= Config.BarTuning.compactMinWidth ? 3 : 4)
     readonly property int responsiveTrayIconLimit: trayDirectIconLimit
-    readonly property int currentVolume: root && root.volumePercent !== undefined ? root.volumePercent : 0
     readonly property var currentScreen: panelWindow ? panelWindow.screen : null
     // Swiss industrial Bar 的稳定视觉 token；与 Matugen 动态面板强调色隔离。
     readonly property color panelSurface: Config.Theme.surface
@@ -111,7 +111,6 @@ Rectangle {
     readonly property int systemSpacing: systemIslandItem.spacing
     readonly property int utilitySpacing: systemIslandItem.utilityGap
     readonly property bool trayVisible: systemIslandItem.showTray
-    readonly property bool metricDetailsVisible: systemIslandItem.showSegments
     readonly property int actualTrayIconLimit: systemIslandItem.trayIconLimit
     property alias centerIsland: clockIslandItem
 
@@ -135,27 +134,6 @@ Rectangle {
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth
         surfaceColor: bar.panelSurface
-    }
-
-    // Cava 只作为整个右岛的低对比底纹；它位于轮廓之上、所有交互内容之下，
-    // 因此不会截获 Metrics、Tray 或 Power 的输入。
-    Spectrum {
-        id: rightIslandSpectrum
-
-        x: bar.width - bar.animatedRightContourWidth
-            + Config.BarTuning.spectrumHorizontalInset
-        y: bar.islandContentTop + Config.BarTuning.spectrumTopInset
-        width: Math.max(0, bar.animatedRightContourWidth
-            - 2 * Config.BarTuning.spectrumHorizontalInset)
-        height: Math.max(0, bar.islandHeight
-            - Config.BarTuning.spectrumTopInset
-            - Config.BarTuning.spectrumBottomInset)
-        visible: width > 0 && height > 0
-        bars: Core.TopBarState.cavaData
-        active: Core.TopBarState.cavaActive
-        reducedMotion: Core.TopBarState.reducedMotion
-        barColor: bar.textDim
-        topLineColor: bar.lineSecondary
     }
 
     ContextIsland {
@@ -214,7 +192,6 @@ Rectangle {
         metricsState: Core.TopBarState
         panelWindow: bar.panelWindow
         responsiveLevel: bar.layoutMode
-        volumePercent: bar.currentVolume
         requestedTrayIconLimit: bar.responsiveTrayIconLimit
         notificationHistoryCount: bar.notificationHistoryCount
         notificationSourceCounts: bar.notificationSourceCounts
@@ -229,8 +206,6 @@ Rectangle {
         textDim: bar.textDim
         lineSoft: bar.lineSecondary
         accentColor: bar.instrumentAccent
-        segmentOn: bar.occupiedTone
-        segmentOff: bar.inactiveTone
         dangerColor: bar.zenDanger
         monoFont: bar.monoFont
         onToggleSystemPanel: bar.systemClicked()

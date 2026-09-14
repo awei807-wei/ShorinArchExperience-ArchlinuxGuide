@@ -323,7 +323,7 @@ Rectangle {
 
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: -2
+                anchors.margins: -Config.BarTuning.trayCompositeHitSlop
                 color: "transparent"
                 border.width: compositeEntry.activeFocus ? 1 : 0
                 border.color: trayIsland.zenCloud
@@ -331,6 +331,7 @@ Rectangle {
 
             MouseArea {
                 anchors.fill: parent
+                anchors.margins: -Config.BarTuning.trayCompositeHitSlop
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: compositeEntry.hovered = true
