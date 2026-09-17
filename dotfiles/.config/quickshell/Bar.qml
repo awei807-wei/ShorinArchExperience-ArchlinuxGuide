@@ -25,10 +25,22 @@ Rectangle {
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property bool rightPanelOpen: false
-    // 中岛子面板开合（驱动中央缺口熔接动画：岛底圆角打开、内容淡出）。
-    // 进度由 controller 动画驱动（shell 注入），Bar 不再持有第二套缓动。
+    // 中岛子面板开合。cWidth 联动为 Brain_Shell TopBar 原方案：
+    // 面板打开时中央缺口宽度跟随面板主体宽，一条 InOutCubic Behavior；
+    // 缺口形状（含底部圆角）不做特殊处理，熔接由面板 PopupShape 凹角完成。
     property bool centerPanelOpen: false
-    property real centerPanelProgress: 0
+    property real centerPanelPageWidth: 0
+
+    // Brain TopBar: cWidth = dashboardOpen ? dashboardPageWidth : 内容宽
+    property real centerPanelCWidth: centerPanelOpen
+        ? centerPanelPageWidth : clockIslandItem.width
+
+    Behavior on centerPanelCWidth {
+        NumberAnimation {
+            duration: Config.BarTuning.panelShellDuration
+            easing.type: Easing.InOutCubic
+        }
+    }
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth
@@ -132,10 +144,11 @@ Rectangle {
 
         anchors.fill: parent
         leftWidth: bar.contextRight
-        centerWidth: clockIslandItem.width
-        centerOffset: bar.clockLeft - (bar.width - clockIslandItem.width) / 2
+        // 中央缺口宽度与中心跟随面板（cWidth 联动），同 Brain TopBar
+        centerWidth: bar.centerPanelCWidth
+        centerOffset: bar.clockLeft + clockIslandItem.width / 2
+            - bar.width / 2
         rightWidth: bar.animatedRightContourWidth
-        centerOpen: bar.centerPanelProgress
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth
