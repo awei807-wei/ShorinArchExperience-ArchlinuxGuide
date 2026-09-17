@@ -70,6 +70,8 @@ Canvas {
             ctx.lineTo(centerEnd - cbr, h);
             ctx.arcTo(centerEnd, h, centerEnd, h - cbr, cbr);
         } else {
+            // 极小圆角先走到左下角，避免直接连向右端形成斜底边。
+            ctx.lineTo(centerStart, h);
             ctx.lineTo(centerEnd, h);
         }
         ctx.lineTo(centerEnd, b + r);
