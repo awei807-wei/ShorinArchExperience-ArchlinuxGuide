@@ -25,17 +25,10 @@ Rectangle {
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property bool rightPanelOpen: false
-    // 中岛子面板开合（驱动中央缺口熔接动画：岛底圆角打开、内容淡出）
+    // 中岛子面板开合（驱动中央缺口熔接动画：岛底圆角打开、内容淡出）。
+    // 进度由 controller 动画驱动（shell 注入），Bar 不再持有第二套缓动。
     property bool centerPanelOpen: false
-    property real centerPanelProgress: centerPanelOpen ? 1 : 0
-
-    Behavior on centerPanelProgress {
-        enabled: !Core.TopBarState.reducedMotion
-        NumberAnimation {
-            duration: Config.BarTuning.panelShellDuration
-            easing.type: Easing.OutCubic
-        }
-    }
+    property real centerPanelProgress: 0
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth

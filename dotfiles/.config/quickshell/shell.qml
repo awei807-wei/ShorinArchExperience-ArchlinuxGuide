@@ -840,6 +840,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         && rightPanelActiveOnScreen
                     centerPanelOpen: centerPanelController.open
                         && centerPanelActiveOnScreen
+                    centerPanelProgress: centerPanelActiveOnScreen
+                        ? centerPanelController.progress : 0
                     rightPanelProgress: rightPanelActiveOnScreen
                         ? rightPanelController.progress : 0
                     rightPanelBaseWidth: rightPanelController.baseRightWidth
@@ -903,7 +905,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     CenterPanelController {
         id: centerPanelController
         reducedMotion: Core.TopBarState.reducedMotion
-        animationDuration: Config.BarTuning.panelShellDuration
+        openDuration: Config.BarTuning.panelShellDuration
+        closeDuration: Math.round(Config.BarTuning.panelShellDuration * 0.8)
     }
 
     Variants {

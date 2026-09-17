@@ -1,9 +1,8 @@
 import QtQuick
 import "../vendor/brain"
 
-// 中岛子面板控制器 — 仿 RightPanelController 的最小化版本。
-// Brain_Shell 的 Popups 单例负责开合；这里用真正的控制器持有状态，
-// 并把 open 状态回写到 Popups 供 vendor 内代码（ESC/点击关闭）消费。
+// 中岛子面板控制器。progress 是唯一的几何进度：打开、关闭、中途反向
+// 都操作同一个值；Bar（岛底圆角）与 Dashboard（外壳宽高）全部由它推导。
 Item {
     id: root
 
@@ -14,8 +13,10 @@ Item {
 
     property bool open: false
     property string page: "home"
-    property int animationDuration: 300
+    property int openDuration: 300
+    property int closeDuration: 240
     property int hideDelay: 20
+    property real progress: 0
     property bool windowVisible: false
     property bool reducedMotion: false
     property var activeScreen: null
@@ -55,20 +56,10 @@ Item {
     }
 
     function finishClose() {
-        if (open)
+        if (open || progress > 0.001)
             return
         closeTimer.stop()
         windowVisible = false
-    }
-
-    function syncState() {
-        closeTimer.stop()
-        Popups.dashboardOpen = open
-        Popups.dashboardPage = page
-        if (open)
-            windowVisible = true
-        else
-            scheduleWindowHide()
     }
 
     function scheduleWindowHide() {
@@ -80,7 +71,35 @@ Item {
             closeTimer.restart()
     }
 
+    function syncState() {
+        closeTimer.stop()
+        progressAnimation.stop()
+        Popups.dashboardOpen = open
+        Popups.dashboardPage = page
+        if (open)
+            windowVisible = true
+
+        const duration = open ? openDuration : closeDuration
+        const target = open ? 1 : 0
+        if (reducedMotion || duration <= 0
+                || Math.abs(progress - target) <= 0.0001) {
+            progress = target
+            if (!open)
+                scheduleWindowHide()
+            return
+        }
+
+        progressAnimation.from = progress
+        progressAnimation.to = target
+        progressAnimation.duration = duration
+        progressAnimation.restart()
+    }
+
     onOpenChanged: syncState()
+    onReducedMotionChanged: {
+        if (reducedMotion)
+            syncState()
+    }
     onPageChanged: Popups.dashboardPage = page
 
     Connections {
@@ -91,11 +110,27 @@ Item {
         }
     }
 
+    NumberAnimation {
+        id: progressAnimation
+
+        target: root
+        property: "progress"
+        easing.type: Easing.InOutCubic
+        onFinished: {
+            if (!root.open)
+                root.scheduleWindowHide()
+        }
+    }
+
     Timer {
         id: closeTimer
-        interval: Math.max(0, root.animationDuration + root.hideDelay)
+
+        interval: Math.max(0, root.closeDuration + root.hideDelay)
         onTriggered: root.finishClose()
     }
 
-    Component.onCompleted: Popups.dashboardOpen = open
+    Component.onCompleted: {
+        progress = open ? 1 : 0
+        windowVisible = open
+    }
 }

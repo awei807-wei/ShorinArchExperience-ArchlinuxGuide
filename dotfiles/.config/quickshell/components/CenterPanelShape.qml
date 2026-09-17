@@ -1,28 +1,34 @@
 import "../config" as Config
 import QtQuick
 
-// 中岛子面板的最终连体轮廓：顶部居中颈部接入 bar 中央岛，凹角喇叭
-// 向外展开到主体，主体底部圆角。Canvas 始终按最终宽高绘制，动画只由
-// 外层 viewport 揭示（与 RightPanelShape 同一架构）。
+// 中岛子面板的连体轮廓：单条闭合路径依次经过
+// 颈部左上 → 颈部右上 → 右侧内凹连接弧 → 主体右上圆角 → 右侧边
+// → 右下圆角 → 底边 → 左下圆角 → 左侧边 → 左上圆角 → 左侧内凹连接弧 → 闭合。
+// 三种半径严格区分：neckFlare（内凹连接弧）/ topRadius（主体上角）
+// / bottomRadius（主体下角），空间不足时按约束收敛，不硬塞完整圆弧。
 // 几何实现参考 Brainitech/Brain_Shell 的 PopupShape（MIT）。
 Canvas {
     id: root
 
     property color color: Config.Theme.surface
-    property real neckWidth: 330
+    property real neckWidth: 300
     property real radius: Config.Theme.radiusMedium
     property real flare: Config.BarTuning.rightPanelFlare
 
     readonly property real w: Math.max(0, width)
     readonly property real h: Math.max(0, height)
     readonly property real effNeck: Math.max(0, Math.min(neckWidth, w))
+    readonly property real shoulder: Math.max(0, (w - effNeck) / 2)
+    // 内凹连接弧不能超过当前高度和左右肩部空间
+    readonly property real effFlare: Math.max(0, Math.min(
+        flare, h / 3, shoulder / 2))
+    // 左右上角必须给连接弧留出横向空间
+    readonly property real effTopRadius: Math.max(0, Math.min(
+        radius, (h - effFlare) / 2, shoulder - effFlare))
+    readonly property real effBottomRadius: Math.max(0, Math.min(
+        radius, (h - effFlare) / 2, w / 2))
     readonly property real neckLeft: (w - effNeck) / 2
     readonly property real neckRight: neckLeft + effNeck
-    readonly property real effFlare: Math.max(0, Math.min(
-        flare, effNeck / 3, w / 2, h))
-    readonly property real bodyTop: effFlare
-    readonly property real effRadius: Math.max(0, Math.min(
-        radius, w / 2, Math.max(0, h - bodyTop) / 2))
 
     antialiasing: true
     renderStrategy: Canvas.Threaded
@@ -42,9 +48,10 @@ Canvas {
         const w = root.w
         const h = root.h
         const f = root.effFlare
-        const r = root.effRadius
-        const neckLeft = root.neckLeft
-        const neckRight = root.neckRight
+        const tr = root.effTopRadius
+        const br = root.effBottomRadius
+        const nl = root.neckLeft
+        const nr = root.neckRight
 
         if (w <= 0 || h <= 0)
             return
@@ -52,33 +59,31 @@ Canvas {
         ctx.beginPath()
         ctx.fillStyle = root.color
 
-        // 主体：全宽，顶边位于 flare 下方，底部圆角
-        ctx.moveTo(0, f)
-        ctx.lineTo(w, f)
-        ctx.lineTo(w, Math.max(f, h - r))
-        if (r > 0)
-            ctx.arcTo(w, h, w - r, h, r)
-        else
-            ctx.lineTo(w, h)
-        ctx.lineTo(r, h)
-        if (r > 0)
-            ctx.arcTo(0, h, 0, h - r, r)
-        else
-            ctx.lineTo(0, h)
-        ctx.lineTo(0, f)
+        // 颈部顶边（贴住 bar 底边）
+        ctx.moveTo(nl, 0)
+        ctx.lineTo(nr, 0)
+        // 右侧内凹连接弧：从颈部右上外展到主体顶边
+        ctx.quadraticCurveTo(nr, f, nr + f, f)
+        // 主体顶边右段 → 右上圆角 → 右侧边
+        ctx.lineTo(w - tr, f)
+        if (tr > 0)
+            ctx.arcTo(w, f, w, f + tr, tr)
+        // 右下圆角
+        ctx.lineTo(w, h - br)
+        if (br > 0)
+            ctx.arcTo(w, h, w - br, h, br)
+        // 底边 → 左下圆角 → 左侧边
+        ctx.lineTo(br, h)
+        if (br > 0)
+            ctx.arcTo(0, h, 0, h - br, br)
+        ctx.lineTo(0, f + tr)
+        if (tr > 0)
+            ctx.arcTo(0, f, tr, f, tr)
+        // 主体顶边左段 → 左侧内凹连接弧回颈部左上
+        ctx.lineTo(nl - f, f)
+        ctx.quadraticCurveTo(nl, f, nl, 0)
+
         ctx.closePath()
         ctx.fill()
-
-        // 颈部：居中窄条接入 bar，两侧凹角喇叭外展到主体宽度
-        if (f > 0 && effNeck > 0) {
-            ctx.beginPath()
-            ctx.moveTo(neckLeft, 0)
-            ctx.lineTo(neckRight, 0)
-            ctx.quadraticCurveTo(neckRight, f, neckRight + f, f)
-            ctx.lineTo(neckLeft - f, f)
-            ctx.quadraticCurveTo(neckLeft, f, neckLeft, 0)
-            ctx.closePath()
-            ctx.fill()
-        }
     }
 }

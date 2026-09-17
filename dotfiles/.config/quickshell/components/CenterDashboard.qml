@@ -8,10 +8,10 @@ import "../vendor/brain/services/center/"
 import "../config" as Config
 import ".." as Core
 
-// 中岛子面板宿主 — 架构对齐 RightPanelHost/UnifiedRightPanel：
-// 全屏透明 PanelWindow；sizer 是固定宽度的 clip viewport，只做高度揭示；
-// 外壳（CenterPanelShape + 内容）始终按最终几何绘制，不经历中间拓扑。
-// 颈部重叠带独立于揭示动画，全程覆盖双窗口接缝。
+// 中岛子面板宿主。唯一的几何进度是 controller.progress：
+// 背景轮廓（CenterPanelShape）按当前宽高直接实例化、真实变形，
+// 页面内容按最终宽度排版、独立裁切，只在展开后段淡入。
+// 两者都不是卷帘裁切——动画期间底边始终是外壳自己的圆角。
 PanelWindow {
     id: root
 
@@ -21,7 +21,6 @@ PanelWindow {
 
     readonly property int fw: Theme.notchRadius
     readonly property int fh: Theme.notchRadius
-    readonly property int animDuration: controller.animationDuration
     // PanelWindow.margins 使用整数逻辑像素；重叠量向上取整，
     // 不把小数窗口边距和未经取整的 Item 偏移混用。
     readonly property int seamOverlapPx: Math.max(1, Math.ceil(
@@ -31,7 +30,23 @@ PanelWindow {
     readonly property real seamLocalY: root.barBottom - root.margins.top
     readonly property real connectionCenterX: controller.centerCenterX > 0
         ? controller.centerCenterX : root.width / 2
-    readonly property int closedSizerHeight: root.fh + 4
+
+    // 唯一几何进度（0..1，由 controller 动画驱动）
+    readonly property real p: Math.max(0, Math.min(1, controller.progress))
+    readonly property real finalPanelWidth: controller.pageWidth + 2 * root.fw
+    readonly property real livePanelWidth: controller.centerWidth
+        + (finalPanelWidth - controller.centerWidth) * root.p
+    readonly property real livePanelHeight: Theme.dashboardHeight * root.p
+    // 中岛底部当前圆角（Bar 同步），颈部接入口与其对应
+    readonly property real currentBottomRadius:
+        Config.BarTuning.barNotchRadius * (1 - root.p)
+    readonly property real currentNeckWidth: Math.max(0,
+        controller.centerWidth - 2 * root.currentBottomRadius)
+    // 内容可见度：几何进度 0.85 后 smoothstep 淡入
+    readonly property real contentOpacity: {
+        const t = Math.max(0, Math.min(1, (root.p - 0.85) / 0.15))
+        return t * t * (3 - 2 * t)
+    }
 
     readonly property bool panelActiveOnScreen:
         controller.isScreenActive(modelData)
@@ -60,133 +75,100 @@ PanelWindow {
         onClicked: controller.close()
     }
 
-    // ── 连接区（颈部）─────────────────────────────────────────────
-    // 职责：动画全程保持对 bar 底边与面板主体之间过渡带的覆盖。
-    // 不参与 clip、淡入、位移——它与 sizer 是兄弟节点，独立于揭示动画。
-    // 仅覆盖中岛底部始终实心的内区。桥始终以连接中心定位。
+    // ── 面板背景轮廓：当前几何直接实例化，不进任何 clip 容器 ──────────
+    CenterPanelShape {
+        id: shellOutline
+
+        visible: root.p > 0.001
+        x: root.connectionCenterX - width / 2
+        y: root.seamLocalY
+        width: root.livePanelWidth
+        height: root.livePanelHeight
+        color: Theme.background
+        neckWidth: root.currentNeckWidth
+        radius: Config.Theme.radiusMedium
+        flare: root.fh
+    }
+
+    // ── 补缝带：只在岛底与颈部接入口的共有区域内的小范围重叠 ──────────
+    // 宽度不超过真实接入口（currentNeckWidth），progress 归零即消失。
     Rectangle {
         id: neck
 
-        visible: sizer.visible
+        visible: shellOutline.visible
         x: root.connectionCenterX - width / 2
         y: 0
-        width: Math.max(0, controller.centerWidth
-            - 2 * Config.BarTuning.barNotchRadius)
+        width: root.currentNeckWidth
         height: root.seamLocalY + 1
         color: Theme.background
     }
 
+    // ── 页面内容：始终按最终宽度排版，独立裁切，后段淡入 ──────────────
+    // 裁切只作用于内容；可见度由 contentOpacity（p≥0.85 才出现）控制，
+    // 关闭时先快速淡出，再让空壳收回——不会看到卡片被拦腰切开。
     Item {
-        id: sizer
+        id: contentStage
 
-        // 水平对齐中岛中心
         x: root.connectionCenterX - width / 2
-        // 顶边固定在 bar 底边（窗口已上移 overlap，这里补回）
-        anchors.top: parent.top
-        anchors.topMargin: root.seamLocalY
+        y: root.seamLocalY
+        width: root.finalPanelWidth
+        height: root.livePanelHeight
         clip: true
-        // 宽度固定为最终几何；只有高度做揭示动画
-        width: controller.pageWidth + 2 * root.fw
-        height: controller.open
-            ? Theme.dashboardHeight
-            : root.closedSizerHeight
-        visible: controller.open || height > root.closedSizerHeight + 0.001
+        visible: root.p > 0.001
+        opacity: root.contentOpacity
+        enabled: controller.open && root.p > 0.999
 
-        Behavior on height {
-            enabled: !Core.TopBarState.reducedMotion
-            NumberAnimation {
-                duration: root.animDuration
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        // 吞掉面板内部点击，避免穿透到关闭层
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {}
-        }
-
-        // 外壳按最终几何绘制：形状与内容不经历中间拓扑
         Item {
-            id: fixedShell
+            // 内容按最终几何排版，不随揭示高度挤压
+            anchors.fill: parent
+            anchors.topMargin: root.fh + 8
+            anchors.leftMargin: root.fw + 8
+            anchors.rightMargin: root.fw + 8
+            anchors.bottomMargin: 8
 
-            anchors.top: parent.top
-            width: sizer.width
-            height: Theme.dashboardHeight
-
-            CenterPanelShape {
+            Column {
                 anchors.fill: parent
-                color: Theme.background
-                neckWidth: controller.centerWidth + 2 * root.fw
-                radius: Config.Theme.radiusMedium
-                flare: root.fh
-            }
+                spacing: 0
 
-            Item {
-                id: content
+                TabSwitcher {
+                    id: tabBar
 
-                anchors {
-                    fill: parent
-                    topMargin: root.fh + 8
-                    leftMargin: root.fw + 8
-                    rightMargin: root.fw + 8
-                    bottomMargin: 8
+                    orientation: "horizontal"
+                    width: parent.width
+                    currentPage: controller.page
+                    model: [
+                        { key: "home",     icon: "󰋜", label: "Home" },
+                        { key: "stats",    icon: "󰻠", label: "System" },
+                        { key: "kanban",   icon: "󰄬", label: "Tasks" }
+                    ]
+                    onPageChanged: key => controller.showPage(key)
                 }
 
-                opacity: controller.open ? 1 : 0
-                enabled: controller.open
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: controller.open
-                            ? root.animDuration * 0.5
-                            : root.animDuration * 0.15
-                    }
-                }
+                Item {
+                    id: pageArea
 
-                Column {
-                    anchors.fill: parent
-                    spacing: 0
+                    focus: true
+                    width: parent.width
+                    height: parent.height - tabBar.height
 
-                    TabSwitcher {
-                        id: tabBar
+                    Keys.onEscapePressed: controller.close()
 
-                        orientation: "horizontal"
-                        width: parent.width
-                        currentPage: controller.page
-                        model: [
-                            { key: "home",     icon: "󰋜", label: "Home" },
-                            { key: "stats",    icon: "󰻠", label: "System" },
-                            { key: "kanban",   icon: "󰄬", label: "Tasks" }
-                        ]
-                        onPageChanged: key => controller.showPage(key)
+                    Item {
+                        anchors.fill: parent
+                        visible: controller.page === "home"
+                        DashHome { anchors.fill: parent }
                     }
 
                     Item {
-                        id: pageArea
+                        anchors.fill: parent
+                        visible: controller.page === "stats"
+                        DashStats { anchors.fill: parent }
+                    }
 
-                        focus: true
-                        width: parent.width
-                        height: parent.height - tabBar.height
-
-                        Keys.onEscapePressed: controller.close()
-
-                        Item {
-                            anchors.fill: parent
-                            visible: controller.page === "home"
-                            DashHome { anchors.fill: parent }
-                        }
-
-                        Item {
-                            anchors.fill: parent
-                            visible: controller.page === "stats"
-                            DashStats { anchors.fill: parent }
-                        }
-
-                        Item {
-                            anchors.fill: parent
-                            visible: controller.page === "kanban"
-                            KanbanBoard { anchors.fill: parent }
-                        }
+                    Item {
+                        anchors.fill: parent
+                        visible: controller.page === "kanban"
+                        KanbanBoard { anchors.fill: parent }
                     }
                 }
             }
