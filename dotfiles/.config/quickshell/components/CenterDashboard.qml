@@ -63,15 +63,15 @@ PanelWindow {
     // ── 连接区（颈部）─────────────────────────────────────────────
     // 职责：动画全程保持对 bar 底边与面板主体之间过渡带的覆盖。
     // 不参与 clip、淡入、位移——它与 sizer 是兄弟节点，独立于揭示动画。
-    // 仅覆盖中岛底部始终实心的内区。桥始终以连接中心定位，
-    // 不跟随正在扩展的 sizer 左边缘，也不填平外侧圆角。
+    // bar 中央岛与面板 sizer 以同一曲线同步变宽，因此颈部直接跟随
+    // sizer 宽度（扣除两侧圆角），全程等于连体轮廓的内区宽度。
     Rectangle {
         id: neck
 
         visible: sizer.visible
         x: root.connectionCenterX - width / 2
         y: 0
-        width: Math.max(0, controller.centerWidth
+        width: Math.max(0, sizer.width
             - 2 * Config.BarTuning.barNotchRadius)
         height: root.seamLocalY + 1
         color: Theme.background

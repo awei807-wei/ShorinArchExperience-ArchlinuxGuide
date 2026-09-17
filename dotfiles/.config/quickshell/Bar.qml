@@ -27,6 +27,8 @@ Rectangle {
     property bool rightPanelOpen: false
     // 中岛子面板开合（驱动中央缺口熔接动画）
     property bool centerPanelOpen: false
+    // 面板展开时中央岛的目标宽度（= 面板主体宽度，由 shell 注入）
+    property real centerPanelTargetWidth: 0
     property real centerPanelProgress: centerPanelOpen ? 1 : 0
 
     Behavior on centerPanelProgress {
@@ -36,6 +38,13 @@ Rectangle {
             easing.type: Easing.OutCubic
         }
     }
+
+    // 中央岛轮廓宽度随面板一起生长（与面板 sizer 同曲线同步），
+    // 收合时回到时钟岛宽度
+    readonly property real centerContourWidth:
+        clockIslandItem.width
+        + Math.max(0, centerPanelTargetWidth - clockIslandItem.width)
+            * centerPanelProgress
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth
@@ -139,8 +148,10 @@ Rectangle {
 
         anchors.fill: parent
         leftWidth: bar.contextRight
-        centerWidth: clockIslandItem.width
-        centerOffset: bar.clockLeft - (bar.width - clockIslandItem.width) / 2
+        // 展开时中央岛与面板同宽生长，中心始终锁定时钟岛中心
+        centerWidth: bar.centerContourWidth
+        centerOffset: bar.clockLeft + clockIslandItem.width / 2
+            - bar.width / 2
         rightWidth: bar.animatedRightContourWidth
         centerOpen: bar.centerPanelProgress
         notchHeight: bar.barHeight
