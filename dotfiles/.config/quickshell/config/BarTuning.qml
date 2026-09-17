@@ -106,7 +106,7 @@ QtObject {
     property int panelShellDuration: 300
     property int panelWindowHideDelay: 20
     property real panelBodyStartProgress: 0.10
-    property real panelContentStartProgress: 0.52
+    property real panelContentStartProgress: 0.25
     property int panelSafeRevealExtra: 2
 
     // 页面切换时保留两个页面实例，以整页卡片做推拉、淡入和轻微缩放。

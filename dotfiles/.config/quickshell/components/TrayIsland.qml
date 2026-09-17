@@ -321,14 +321,6 @@ Rectangle {
                 }
             }
 
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -Config.BarTuning.trayCompositeHitSlop
-                color: "transparent"
-                border.width: compositeEntry.activeFocus ? 1 : 0
-                border.color: trayIsland.zenCloud
-            }
-
             MouseArea {
                 anchors.fill: parent
                 anchors.margins: -Config.BarTuning.trayCompositeHitSlop
@@ -336,10 +328,7 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onEntered: compositeEntry.hovered = true
                 onExited: compositeEntry.hovered = false
-                onClicked: {
-                    compositeEntry.forceActiveFocus()
-                    trayIsland.toggleRequested(trayIsland.expandedWidth)
-                }
+                onClicked: trayIsland.toggleRequested(trayIsland.expandedWidth)
             }
         }
 

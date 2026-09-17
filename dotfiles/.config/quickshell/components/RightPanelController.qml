@@ -174,7 +174,10 @@ Item {
 
         target: root
         property: "rightPanelProgress"
-        easing.type: Easing.InOutCubic
+        // OutCubic：开合两端都是"即时响应 + 柔和收尾"。
+        // 原先的 InOutCubic 起步速度为零，点击后前 ~80ms 无明显位移，
+        // 体感为"点了没反应"，中段速度峰值又被感知为"强行加速"。
+        easing.type: Easing.OutCubic
         onFinished: {
             if (!root.rightPanelOpen
                     && root.rightPanelProgress <= 0.001)
