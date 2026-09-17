@@ -10,6 +10,8 @@ Canvas {
     property real centerWidth: 240
     property real centerOffset: 0
     property real rightWidth: 180
+    // 中央岛熔接进度 0..1：1 = 底部圆角打开（与中岛子面板融合）
+    property real centerOpen: 0
     property real notchHeight: 40
     property real notchRadius: 15
     property real topBorderWidth: 6
@@ -27,6 +29,7 @@ Canvas {
     onCenterWidthChanged: requestPaint()
     onCenterOffsetChanged: requestPaint()
     onRightWidthChanged: requestPaint()
+    onCenterOpenChanged: requestPaint()
     onNotchHeightChanged: requestPaint()
     onNotchRadiusChanged: requestPaint()
     onTopBorderWidthChanged: requestPaint()
@@ -57,12 +60,18 @@ Canvas {
         ctx.arcTo(leftEnd, b, leftEnd + r, b, r);
 
         // 中岛两侧都由上部内凹圆角、短直边和下部外凸圆角组成。
+        // 面板打开（centerOpen=1）时底部圆角退化为方角，与子面板喇叭口融合。
+        const cbr = r * (1 - Math.max(0, Math.min(1, root.centerOpen)));
         ctx.lineTo(centerStart - r, b);
         ctx.arcTo(centerStart, b, centerStart, b + r, r);
-        ctx.lineTo(centerStart, h - r);
-        ctx.arcTo(centerStart, h, centerStart + r, h, r);
-        ctx.lineTo(centerEnd - r, h);
-        ctx.arcTo(centerEnd, h, centerEnd, h - r, r);
+        ctx.lineTo(centerStart, h - cbr);
+        if (cbr > 0.5) {
+            ctx.arcTo(centerStart, h, centerStart + cbr, h, cbr);
+            ctx.lineTo(centerEnd - cbr, h);
+            ctx.arcTo(centerEnd, h, centerEnd, h - cbr, cbr);
+        } else {
+            ctx.lineTo(centerEnd, h);
+        }
         ctx.lineTo(centerEnd, b + r);
         ctx.arcTo(centerEnd, b, centerEnd + r, b, r);
 

@@ -25,6 +25,17 @@ Rectangle {
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property bool rightPanelOpen: false
+    // 中岛子面板开合（驱动中央缺口熔接动画）
+    property bool centerPanelOpen: false
+    property real centerPanelProgress: centerPanelOpen ? 1 : 0
+
+    Behavior on centerPanelProgress {
+        enabled: !Core.TopBarState.reducedMotion
+        NumberAnimation {
+            duration: Config.BarTuning.panelShellDuration
+            easing.type: Easing.OutCubic
+        }
+    }
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth
@@ -115,6 +126,7 @@ Rectangle {
     property alias centerIsland: clockIslandItem
 
     signal systemClicked()
+    signal centerIslandClicked()
     signal trayPanelToggleRequested(real panelWidth)
     signal trayPanelResizeRequested(real panelWidth)
     signal trayPanelCloseRequested()
@@ -130,6 +142,7 @@ Rectangle {
         centerWidth: clockIslandItem.width
         centerOffset: bar.clockLeft - (bar.width - clockIslandItem.width) / 2
         rightWidth: bar.animatedRightContourWidth
+        centerOpen: bar.centerPanelProgress
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth
@@ -169,6 +182,7 @@ Rectangle {
         height: bar.islandHeight
         responsiveLevel: bar.layoutMode
         reducedMotion: Core.TopBarState.reducedMotion
+        panelOpen: bar.centerPanelOpen
         surfaceColor: "transparent"
         hoverColor: bar.hoverSurface
         borderColor: "transparent"
@@ -179,6 +193,7 @@ Rectangle {
         lineColor: bar.linePrimary
         accentColor: bar.instrumentAccent
         monoFont: bar.monoFont
+        onClicked: bar.centerIslandClicked()
     }
 
     SystemIsland {

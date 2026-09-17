@@ -22,6 +22,9 @@ Rectangle {
     property bool showVolume: false
     property int volume: 0
     property real shakeOffset: 0
+    // 中岛子面板打开：内容淡出、岛体成为面板颈部
+    property bool panelOpen: false
+    signal clicked()
     readonly property bool hovered: hoverArea.containsMouse
     readonly property bool ultraCompact: responsiveLevel >= 4
     readonly property bool compact: responsiveLevel >= 3
@@ -45,7 +48,7 @@ Rectangle {
 
     implicitWidth: ultraCompact ? Config.BarTuning.clockUltraWidth : (compact ? Config.BarTuning.clockCompactWidth : Config.BarTuning.clockWidth)
     implicitHeight: Config.BarTuning.islandHeight
-    color: hovered ? hoverColor : surfaceColor
+    color: panelOpen ? surfaceColor : (hovered ? hoverColor : surfaceColor)
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
     radius: Config.Theme.radiusMedium
@@ -102,6 +105,12 @@ Rectangle {
         id: clockContent
 
         anchors.centerIn: parent
+        opacity: panelOpen ? 0 : 1
+
+        Behavior on opacity {
+            enabled: !clockIsland.reducedMotion
+            NumberAnimation { duration: Config.Theme.animNormal }
+        }
 
         Item {
             width: clockIsland.timeColumnWidth
@@ -179,7 +188,8 @@ Rectangle {
 
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.NoButton
+        acceptedButtons: Qt.LeftButton
+        onClicked: clockIsland.clicked()
     }
 
     transform: Translate {

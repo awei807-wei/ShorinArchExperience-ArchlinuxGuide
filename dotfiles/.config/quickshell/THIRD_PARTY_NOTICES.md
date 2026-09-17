@@ -1,5 +1,19 @@
 # Third-party notices
 
+## Brainitech/Brain_Shell
+
+The center-island dashboard (panel skeleton, tab switcher, popup shape, and
+the Home / System / Tasks / Apps pages) is adapted from
+[`Brainitech/Brain_Shell`](https://github.com/Brainitech/Brain_Shell), vendored
+under `vendor/brain/` with mock service shims:
+
+- `vendor/brain/**` (ClockState, PopupShape, TabSwitcher, StatCard/Speedometer/
+  StatRow/DiskBar/ProfileButton/TimeInput, DashHome/ClockCard/CalendarCard/
+  PlayerCard/ProfileCard, KanbanBoard, AppLauncher, DashStats and sub-panels,
+  scripts/list_apps.py)
+
+MIT License — see https://github.com/Brainitech/Brain_Shell/blob/main/LICENSE
+
 ## tripathiji1312/quickshell
 
 The control-center layout and interaction model in the following files is adapted from

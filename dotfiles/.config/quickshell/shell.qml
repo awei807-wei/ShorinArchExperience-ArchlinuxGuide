@@ -801,6 +801,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 margins.right: configRoot.barMarginSide // 右边距
                 color: "transparent" // 窗口透明，实际视觉由 Bar/岛屿绘制
                 Bar {
+                    id: mainBar
                     anchors.fill: parent // Bar 填充整个窗口
                     root: configRoot
                     zenInk: configRoot.zenInk // 主题色注入：背景
@@ -826,14 +827,33 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         rightPanelController.isScreenActive(
                             barWindow.modelData
                         )
+                    readonly property bool centerPanelActiveOnScreen:
+                        centerPanelController.isScreenActive(
+                            barWindow.modelData
+                        )
+                    Binding {
+                        target: centerPanelController
+                        property: "centerWidth"
+                        value: mainBar.clockWidth
+                    }
                     rightPanelOpen: rightPanelController.open
                         && rightPanelActiveOnScreen
+                    centerPanelOpen: centerPanelController.open
+                        && centerPanelActiveOnScreen
                     rightPanelProgress: rightPanelActiveOnScreen
                         ? rightPanelController.progress : 0
                     rightPanelBaseWidth: rightPanelController.baseRightWidth
                     rightPanelTargetWidth:
                         rightPanelController.targetRightWidth
                     Component.onCompleted: configRoot.centerIslandRef = centerIsland // 记录 ClockIsland 实例（用于音量反馈联动）
+                    onCenterIslandClicked: {
+                        centerPanelController.togglePage(
+                            "home",
+                            barWindow.modelData,
+                            configRoot.barMarginSide + mainBar.clockLeft
+                                + mainBar.clockWidth / 2
+                        )
+                    }
                     onSystemClicked: {
                         rightPanelController.togglePage(
                             rightPanelController.controlsPage,
@@ -874,6 +894,25 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         store: notificationHistoryStore
         trayItems: notificationTrayBridge.items
         trayModelRevision: notificationTrayBridge.revision
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // 🏝️ 中岛子面板（移植自 Brain_Shell Dashboard，MIT）
+    // 点击时钟岛打开：Home / System / Tasks / Apps
+    // ═══════════════════════════════════════════════════════
+    CenterPanelController {
+        id: centerPanelController
+        reducedMotion: Core.TopBarState.reducedMotion
+        animationDuration: Config.BarTuning.panelShellDuration
+    }
+
+    Variants {
+        model: Quickshell.screens
+        delegate: Component {
+            CenterDashboard {
+                controller: centerPanelController
+            }
+        }
     }
 
     // ===== TEMP NOTIFICATION POPUPS =====

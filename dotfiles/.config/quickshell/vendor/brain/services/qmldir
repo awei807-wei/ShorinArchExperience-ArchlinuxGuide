@@ -1,0 +1,17 @@
+DashHome      home/DashHome.qml
+ProfileCard   home/ProfileCard.qml
+CalendarCard  home/CalendarCard.qml
+ClockCard     home/ClockCard.qml
+PlayerCard    home/PlayerCard.qml
+QuickSettings home/QuickSettings.qml
+KanbanBoard   KanbanBoard.qml
+singleton WallpaperService 1.0 WallpaperService.qml
+CpuService            system/CpuService.qml
+MemService            system/MemService.qml
+NetService            system/NetService.qml
+ThermalService        system/ThermalService.qml
+FanControl            system/FanControl.qml
+DiskService           system/DiskService.qml
+EnvyControlService    system/EnvyControlService.qml
+CpuFreqService        system/CpuFreqService.qml
+GpuService            system/GpuService.qml
