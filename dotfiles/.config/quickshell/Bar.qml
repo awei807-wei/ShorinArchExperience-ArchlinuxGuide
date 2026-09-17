@@ -41,6 +41,16 @@ Rectangle {
             easing.type: Easing.InOutCubic
         }
     }
+
+    // 面板打开时岛底圆角展平为方角，使中岛底边与面板顶边直接延续
+    property real centerPanelProgress: centerPanelOpen ? 1 : 0
+
+    Behavior on centerPanelProgress {
+        NumberAnimation {
+            duration: Config.BarTuning.panelShellDuration
+            easing.type: Easing.InOutCubic
+        }
+    }
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth
@@ -149,6 +159,7 @@ Rectangle {
         centerOffset: bar.clockLeft + clockIslandItem.width / 2
             - bar.width / 2
         rightWidth: bar.animatedRightContourWidth
+        centerOpen: bar.centerPanelProgress
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth

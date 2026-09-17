@@ -35,8 +35,10 @@ PanelWindow {
         right: true
         bottom: true
     }
-    // sizer 顶边与 bar 底边齐平（Brain 原方案：Theme.notchHeight）
-    margins.top: Config.BarTuning.barMarginTop + Config.BarTuning.barHeight
+    // 窗口顶边伸入 bar 底边 2 逻辑像素：面板矩形与中岛底边同色重叠，
+    // 吸收双窗口接缝，连接处不可见
+    margins.top: Math.max(0, Config.BarTuning.barMarginTop
+        + Config.BarTuning.barHeight - 2)
 
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
@@ -61,10 +63,10 @@ PanelWindow {
         anchors.top: parent.top
         clip: true
 
-        // Brain: dashboardOpen ? dashboardPageWidth + 2*fw : cNotchMinWidth + 2*fw
+        // 宽度与中岛轮廓严格同宽（无外翻耳朵），顶边与岛底直接延续
         width: controller.open
-            ? controller.pageWidth + 2 * root.fw
-            : controller.centerWidth + 2 * root.fw
+            ? controller.pageWidth
+            : controller.centerWidth
         // Brain: dashboardOpen ? dashboardHeight : notchHeight / 2
         height: controller.open
             ? Theme.dashboardHeight
@@ -90,14 +92,15 @@ PanelWindow {
             onClicked: {}
         }
 
-        // Brain 原版 PopupShape：随 sizer 当前尺寸重绘
+        // 平顶矩形（无凹角耳朵）：顶边与中岛底边同宽直接延续，
+        // 只有底角保留圆角
         PopupShape {
             anchors.fill: parent
             attachedEdge: "top"
             color: Theme.background
             radius: Theme.cornerRadius
-            flareWidth: root.fw
-            flareHeight: root.fh
+            flareWidth: 0
+            flareHeight: 0
         }
 
         Item {
@@ -105,9 +108,9 @@ PanelWindow {
 
             anchors {
                 fill: parent
-                topMargin: root.fh + 8
-                leftMargin: root.fw + 8
-                rightMargin: root.fw + 8
+                topMargin: 16
+                leftMargin: 16
+                rightMargin: 16
                 bottomMargin: 8
             }
 
