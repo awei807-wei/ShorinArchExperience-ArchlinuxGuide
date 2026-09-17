@@ -836,11 +836,6 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         property: "centerWidth"
                         value: mainBar.clockWidth
                     }
-                    Binding {
-                        target: centerPanelController
-                        property: "centerPanelTargetWidth"
-                        value: centerPanelController.pageWidth
-                    }
                     rightPanelOpen: rightPanelController.open
                         && rightPanelActiveOnScreen
                     centerPanelOpen: centerPanelController.open
