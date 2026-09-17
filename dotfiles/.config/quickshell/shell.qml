@@ -840,6 +840,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         && rightPanelActiveOnScreen
                     centerPanelOpen: centerPanelController.open
                         && centerPanelActiveOnScreen
+                    centerPanelPageWidth: centerPanelController.pageWidth
                     rightPanelProgress: rightPanelActiveOnScreen
                         ? rightPanelController.progress : 0
                     rightPanelBaseWidth: rightPanelController.baseRightWidth
