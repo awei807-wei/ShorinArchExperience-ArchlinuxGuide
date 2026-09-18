@@ -1,6 +1,8 @@
 // Brain_Shell DiskService — 真实数据。df -P 采集物理分区占用。
 import QtQuick
 import Quickshell.Io
+// PollTimer 经 ../qmldir 暴露：qs: 方案下同目录类型不会被自动发现
+import "../"
 
 QtObject {
     id: svc
@@ -41,10 +43,10 @@ QtObject {
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 5000
-        repeat: true
-        running: svc.active
+    // 激活即采样（单次快照就有读数，无需热身）
+    property Timer pollTimer: PollTimer {
+        active: svc.active
+        period: 5000
         onTriggered: {
             diskProc.command = ["sh", "-c",
                 "df -P -B1 -x tmpfs -x devtmpfs -x efivarfs | tail -n +2"]

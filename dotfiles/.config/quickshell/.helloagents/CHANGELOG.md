@@ -5,6 +5,7 @@
 - **[面板]**: 新增 `PanelOutsideClickCatcher` 共享外部点击捕获层与 `RightPanelGeometry.js` 几何函数，两个面板不再各自携带全屏关闭窗口。
 - **[通知]**: 新增 `NotificationPopupStack` 增量卡片栈与 `notification-popup-stack-check.qml` 门禁。
 - **[配置]**: `BarTuning` 新增中岛内容显露区间、上抬距离、时钟淡出终点、页面淡入时长与面板启动预热时长 token。
+- **[中岛 System 页]**: 新增 `PollTimer` 共用轮询时钟（激活即采样、可选热身周期），CPU/Mem/Net/Thermal/Disk/Gpu/CpuFreq 服务统一接入；`DashStats` 暴露 `active` 门控并由 `CenterDashboard` 按面板开合注入，收起后不再轮询。新增 `stats-poll-check.qml` 门禁。
 
 ### 变更
 - **[面板]**: 右面板与中岛内容窗口改为常驻映射的 Top 层窗口，关闭态输入区域为空；开合只动裁剪与透明度，`windowVisible` 只控制输入区域和键盘焦点。启动后 `1500ms` 内以 `0.001` 透明度预渲染两个面板内容。

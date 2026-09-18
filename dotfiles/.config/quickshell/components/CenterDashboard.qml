@@ -171,8 +171,9 @@ PanelWindow {
                         DashHome { anchors.fill: parent }
                     }
 
-                    // 次要页面：交叉淡入，淡出结束后才卸载，其采集服务随
-                    // visible 一并停止
+                    // 次要页面：交叉淡入，淡出结束后才卸载。采集门控由宿主
+                    // 注入：面板打开期间即采样（切到本页时读数已就绪），
+                    // 收起后停止，不再因停留在本页而在关闭态继续轮询
                     Item {
                         anchors.fill: parent
                         opacity: controller.page === "stats" ? 1 : 0
@@ -184,7 +185,11 @@ PanelWindow {
                                 easing.type: Easing.OutCubic
                             }
                         }
-                        DashStats { anchors.fill: parent }
+                        DashStats {
+                            anchors.fill: parent
+                            active: visible && controller.open
+                                && root.panelActiveOnScreen
+                        }
                     }
 
                     Item {

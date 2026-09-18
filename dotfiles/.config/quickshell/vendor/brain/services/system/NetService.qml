@@ -1,6 +1,8 @@
 // Brain_Shell NetService — 真实数据。/proc/net/dev 差分计算上下行速率。
 import QtQuick
 import Quickshell.Io
+// PollTimer 经 ../qmldir 暴露：qs: 方案下同目录类型不会被自动发现
+import "../"
 
 QtObject {
     id: svc
@@ -10,6 +12,9 @@ QtObject {
     property string upSpeed: "0 B/s"
     property string downSpeed: "0 B/s"
     property var _prev: null
+
+    // 上一样本超过这个间隔就只当作基准、不做差分（同 CpuService）
+    readonly property int maxSampleGapMs: 5000
 
     function _fmt(bytesPerSec) {
         if (bytesPerSec >= 1048576)
@@ -47,20 +52,27 @@ QtObject {
                 if (primary === "")
                     return
                 svc.iface = primary
+                // 速率按两次采样的真实时间差计算：热身样本只隔 300ms，
+                // 常规样本也有进程启动抖动，不能再假定固定 2s
+                const now = Date.now()
                 const prev = svc._prev
                 if (prev && rxTotal >= prev.rx && txTotal >= prev.tx) {
-                    svc.downSpeed = svc._fmt((rxTotal - prev.rx) / 2)
-                    svc.upSpeed = svc._fmt((txTotal - prev.tx) / 2)
+                    const dt = (now - prev.t) / 1000
+                    if (dt > 0.05 && now - prev.t <= svc.maxSampleGapMs) {
+                        svc.downSpeed = svc._fmt((rxTotal - prev.rx) / dt)
+                        svc.upSpeed = svc._fmt((txTotal - prev.tx) / dt)
+                    }
                 }
-                svc._prev = { "rx": rxTotal, "tx": txTotal }
+                svc._prev = { "rx": rxTotal, "tx": txTotal, "t": now }
             }
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 2000
-        repeat: true
-        running: svc.active
+    // 激活即采样，300ms 后补第二个样本得到首个速率，再回到 2s 周期
+    property Timer pollTimer: PollTimer {
+        active: svc.active
+        period: 2000
+        warmupPeriod: 300
         onTriggered: {
             netProc.command = ["cat", "/proc/net/dev"]
             netProc.running = false

@@ -1,6 +1,8 @@
 // Brain_Shell ThermalService — 真实数据。/sys/class/hwmon 读取 CPU/GPU 温度。
 import QtQuick
 import Quickshell.Io
+// PollTimer 经 ../qmldir 暴露：qs: 方案下同目录类型不会被自动发现
+import "../"
 
 QtObject {
     id: svc
@@ -47,10 +49,10 @@ QtObject {
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 2500
-        repeat: true
-        running: svc.active
+    // 激活即采样（单次快照就有读数，无需热身）
+    property Timer pollTimer: PollTimer {
+        active: svc.active
+        period: 2500
         onTriggered: {
             thermalProc.command = ["sh", "-c",
                 "for h in /sys/class/hwmon/hwmon*; do n=$(cat $h/name 2>/dev/null);" +

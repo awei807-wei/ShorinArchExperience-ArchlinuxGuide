@@ -6,6 +6,7 @@ PlayerCard    home/PlayerCard.qml
 QuickSettings home/QuickSettings.qml
 KanbanBoard   KanbanBoard.qml
 singleton WallpaperService 1.0 WallpaperService.qml
+PollTimer             system/PollTimer.qml
 CpuService            system/CpuService.qml
 MemService            system/MemService.qml
 NetService            system/NetService.qml

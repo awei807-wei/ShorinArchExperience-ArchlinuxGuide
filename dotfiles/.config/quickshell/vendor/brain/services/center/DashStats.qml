@@ -6,17 +6,23 @@ import "../../services/"
 Item {
     id: root
 
-    CpuService         { id: cpu;     active: root.visible }
-    MemService         { id: mem;     active: root.visible }
-    NetService         { id: net;     active: root.visible }
-    ThermalService     { id: thermal; active: root.visible }
+    // 采样门控。默认跟随自身可见性；宿主应注入更早的时机（面板开始展开
+    // 就预热），这样切到本页时读数已经就绪。注意 Item.visible 不包含窗口
+    // 可见性：面板收起后若停留在本页，visible 仍为 true，不注入的话会在
+    // 面板关着时继续轮询
+    property bool active: visible
+
+    CpuService         { id: cpu;     active: root.active }
+    MemService         { id: mem;     active: root.active }
+    NetService         { id: net;     active: root.active }
+    ThermalService     { id: thermal; active: root.active }
     FanControl         { id: fan }
-    DiskService        { id: disk;    active: root.visible }
+    DiskService        { id: disk;    active: root.active }
     EnvyControlService { id: envy }
-    CpuFreqService     { id: cpuFreq }
+    CpuFreqService     { id: cpuFreq; active: root.active }
     GpuService {
         id:       gpu
-        active:   root.visible
+        active:   root.active
         envyMode: envy.currentMode
     }
 

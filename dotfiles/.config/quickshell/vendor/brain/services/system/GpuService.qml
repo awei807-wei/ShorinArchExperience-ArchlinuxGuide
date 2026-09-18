@@ -1,6 +1,8 @@
 // Brain_Shell GpuService — 真实数据。amdgpu sysfs 读取 iGPU 占用与频率。
 import QtQuick
 import Quickshell.Io
+// PollTimer 经 ../qmldir 暴露：qs: 方案下同目录类型不会被自动发现
+import "../"
 
 QtObject {
     id: svc
@@ -30,10 +32,10 @@ QtObject {
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 2000
-        repeat: true
-        running: svc.active
+    // 激活即采样（单次快照就有读数，无需热身）
+    property Timer pollTimer: PollTimer {
+        active: svc.active
+        period: 2000
         onTriggered: {
             busyProc.command = ["sh", "-c",
                 "for c in /sys/class/drm/card[0-9]*; do" +

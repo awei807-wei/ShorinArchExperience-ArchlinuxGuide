@@ -1,6 +1,8 @@
 // Brain_Shell MemService — 真实数据。/proc/meminfo 计算 RAM 占用。
 import QtQuick
 import Quickshell.Io
+// PollTimer 经 ../qmldir 暴露：qs: 方案下同目录类型不会被自动发现
+import "../"
 
 QtObject {
     id: svc
@@ -29,10 +31,10 @@ QtObject {
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 2000
-        repeat: true
-        running: svc.active
+    // 激活即采样（单次快照就有读数，无需热身）
+    property Timer pollTimer: PollTimer {
+        active: svc.active
+        period: 2000
         onTriggered: {
             memProc.command = ["cat", "/proc/meminfo"]
             memProc.running = false
