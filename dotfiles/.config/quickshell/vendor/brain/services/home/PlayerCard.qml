@@ -103,10 +103,6 @@ Item {
 
     readonly property real _progress: root.length > 0 ? root._pos / root.length : 0
 
-    // ── Shared cava bars (32 bars from CavaService) ───────────────────────────
-    readonly property int _cavaBars: 32
-    readonly property var _bars: CavaService.bars
-
     // ── Player icon helper ────────────────────────────────────────────────────
     function _playerIcon(player) {
         if (!player) return "♪"
@@ -484,32 +480,14 @@ Item {
         }
     } 
 
-    // ── Cava bars — independent, always flush with the card bottom ────────────
-    Item {
+    // ── VCPChat-style spectrum — gradient curve + vocal waves + particles ─────
+    SpectrumVisualizer {
+        id: spectrumVisualizer
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 7; rightMargin: 7; bottomMargin: 4 }
-        height: 32
-        Row {
-            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-            spacing: 2
-            readonly property real barW: Math.max(1, (parent.width - spacing * (root._cavaBars - 1)) / root._cavaBars)
-            Repeater {
-                model: root._bars
-                delegate: Item {
-                    required property int modelData
-                    required property int index
-                    width: parent.barW; height: 32
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width:  parent.width
-                        readonly property real _amp: root.isPlaying ? (modelData / 100) : 0
-                        height: Math.max(2, _amp * 32)
-                        radius: width / 2
-                        color:  Qt.rgba(Theme.active.r, Theme.active.g, Theme.active.b, 0.25 + _amp * 0.65)
-                        Behavior on height { NumberAnimation { duration: 50; easing.type: Easing.OutCubic } }
-                    }
-                }
-            }
-        }
+        height: 48
+        spectrum: CavaService.easedSpectrum
+        running: root.visible
+        tint: Theme.active
     }
 
     // Border
