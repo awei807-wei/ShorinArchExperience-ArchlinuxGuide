@@ -93,7 +93,7 @@ ShellRoot {
                     Config.BarTuning.panelBodyStartProgress - 0.10)
                     < 0.0001, "body reveal threshold")
                 expect(Math.abs(
-                    Config.BarTuning.panelContentStartProgress - 0.52)
+                    Config.BarTuning.panelContentStartProgress - 0.25)
                     < 0.0001, "content reveal threshold")
                 expectEqual(Config.BarTuning.panelSafeRevealExtra,
                             2, "safe reveal overshoot")

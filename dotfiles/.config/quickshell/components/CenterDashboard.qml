@@ -7,11 +7,12 @@ import "../vendor/brain/services/"
 import "../vendor/brain/services/center/"
 import "../config" as Config
 
-// 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植：
-// 共享外轮廓（岛底 → 面板底，含底角 15 → 17 随动）已全部由 bar 窗口
-// 绘制（单 surface，动态接缝消失），本窗口只承载两件无动画几何的事：
-// ① sizer 覆盖面板区域的吞点击层；② 固定最终尺寸的内容层（接近
-// 展开完成才淡入）；外加全屏关闭层（点击面板外即关闭）。
+// 中岛子面板内容宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植。
+// 面板背景（共享外轮廓）由 bar 窗口绘制；本窗口只承载内容，并且常驻
+// 映射：关闭态输入区域为空、内容透明，开合只动裁剪与透明度，不再随
+// 开合映射/卸载窗口或用 visible 卸载内容。此前每次打开都在内容显露
+// 那一帧重建整棵内容树，实测产生 40–58ms 的单帧停顿。
+// 点击面板外关闭由 PanelOutsideClickCatcher 承担。
 PanelWindow {
     id: root
 
@@ -19,51 +20,75 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    readonly property int fw: Theme.notchRadius
-    readonly property int fh: Theme.notchRadius
-    readonly property int animDuration: controller.animationDuration
-
-    // 归一化的开合进度（单一进度时钟的消费入口）
-    readonly property real p:
-        Math.max(0, Math.min(1, controller.centerPanelProgress))
-
     readonly property bool panelActiveOnScreen:
         controller.isScreenActive(modelData)
+    // 本屏消费的开合进度：非触发屏幕保持收拢
+    readonly property real p: panelActiveOnScreen
+        ? Math.max(0, Math.min(1, controller.centerPanelProgress)) : 0
+    // 打开或收回途中（含收尾隐藏延迟）都视为在视野内，输入区域随之开启
+    readonly property bool inView:
+        controller.windowVisible && panelActiveOnScreen
+    // 内容显露进度：由外壳进度经 smoothstep 派生，和裁剪同步显露，
+    // 不再等外壳落地后再单独淡入
+    readonly property real contentT: smoothstep(
+        Config.BarTuning.centerPanelContentStartProgress,
+        Config.BarTuning.centerPanelContentEndProgress, p)
+    readonly property int pageFadeDuration: controller.reducedMotion
+        ? 0 : Config.BarTuning.centerPanelPageFadeDuration
+    // 启动预热：先以 0.001 的下限透明度渲染一轮内容（低于 0.001 的子树会
+    // 被场景图整体跳过），提前建好着色器管线、图层与字形纹理；否则热重载
+    // 或登录后第一次打开的内容首帧实测 70–90ms
+    property bool prewarming: Config.BarTuning.panelPrewarmDuration > 0
 
-    // 模拟频谱等装饰更新的门控：面板展开 + Home 页 + 非减少动画。
+    Timer {
+        interval: Math.max(1, Config.BarTuning.panelPrewarmDuration)
+        running: root.prewarming
+        onTriggered: root.prewarming = false
+    }
+
+    function smoothstep(a, b, value) {
+        const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+    }
+
+    // 频谱采集只在面板完全展开并停在 Home 页时运行：动画期间内容尚在
+    // 显露，提前拉起只会把进程启动和 16ms 缓动计时器压进动画帧。
     // 单一消费方汇总注入，后续多个消费者时应改为计数/汇总模式
     Binding {
         target: CavaService
         property: "active"
         value: controller.open
+            && controller.centerPanelProgress >= 0.999
             && controller.page === "home"
             && !controller.reducedMotion
     }
 
     color: "transparent"
-    visible: controller.windowVisible && panelActiveOnScreen
+    visible: true
 
+    // 常驻窗口只覆盖面板可能出现的水平条带：顶边伸入 bar 底边 2 逻辑
+    // 像素吸收双窗口接缝，高度为面板最大下探
     anchors {
         top: true
         left: true
         right: true
-        bottom: true
     }
-    // 窗口顶边伸入 bar 底边 2 逻辑像素：面板矩形与中岛底边同色重叠，
-    // 吸收双窗口接缝，连接处不可见
+    implicitHeight: 2 + Theme.dashboardHeight
     margins.top: Math.max(0, Config.BarTuning.barMarginTop
         + Config.BarTuning.barHeight - 2)
-
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus:
-        visible && controller.open
+        controller.open && panelActiveOnScreen
         ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
-    // 点击 bar 以外区域关闭
-    MouseArea {
-        anchors.fill: parent
-        onClicked: controller.close()
+    // 关闭态输入区域为空，点击穿透；打开态只覆盖面板矩形，
+    // 并让出与 bar 重叠的 2 逻辑像素
+    mask: Region {
+        x: sizer.x
+        y: 2
+        width: root.inView ? sizer.width : 0
+        height: root.inView ? Math.max(0, sizer.height - 2) : 0
     }
 
     Item {
@@ -79,52 +104,31 @@ PanelWindow {
 
         // 共享外轮廓：宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth
         // 同式）；高度 = 2px 重叠 + dashboardHeight × 进度，使面板底边与
-        // bar 侧轮廓底边（barHeight + dashboardHeight × 进度）逐帧同值；
-        // 底角半径随共享轮廓从岛底 15 过渡到面板底 17，高度不足以容纳
-        // 底角半径随共享轮廓插值（15 → 17），低高度大半径由 bar 侧
-        // Shape 的虚拟顶边处理
+        // bar 侧轮廓底边逐帧同值
         width: controller.centerWidth
-            + (controller.pageWidth - controller.centerWidth)
-              * Math.max(0, Math.min(1, controller.centerPanelProgress))
-        height: 2 + Theme.dashboardHeight
-            * Math.max(0, Math.min(1, controller.centerPanelProgress))
+            + (controller.pageWidth - controller.centerWidth) * root.p
+        height: 2 + Theme.dashboardHeight * root.p
 
-        // 吞掉面板内部点击，避免穿透到关闭层。
-        // 面板背景已由 bar 窗口的共享外轮廓绘制（单 surface），本窗口
-        // 只承载内容与关闭层，无动画几何，跨窗口无同步需求
+        // 吞掉面板内部点击，避免穿透到桌面；外部点击由捕获层处理
         MouseArea {
             anchors.fill: parent
+            enabled: root.inView
             onClicked: {}
         }
 
         Item {
             id: content
 
-            // 不再跟随 sizer 重新排版：页面始终按最终尺寸布局，横向与
-            // 展开中的面板中心对齐，由 sizer 裁切逐步显露。此前外壳变形
-            // 的每一帧都在重排三列页面，中间列与时钟卡会经历负尺寸布局
+            // 页面始终按最终尺寸布局，横向与展开中的面板中心对齐，由 sizer
+            // 裁切逐步显露；显露过程中轻微上抬，透明度随 contentT 变化
             x: (sizer.width - controller.pageWidth) / 2 + 16
-            y: 16
+            y: 16 - Config.BarTuning.centerPanelContentLift * (1 - root.contentT)
             width: Math.max(0, controller.pageWidth - 32)
             height: Math.max(0, Theme.dashboardHeight - 24)
-
-            // 外壳接近展开完成才淡入内容（打开 60ms / 收起 40ms）；
-            // 透明度不阻止输入，enabled 需独立门控。
-            // 0.98 为布局挤压问题解决后的放宽阈值，勿再回退到保守值
-            readonly property bool contentVisible:
-                controller.open && root.p >= 0.98
-
-            opacity: contentVisible ? 1 : 0
-            enabled: controller.open
-                && root.p >= 0.999 && opacity >= 0.99
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: controller.reducedMotion
-                        || root.animDuration <= 0
-                        ? 0 : (controller.open ? 60 : 40)
-                    easing.type: Easing.OutCubic
-                }
-            }
+            opacity: root.prewarming
+                ? Math.max(0.001, root.contentT) : root.contentT
+            // 透明度不阻止输入，enabled 需独立门控
+            enabled: controller.open && root.p >= 0.999
 
             Column {
                 anchors.fill: parent
@@ -153,21 +157,47 @@ PanelWindow {
 
                     Keys.onEscapePressed: controller.close()
 
+                    // Home 是默认页，常驻渲染：打开面板时不能再付整页首帧成本
                     Item {
                         anchors.fill: parent
-                        visible: controller.page === "home"
+                        opacity: controller.page === "home" ? 1 : 0
+                        enabled: controller.page === "home"
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: root.pageFadeDuration
+                                easing.type: Easing.OutCubic
+                            }
+                        }
                         DashHome { anchors.fill: parent }
                     }
 
+                    // 次要页面：交叉淡入，淡出结束后才卸载，其采集服务随
+                    // visible 一并停止
                     Item {
                         anchors.fill: parent
-                        visible: controller.page === "stats"
+                        opacity: controller.page === "stats" ? 1 : 0
+                        visible: opacity > 0.001
+                        enabled: controller.page === "stats"
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: root.pageFadeDuration
+                                easing.type: Easing.OutCubic
+                            }
+                        }
                         DashStats { anchors.fill: parent }
                     }
 
                     Item {
                         anchors.fill: parent
-                        visible: controller.page === "kanban"
+                        opacity: controller.page === "kanban" ? 1 : 0
+                        visible: opacity > 0.001
+                        enabled: controller.page === "kanban"
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: root.pageFadeDuration
+                                easing.type: Easing.OutCubic
+                            }
+                        }
                         KanbanBoard { anchors.fill: parent }
                     }
                 }

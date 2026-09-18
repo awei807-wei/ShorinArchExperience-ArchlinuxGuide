@@ -31,6 +31,8 @@ Item {
     property real centerPanelProgress: 0
 
     readonly property int pageWidth: 900
+    // 面板展开后的固定高度：外部点击捕获层用它扣除面板矩形
+    readonly property int pageHeight: Theme.dashboardHeight
 
     function isScreenActive(candidate) {
         return candidate === undefined || candidate === null

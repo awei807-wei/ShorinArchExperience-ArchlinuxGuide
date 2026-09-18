@@ -36,6 +36,11 @@ commands:
   - qmllint -I /usr/lib/qt6/qml components/TrayNotificationModel.js
   - qmllint -I /usr/lib/qt6/qml components/UnifiedRightPanel.qml
   - qmllint -I /usr/lib/qt6/qml components/RightPanelHost.qml
+  - qmllint -I /usr/lib/qt6/qml components/RightPanelGeometry.js
+  - qmllint -I /usr/lib/qt6/qml components/PanelOutsideClickCatcher.qml
+  - qmllint -I /usr/lib/qt6/qml components/CenterPanelController.qml
+  - qmllint -I /usr/lib/qt6/qml components/CenterDashboard.qml
+  - qmllint -I /usr/lib/qt6/qml components/ClockIsland.qml
   - quickshell --no-color -p audio-output-model-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p audio-output-selector-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p bar-layout-check.qml
@@ -43,6 +48,7 @@ commands:
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-state-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p right-panel-animation-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-panel-state-check.qml
+  - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-popup-stack-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-source-model-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p notification-source-icon-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p tray-state-check.qml

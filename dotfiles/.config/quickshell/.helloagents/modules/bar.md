@@ -9,10 +9,14 @@
 - `components/BarContour.qml`：以单个 Canvas 路径绘制全宽顶部连接带和三段反 R 角岛屿轮廓。
 - `components/ScreenEdgeBorder.qml`、`ScreenEdgeBorderHost.qml`：把 Bar 方形外端以 `17px` 内凹角融入两侧 `6px` 屏幕轨道，复刻 Brain_Shell `Border.qml` 的实际外缘结构。
 - `components/RightPanelController.qml`：统一控制页/通知页路由、同入口开关、触发屏幕、右岛起始/目标颈宽、唯一 `rightPanelProgress` 与退场窗口生命周期。
-- `components/RightPanelHost.qml`：每屏保留固定最大透明外窗，但只显示触发屏幕实例；flare 上移到右岛底边接缝，打开时承载一次外部点击关闭，退场时输入 mask 跟随 reveal viewport 的可见主体并避开 Bar 接缝。
+- `components/RightPanelHost.qml`：每屏一个常驻映射、只覆盖面板最终几何的 Top 层窗口；flare 上移到右岛底边接缝，输入 mask 只在 `windowVisible` 期间跟随 reveal viewport 的可见主体并避开 Bar 接缝，关闭态为空区域。
+- `components/RightPanelGeometry.js`：右面板宽度与内容高度的纯函数，`RightPanelHost` 与 `PanelOutsideClickCatcher` 共用。
+- `components/PanelOutsideClickCatcher.qml`：任一面板打开时映射的全屏透明 Top 层窗口，点击面板外或 Esc 关闭全部面板；输入区域用减法 Region 扣除两个面板矩形。
+- `components/CenterPanelController.qml`、`CenterDashboard.qml`：中岛子面板的单一进度时钟与常驻内容窗口；内容按最终尺寸布局、由裁剪逐步显露，透明度随 `smoothstep(0.30, 0.90)` 派生，Home 页常驻渲染，频谱采集在完全展开后才拉起。
+- `components/NotificationPopupStack.qml`：临时通知浮层的增量卡片栈，按应用键复用 `NotificationPopupGroup`，消失的分组先播退场再销毁；宿主窗口固定尺寸常驻，输入区域跟随卡片列高度。
 - `components/UnifiedRightPanel.qml`：以共享进度和触发 Bar 的两个颈宽端点驱动右锚定 reveal viewport；surface 空间允许时从 `54px` 安全高度揭示固定最终外壳，主体和内容进度只做阈值派生，常驻 Control / History 页面支持动画中途反向。
 - `components/RightPanelShape.qml`：用单个最终尺寸 Canvas 绘制 `304px` 连接颈部、`560–640px` 主体、`16px` flare 与 `18px` 圆角；动画期间纹理尺寸和路径拓扑不变，只水平平移以对齐 Bar 的活动颈部。
-- `components/AnimatedPanelPage.qml`：页面常驻包装器，通过透明度、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放切换整页内容，并在卡片完全就位后恢复输入。
+- `components/AnimatedPanelPage.qml`：页面常驻包装器，始终保持 `visible`，通过同时进行的交叉淡入淡出、方向相反的 `28px` 水平位移和 `0.985→1` 轻量缩放切换整页内容，并在卡片完全就位后恢复输入。
 - `components/RightPanelTabs.qml`、`RightPanelPageSwitcher.qml`：目标 `296×38px`、最小面板下不超过主体 `50%` 的单指示器分页轨道及 `58px` 页脚层。
 - `components/NotificationHistoryPage.qml`：History 与 Control 共用固定面板高度，通知溢出时由 ListView 内部滚动；标题、空态及加载/错误状态分别由 `NotificationHistoryHeader`、`NotificationHistoryEmptyState`、`NotificationHistoryStatusState` 承担。
 - `Niri.qml`：共享 niri workspace 数据、事件流与聚焦动作。
@@ -30,7 +34,8 @@
 - `bar-layout-check.qml`：2048/1280/1024/1008/1007/800/660 宽度的几何、阈值、反 R 角排除间距与退让顺序门禁。
 - `tray-interaction-check.qml`：单击延迟激活、双击取消激活并聚焦、右键取消待执行单击的交互回归。
 - `right-panel-state-check.qml`：控制/通知入口路由、同屏同页关闭、关闭中跨屏从 `0` 重新定向、受限目标颈宽、退场生命周期与统一 token 门禁。
-- `right-panel-animation-check.qml`：共享进度、`54px` 安全揭示、固定 Canvas 拓扑、常规/受限目标下的 Bar/flare 逐帧对齐、双向页面卡片过渡、半途反向与减弱动效门禁。
+- `right-panel-animation-check.qml`：共享进度、`54px` 安全揭示、固定 Canvas 拓扑、常规/受限目标下的 Bar/flare 逐帧对齐、真实动画单调推进与阶段自洽、双向页面卡片交叉过渡、半途反向与减弱动效门禁。
+- `notification-popup-stack-check.qml`：分组数组整体替换时卡片不重建、消失分组先退场后销毁、退场期间同应用另起新卡片的回归门禁。
 
 ## 依赖
 依赖 Quickshell 0.3、QtQuick、SystemTray 与 UPower；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，天气沿用 Waybar weather 脚本。
@@ -57,3 +62,5 @@
 - [2026-08-25] 页面切换不能 resize 线程化 Canvas：裁剪区会先变化，而新纹理异步完成前会短暂露出壁纸。两页因此共用固定高度，跨页只对常驻内容执行位移、淡入淡出和轻量卡片缩放。
 - [2026-08-26] 连体外壳不能让宽度、高度与 Bar 错峰：`16–52px` 低高度无法容纳 flare 与两个 `18px` 圆角，会产生 GIF 中的凹口。最终实现使用一条 `300ms InOutCubic` 进度，Canvas 始终保持最终拓扑，viewport 在 surface 允许时从 `54px` 安全高度揭示；前 `10%` 只展开 Bar，内容从 `52%` 后进入。Controller 从触发屏幕捕获右岛起始/目标宽度，固定 Canvas 只做水平平移，使常规与窄屏受限颈部都逐帧一致；其他屏幕实例保持关闭。
 - [2026-09-14] Metrics 不应靠缩小、缩放或负字距硬压缩字形承载四项监控。右岛总预算保持 `240px`，隐藏直出 Tray 槽并将 `164px` 分配给 CPU / RAM / BAT 三个等宽固定值槽，使用 `9/11px` Consolas 原生渲染等宽字、完整 hinting、两个 `10px` 斜杠栅栏与 `12px` 工具组间距。Tray 外壳为 `30×40px`，其复合入口命中区扩至 `24×24px`，Power 命中区为 `30×40px`。网络吞吐与 Cava 采集随展示一并删除；UPower 未就绪或无电池时 BAT 必须常驻为绿色 `100%`，避免布局坍塌。
+- [2026-09-18] 动画顿挫的根因不是动画时钟：隔离探针证明 Quickshell 默认 basic 渲染循环下 300ms 动画稳定 16.0ms/帧。真实 shell 探针（临时 FrameAnimation 直接驱动 controller.togglePage）测出中岛打开在内容显露帧停顿 40–58ms、右面板首次位移 66–122ms、切页 90ms，来源都是面板窗口随开合重建与用 visible 卸载内容后的首帧重建；进程 fork 本身只有 0–1ms。窗口常驻 + 只动裁剪/透明度 + 启动预热后，开合全程 15–17ms/帧。Repeater 直接绑定 JS 数组会在数组任何变化时销毁并重建全部代理，通知浮层必须按键增量维护。切勿把 `QSG_RENDER_LOOP=threaded` 当作修复：它在窗口映射时反而多出 40ms 停顿。
+- [2026-09-18] Quickshell 的空 Region mask 会下发空的 wl_region（完全穿透），根 Region 加 `Intersection.Subtract` 子区域会被拆成围绕孔洞的多个矩形下发，可放心用于常驻透明窗口与外部点击捕获层。热重载只响应原地写入，`mv` 覆盖文件不会触发。

@@ -108,14 +108,33 @@ QtObject {
     property real panelBodyStartProgress: 0.10
     property real panelContentStartProgress: 0.25
     property int panelSafeRevealExtra: 2
+    // 启动后以肉眼不可见的透明度预渲染面板内容的时长（ms）：提前创建
+    // 着色器管线、图层与字形纹理，否则首次打开的内容首帧要付 70–90ms。
+    // 0 = 关闭预热。
+    property int panelPrewarmDuration: 1500
 
-    // 页面切换时保留两个页面实例，以整页卡片做推拉、淡入和轻微缩放。
-    property int panelPageOutDuration: 90
-    property int panelPageInDelay: 40
-    property int panelPageInDuration: 150
+    // 页面切换时两个页面常驻，以整页卡片做交叉淡入淡出、推拉和轻微缩放；
+    // 退出与进入同时开始，中间不留空白帧。
+    property int panelPageOutDuration: 150
+    property int panelPageInDuration: 200
     property int panelPageCardOffset: 28
     property real panelPageCardInactiveScale: 0.985
     property int panelTabIndicatorDuration: 190
+
+    // ═══════════════════════════════════════════════════════
+    // 2b. 中岛子面板（Brain_Shell Dashboard 移植）
+    // ═══════════════════════════════════════════════════════
+
+    // 内容随外壳进度显露：透明度按 smoothstep(start, end) 派生，与裁剪
+    // 同步展开，不再等外壳落地后单独淡入。
+    property real centerPanelContentStartProgress: 0.30
+    property real centerPanelContentEndProgress: 0.90
+    // 内容显露过程中的轻微上抬距离（px）。
+    property int centerPanelContentLift: 8
+    // 中岛时钟文字在此进度前淡出，与面板内容交叉过渡。
+    property real centerPanelClockFadeEnd: 0.30
+    // 中岛内 Home / System / Tasks 页面的交叉淡入时长（ms）。
+    property int centerPanelPageFadeDuration: 150
 
     // ═══════════════════════════════════════════════════════
     // 3. 响应式切换阈值（屏幕宽度 px）

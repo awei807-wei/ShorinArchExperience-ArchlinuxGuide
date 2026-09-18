@@ -12,6 +12,8 @@ Rectangle {
     readonly property int animNormal: (Config.Theme !== undefined && Config.Theme !== null) ? Config.Theme.animNormal : 200
 
     required property var group
+    // 浮层卡片栈用于复用/回收本卡片的应用键
+    property string stackKey: ""
     readonly property var notifications: group?.notifications ?? []
     readonly property string appName: group?.appName ?? "NOTIFICATION"
     readonly property bool critical: group?.critical ?? false
@@ -110,7 +112,9 @@ Rectangle {
         }
     }
 
-    // 退场：滑出（向右移出）+ 淡出，播放完后发出 exitFinished（由宿主销毁卡片）
+    // 退场：滑出（向右移出）+ 淡出 + 高度收拢，播放完后发出 exitFinished
+    //（由宿主销毁卡片）。高度同步收拢让下方卡片在同一时间轴内上移，
+    // 而不是等销毁后再补一段位移。
     ParallelAnimation {
         id: exitAnim
         NumberAnimation {
@@ -123,6 +127,13 @@ Rectangle {
         NumberAnimation {
             target: root
             property: "opacity"
+            to: 0
+            duration: root.animNormal
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: root
+            property: "height"
             to: 0
             duration: root.animNormal
             easing.type: Easing.InCubic
@@ -178,10 +189,8 @@ Rectangle {
         opacity: 0.35
     }
 
-    // 通知组重排时平滑上移/下移（替代瞬移）
-    Behavior on y {
-        NumberAnimation { duration: root.animNormal; easing.type: Easing.OutCubic }
-    }
+    // 重排位移由宿主 Column 的 move 过渡负责；卡片自身不再对 y 加 Behavior，
+    // 两者叠加会互相争抢同一属性。
 
     Column {
         id: content

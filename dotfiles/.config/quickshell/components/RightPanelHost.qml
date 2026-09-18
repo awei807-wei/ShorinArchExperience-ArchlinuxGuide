@@ -1,10 +1,14 @@
 import "../config" as Config
+import "RightPanelGeometry.js" as Geometry
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
 
-// 每屏固定宿主只负责 Wayland 表面、定位和输入；只有触发屏幕可见。
-// 面板外壳按最终几何绘制，reveal viewport 与 Bar 消费同一份状态。
+// 每屏固定宿主只负责 Wayland 表面、定位和输入。窗口常驻映射，只覆盖
+// 面板的最终几何；关闭态输入区域为空，打开后输入区域跟随 reveal viewport
+// 的可见主体。面板外壳按最终几何绘制，viewport 与 Bar 消费同一份状态。
+// 外部点击关闭由 PanelOutsideClickCatcher 承担。此前窗口随开合映射/卸载，
+// 每次打开都重建整棵场景图，实测首次位移被推迟到点击后 66–122ms。
 Scope {
     id: host
 
@@ -21,10 +25,6 @@ Scope {
         barBottom - Config.BarTuning.rightPanelFlare
     )
 
-    function clamp(value, minimum, maximum) {
-        return Math.max(minimum, Math.min(maximum, value))
-    }
-
     Variants {
         model: Quickshell.screens
 
@@ -36,92 +36,47 @@ Scope {
 
                 readonly property bool panelActiveOnScreen:
                     host.controller.isScreenActive(modelData)
-
-                readonly property int panelWidth: host.clamp(
-                    Math.round(modelData.width
-                        * Config.BarTuning.rightPanelWidthRatio),
-                    Math.min(Config.BarTuning.rightPanelWidthMin,
-                             modelData.width),
-                    Math.min(Config.BarTuning.rightPanelWidthMax,
-                             modelData.width)
-                )
-                readonly property int minimumPanelHeight:
-                    Config.BarTuning.rightPanelFlare
-                    + Config.BarTuning.rightPanelRadius * 2
-                    + Config.BarTuning.panelSafeRevealExtra
-                readonly property int surfaceHeight: Math.max(
-                    0, modelData.height - host.panelTop
-                )
-                readonly property int availablePanelHeight: Math.max(
-                    Math.min(minimumPanelHeight, surfaceHeight),
-                    Math.min(surfaceHeight,
-                             modelData.height - host.barBottom - 24)
-                )
-                readonly property int panelContentHeight: Math.min(
-                    Config.BarTuning.rightPanelHeight,
-                    availablePanelHeight
-                )
+                // 打开或收回途中（含收尾隐藏延迟）都视为在视野内
+                readonly property bool inView:
+                    host.controller.windowVisible && panelActiveOnScreen
+                readonly property int panelWidth:
+                    Geometry.panelWidth(modelData.width, Config.BarTuning)
+                readonly property int panelContentHeight:
+                    Geometry.panelContentHeight(
+                        modelData.height, host.panelTop,
+                        host.barBottom, Config.BarTuning)
 
                 screen: modelData
-                visible: host.controller.windowVisible
-                    && panelActiveOnScreen
-                exclusiveZone: -1
+                visible: true
+                exclusionMode: ExclusionMode.Ignore
                 anchors {
                     top: true
-                    bottom: true
-                    left: true
                     right: true
                 }
                 margins.top: host.panelTop
+                margins.right: host.shellRoot.barMarginSide
+                implicitWidth: panelWidth
+                implicitHeight: panelContentHeight
                 color: "transparent"
-                WlrLayershell.layer: WlrLayer.Overlay
+                WlrLayershell.layer: WlrLayer.Top
                 WlrLayershell.keyboardFocus: host.controller.open
                     && panelActiveOnScreen
                     ? WlrKeyboardFocus.OnDemand
                     : WlrKeyboardFocus.None
-                mask: Region { item: windowInput }
 
-                // 打开期间保留单次外部点击关闭；退场一开始，mask 缩回
-                // reveal viewport 的可见主体，并避开由 Bar 持有的重叠 flare。
-                Item {
-                    id: windowInput
-
-                    readonly property bool captureOutside:
-                        panelWindow.panelActiveOnScreen
-                        && host.controller.open
-
-                    x: captureOutside
-                        ? 0
-                        : panel.x + panel.inputRegion.x
-                    y: captureOutside
-                        ? Config.BarTuning.rightPanelFlare
-                        : panel.y + panel.inputRegion.y
-                    width: captureOutside
-                        ? panelWindow.width
-                        : panel.inputRegion.width
-                    height: captureOutside
-                        ? Math.max(0, panelWindow.height
-                            - Config.BarTuning.rightPanelFlare)
-                        : panel.inputRegion.height
-                }
-
-                MouseArea {
-                    z: 0
-                    anchors.fill: parent
-                    anchors.topMargin: Config.BarTuning.rightPanelFlare
-                    enabled: windowInput.captureOutside
-                    onClicked: host.controller.close()
+                // 输入区域只覆盖 reveal viewport 的可见主体，并避开由 Bar
+                // 持有的重叠 flare；关闭态为空区域，点击穿透到桌面。
+                mask: Region {
+                    x: panel.inputRegion.x
+                    y: panel.inputRegion.y
+                    width: panelWindow.inView ? panel.inputRegion.width : 0
+                    height: panelWindow.inView ? panel.inputRegion.height : 0
                 }
 
                 UnifiedRightPanel {
                     id: panel
 
-                    z: 1
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    anchors.rightMargin: host.shellRoot.barMarginSide
-                    width: panelWindow.panelWidth
-                    height: panelWindow.panelContentHeight
+                    anchors.fill: parent
                     shellRoot: host.shellRoot
                     store: host.store
                     menuWindow: panelWindow

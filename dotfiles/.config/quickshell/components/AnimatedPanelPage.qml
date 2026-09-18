@@ -3,11 +3,16 @@ import QtQuick
 
 // 常驻页面包装器：把整页作为一张卡片做推拉、淡入和轻微缩放，
 // 不销毁/重建页面实例，也不重新播放外层面板的开合动画。
+// 页面始终保持 visible，只用透明度、位移和缩放切换：通过 visible
+// 卸载/重建整页场景图曾在切页时造成 90ms 的单帧停顿。
 Item {
     id: root
 
     property bool active: false
     property bool reducedMotion: false
+    // 预热期：以 0.001 的下限透明度保持渲染（低于 0.001 的子树会被
+    // 场景图整体跳过），让非当前页也提前建好图层与管线
+    property bool prewarm: false
     // Control 从左侧退场，History 传入正值从右侧退场。
     property real inactiveX: -Config.BarTuning.panelPageCardOffset
     property real inactiveScale:
@@ -24,37 +29,17 @@ Item {
     default property alias contentData: contentHost.data
 
     z: active ? 1 : 0
-    opacity: transitionProgress
-    visible: contentVisible
+    opacity: prewarm ? Math.max(0.001, transitionProgress) : transitionProgress
     enabled: contentReady
     clip: true
 
+    // 退出与进入同时开始：交叉淡入淡出，不再先退出、空一拍再进入。
     function syncActivePage() {
-        pageInDelay.stop()
-
-        if (reducedMotion) {
-            transitionProgress = active ? 1 : 0
-            return
-        }
-
-        if (active)
-            pageInDelay.restart()
-        else
-            transitionProgress = 0
+        transitionProgress = active ? 1 : 0
     }
 
     onActiveChanged: syncActivePage()
     onReducedMotionChanged: syncActivePage()
-
-    Timer {
-        id: pageInDelay
-
-        interval: Config.BarTuning.panelPageInDelay
-        onTriggered: {
-            if (root.active)
-                root.transitionProgress = 1
-        }
-    }
 
     Behavior on transitionProgress {
         enabled: !root.reducedMotion
@@ -63,7 +48,7 @@ Item {
             duration: root.active
                 ? Config.BarTuning.panelPageInDuration
                 : Config.BarTuning.panelPageOutDuration
-            easing.type: root.active ? Easing.OutCubic : Easing.InQuad
+            easing.type: Easing.OutCubic
         }
     }
 

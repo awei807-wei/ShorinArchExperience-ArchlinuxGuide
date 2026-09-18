@@ -9,6 +9,7 @@ ShellRoot {
     property int failureCount: 0
     property int phase: 0
     property real reverseProgress: 0
+    property real sampledProgress: 0
     property real stablePageHeight: 0
     property real stableViewportHeight: 0
 
@@ -44,6 +45,21 @@ ShellRoot {
         return Math.round(panel.safeRevealHeight
             + (panel.openHeight - panel.safeRevealHeight)
                 * expectedBody(progress))
+    }
+
+    // 阶段门槛自洽：Bar-only 段 body/content 为 0，body-only 段 content 为 0
+    function expectStageConsistency(progress, label) {
+        if (progress < Config.BarTuning.panelBodyStartProgress) {
+            expect(panel.bodyProgress === 0 && panel.contentProgress === 0
+                   && panel.inputRegion.height === 0,
+                   label + " Bar-only stage exposes no body or input")
+        } else if (progress < Config.BarTuning.panelContentStartProgress) {
+            expect(panel.bodyProgress > 0 && panel.contentProgress === 0,
+                   label + " body precedes content")
+        } else {
+            expect(panel.bodyProgress > panel.contentProgress,
+                   label + " content stays behind body")
+        }
     }
 
     function expectGeometry(progress, label) {
@@ -213,6 +229,7 @@ ShellRoot {
             baseRightWidth: controller.baseRightWidth
             targetRightWidth: controller.targetRightWidth
             reducedMotion: controller.reducedMotion
+            prewarmDuration: 0
             onCloseRequested: controller.close()
             onPageRequested: targetPage => controller.showPage(targetPage)
         }
@@ -233,7 +250,7 @@ ShellRoot {
                 expect(panel.bodyProgress === 0
                        && panel.contentProgress === 0,
                        "first ten percent reveals only the Bar")
-                expectGeometry(0.35, "body-only stage")
+                expectGeometry(0.2, "body-only stage")
                 expect(panel.bodyProgress > 0
                        && panel.contentProgress === 0,
                        "body precedes content without deforming shell")
@@ -257,35 +274,36 @@ ShellRoot {
                 return
             }
 
+            // 真实动画采样：OutCubic 起步即有位移，采样点不再假定固定
+            // 阶段，只验证进度单调递增、几何派生一致且各阶段门槛自洽。
             if (testRoot.phase === 1) {
-                expect(controller.progress > 0 && controller.progress < 0.10,
-                       "real animation starts in Bar-only stage")
-                expect(panel.bodyProgress === 0
-                       && panel.inputRegion.height === 0,
-                       "panel and input stay absent before safe threshold")
+                expect(controller.progress > 0 && controller.progress < 1,
+                       "real animation starts moving immediately")
+                expectStageConsistency(controller.progress, "early animation")
                 expectGeometry(controller.progress, "early animation")
+                sampledProgress = controller.progress
                 phase = 2
                 next(50)
                 return
             }
 
             if (testRoot.phase === 2) {
-                expect(controller.progress > 0.10
-                       && controller.progress < 0.52,
-                       "real animation reaches body-only interval")
-                expect(panel.bodyProgress > 0
-                       && panel.contentProgress === 0,
-                       "real body reveal keeps content hidden")
-                expectGeometry(controller.progress, "body animation")
+                expect(controller.progress > sampledProgress,
+                       "real animation keeps advancing")
+                expectStageConsistency(controller.progress, "mid animation")
+                expectGeometry(controller.progress, "mid animation")
+                sampledProgress = controller.progress
                 phase = 3
                 next(55)
                 return
             }
 
             if (testRoot.phase === 3) {
-                expect(controller.progress > 0.52,
-                       "real animation reaches content interval")
-                expect(panel.contentProgress > 0,
+                expect(controller.progress >= sampledProgress,
+                       "real animation never reverses while opening")
+                expect(controller.progress
+                           > Config.BarTuning.panelContentStartProgress
+                       && panel.contentProgress > 0,
                        "content begins from shared progress")
                 expectGeometry(controller.progress, "content animation")
                 phase = 4

@@ -25,7 +25,8 @@ Rectangle {
     // 中岛子面板打开：内容淡出、岛体成为面板颈部
     property bool panelOpen: false
     // 子面板开合进度 0..1（由 Bar 注入）：小时钟内容随进度在展开初段
-    // 退场、收起末段返回（smoothstep 0~0.16），替代独立时间线淡入淡出
+    // 退场、收起末段返回（smoothstep 0~centerPanelClockFadeEnd），与面板
+    // 内容的显露交叉过渡，替代独立时间线淡入淡出
     property real panelProgress: 0
 
     function smoothstep(a, b, value) {
@@ -116,10 +117,11 @@ Rectangle {
         id: clockContent
 
         anchors.centerIn: parent
-        // 展开初段（progress 0~0.16）退场，收起末段随进度返回，
-        // 与大面板内容在时间上互斥，避免同屏
+        // 展开初段退场，收起末段随进度返回；面板内容从
+        // centerPanelContentStartProgress 起显露，两者交叉衔接
         opacity: 1 - clockIsland.smoothstep(
-            0.0, 0.16, clockIsland.panelProgress)
+            0.0, Config.BarTuning.centerPanelClockFadeEnd,
+            clockIsland.panelProgress)
 
         Item {
             width: clockIsland.timeColumnWidth
@@ -207,8 +209,12 @@ Rectangle {
         x: clockIsland.shakeOffset
     }
 
+    // 面板开合期间不做 hover 底色过渡：否则从 hover 态点击打开时，
+    // 会有一块正在淡出的小矩形叠在正在展开的面板颈部上
     Behavior on color {
         enabled: !clockIsland.reducedMotion
+            && !clockIsland.panelOpen
+            && clockIsland.panelProgress <= 0
 
         ColorAnimation {
             duration: Config.Theme.animNormal

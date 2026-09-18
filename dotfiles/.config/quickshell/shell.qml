@@ -7,7 +7,7 @@
 // - 系统状态采集与控制（通过 Quickshell.Io.Process 执行外部命令）
 // - 媒体状态读取与控制（通过 Quickshell.Services.Mpris）
 // - 动态配色热更新（监听 matugen 生成的 colors.json）
-// - 创建顶栏窗口（Bar）、通知面板与右侧控制中心
+// - 创建顶栏窗口（Bar）、常驻的通知浮层/中岛内容/右侧面板窗口与外部点击捕获层
 // 关联功能：
 // - Bar.qml：顶栏容器（组合 ContextIsland/ClockIsland/SystemIsland）
 // - ClockIsland：用于时间显示与轻量音量反馈（通过 centerIslandRef 联动）
@@ -340,6 +340,20 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     RightPanelController {
         id: rightPanelController
         reducedMotion: Core.TopBarState.reducedMotion
+    }
+
+    // 控制页数据刷新延后到外壳动画之后（见 Bar.onSystemClicked）
+    Timer {
+        id: controlRefreshTimer
+        interval: Config.BarTuning.panelShellDuration + 50
+        repeat: false
+        onTriggered: {
+            if (rightPanelController.open
+                    && rightPanelController.page === rightPanelController.controlsPage) {
+                configRoot.refreshControlData()
+                configRoot.refreshDiskData()
+            }
+        }
     }
 
     NotificationServer {
@@ -881,10 +895,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                             openRightContourWidth,
                             barWindow.modelData
                         )
+                        // 控制页的网络/蓝牙/亮度/磁盘刷新推迟到外壳动画结束后：
+                        // 五次进程 fork 挤在点击那一帧时，首次位移实测晚 30ms 以上
                         if (rightPanelController.open
                                 && rightPanelController.page === rightPanelController.controlsPage) {
-                            configRoot.refreshControlData()
-                            configRoot.refreshDiskData()
+                            controlRefreshTimer.restart()
                         }
                     }
                     onTrayPanelToggleRequested: () => {
@@ -906,6 +921,54 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
     ScreenEdgeBorderHost {
         shellRoot: configRoot
+    }
+
+    // ===== TEMP NOTIFICATION POPUPS =====
+    // 窗口常驻映射、尺寸固定：卡片增删只改内容与输入区域，不再让 Wayland
+    // 窗口逐帧重新配置尺寸；卡片由 NotificationPopupStack 按应用键增量维护。
+    // 先于右侧面板与中岛内容窗口创建，使面板叠在浮层之上。
+    Variants {
+        model: Quickshell.screens
+        delegate: Component {
+            PanelWindow {
+                id: notificationWindow
+                required property var modelData
+                screen: modelData
+                visible: true
+                exclusiveZone: -1
+                anchors { top: true; right: true }
+                margins.top: configRoot.barMarginTop + configRoot.barHeight + configRoot.baseUnit * 0.5
+                margins.right: configRoot.barMarginSide + configRoot.baseUnit * 0.4
+                implicitWidth: configRoot.notificationPopupWidth
+                implicitHeight: Math.max(1, Math.round(
+                    modelData.height - margins.top - configRoot.baseUnit))
+                color: "transparent" // 窗口透明，实际视觉由通知卡片绘制
+                // 输入区域只覆盖当前卡片列，其余区域穿透
+                mask: Region {
+                    x: 0
+                    y: 0
+                    width: popupStack.width
+                    height: Math.ceil(popupStack.columnHeight)
+                }
+
+                NotificationPopupStack {
+                    id: popupStack
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    groups: configRoot.notificationGroups
+                    unit: configRoot.baseUnit
+                    ink: configRoot.zenInk
+                    stone: configRoot.zenStone
+                    mist: configRoot.zenMist
+                    smoke: configRoot.zenSmoke
+                    cloud: configRoot.zenCloud
+                    snow: configRoot.zenSnow
+                    onDismissRequested: notice => notice.dismiss()
+                    onSourceRequested: notice => configRoot.focusNotificationSource(notice)
+                }
+            }
+        }
     }
 
     RightPanelHost {
@@ -935,73 +998,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
-    // ===== TEMP NOTIFICATION POPUPS =====
-    Variants {
-        model: Quickshell.screens
-        delegate: Component {
-            PanelWindow {
-                id: notificationWindow
-                required property var modelData
-                screen: modelData
-                visible: configRoot.activeNotifications.length > 0
-                exclusiveZone: -1
-                anchors { top: true; right: true }
-                margins.top: configRoot.barMarginTop + configRoot.barHeight + configRoot.baseUnit * 0.5
-                margins.right: configRoot.barMarginSide + configRoot.baseUnit * 0.4
-                implicitWidth: configRoot.notificationPopupWidth
-                implicitHeight: notificationColumn.implicitHeight
-                color: "transparent" // 窗口透明，实际视觉由通知卡片绘制
-
-                Column {
-                    id: notificationColumn
-                    width: parent.width
-                    spacing: configRoot.baseUnit * 0.35
-
-                    // 通知消失后下方分组平滑上移（替代瞬移）
-                    move: Transition {
-                        NumberAnimation {
-                            properties: "y"
-                            duration: Config.Theme.animNormal
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-
-                    Repeater {
-                        id: notificationGroupRepeater
-                        model: configRoot.notificationGroups
-
-                        NotificationPopupGroup {
-                            required property var modelData
-                            required property int index
-                            width: notificationColumn.width
-                            group: modelData
-                            unit: configRoot.baseUnit
-                            ink: configRoot.zenInk
-                            stone: configRoot.zenStone
-                            mist: configRoot.zenMist
-                            smoke: configRoot.zenSmoke
-                            cloud: configRoot.zenCloud
-                            snow: configRoot.zenSnow
-                            onDismissRequested: notice => notice.dismiss()
-                            onSourceRequested: notice => configRoot.focusNotificationSource(notice)
-
-                            // 退场动画期间先把对应通知从分组数据中移除（触发剩余分组重排），
-                            // 动画播放完后清掉占位计数，卡片真正销毁，避免闪烁/复用错位。
-                            onExitStarted: notification => {
-                                notificationColumn.exitCleanupPending += 1
-                                configRoot.removeNotificationFromGroups(notification)
-                            }
-                            onExitFinished: notificationColumn.exitCleanupPending -= 1
-                        }
-                    }
-
-                    // 退场动画播放期间临时保留对应数量的已移除卡片（占位防闪）
-                    // 说明：repeater.model 保持绑定分组数组，不要在这里覆盖；
-                    // 任务E的"占位"语义由卡片自身退出动画承担，无需改 model。
-                    property int exitCleanupPending: 0
-                }
-            }
-        }
+    // 面板外部点击捕获层：任一面板打开时映射，点击面板以外区域或按 Esc 关闭
+    PanelOutsideClickCatcher {
+        shellRoot: configRoot
+        centerController: centerPanelController
+        rightController: rightPanelController
     }
 
 }

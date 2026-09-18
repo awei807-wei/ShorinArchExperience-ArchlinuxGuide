@@ -15,6 +15,9 @@ Item {
     property bool open: false
     property int page: 0
     property bool reducedMotion: false
+    // 启动预热：见 BarTuning.panelPrewarmDuration；门禁可置 0 以获得精确几何
+    property int prewarmDuration: Config.BarTuning.panelPrewarmDuration
+    property bool prewarming: prewarmDuration > 0
 
     property real shellProgress: open ? 1 : 0
     property real baseRightWidth: Config.BarTuning.rightPanelNeckWidth
@@ -99,6 +102,12 @@ Item {
             Qt.callLater(forceActiveFocus)
     }
 
+    Timer {
+        interval: Math.max(1, root.prewarmDuration)
+        running: root.prewarming
+        onTriggered: root.prewarming = false
+    }
+
     Keys.onEscapePressed: closeRequested()
 
     Item {
@@ -124,7 +133,8 @@ Item {
         height: Math.round(root.safeRevealHeight
             + (root.openHeight - root.safeRevealHeight)
                 * root.bodyProgress)
-        opacity: root.bodyProgress
+        opacity: root.prewarming
+            ? Math.max(0.001, root.bodyProgress) : root.bodyProgress
         clip: true
 
         // 面板内部空白由此层消费，外部点击只落到宿主的关闭层。
@@ -157,14 +167,16 @@ Item {
                 color: Config.Theme.surface
             }
 
-            // 页面始终按最终宽高排版，内容进度仅控制透明度和轻位移。
+            // 页面始终按最终宽高排版并保持可见，内容进度仅控制透明度和
+            // 轻位移；不再用 visible 卸载内容，避免每次打开都重建整棵内容树。
             Item {
                 id: contentStage
 
                 anchors.fill: parent
-                opacity: root.contentProgress
+                opacity: root.prewarming
+                    ? Math.max(0.001, root.contentProgress)
+                    : root.contentProgress
                 enabled: root.contentProgress > 0.95
-                visible: root.contentProgress > 0.001
                 transform: Translate {
                     y: 8 * (1 - root.contentProgress)
                 }
@@ -190,6 +202,7 @@ Item {
                             Config.BarTuning.rightPanelPaddingH
                         active: root.page === 0
                         reducedMotion: root.reducedMotion
+                        prewarm: root.prewarming
                         inactiveX:
                             -Config.BarTuning.panelPageCardOffset
 
@@ -219,6 +232,7 @@ Item {
                         anchors.fill: parent
                         active: root.page === 1
                         reducedMotion: root.reducedMotion
+                        prewarm: root.prewarming
                         inactiveX:
                             Config.BarTuning.panelPageCardOffset
 

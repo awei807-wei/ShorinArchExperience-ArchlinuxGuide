@@ -217,7 +217,10 @@ Item {
                 anchors.horizontalCenter: titleMetrics.width <= parent.width ? parent.horizontalCenter : undefined
                 NumberAnimation on x {
                     id: marqueeAnim
+                    // 面板常驻映射后，跑马灯只能在面板打开时运行，否则会在
+                    // 关闭态持续以 60fps 重绘整个内容窗口
                     running: titleMetrics.width > titleText.parent.width && root.isPlaying
+                        && Popups.dashboardOpen
                     from: titleText.parent.width
                     to: -titleMetrics.width
                     duration: Math.max(0, (titleMetrics.width + titleText.parent.width) * 20)
@@ -486,7 +489,9 @@ Item {
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 7; rightMargin: 7; bottomMargin: 4 }
         height: 48
         spectrum: CavaService.easedSpectrum
-        running: root.visible
+        // 只在采集链路激活时重绘：卡片常驻可见后，不能再以 visible 作为
+        // 60fps 重绘的开关
+        running: CavaService.active && root.visible
         tint: Theme.active
     }
 
