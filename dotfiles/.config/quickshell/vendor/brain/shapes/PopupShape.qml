@@ -9,7 +9,10 @@ Canvas {
     property color color: Theme.background
     
     // Normal corner radius for the edges away from the notch
-    property int radius: Theme.cornerRadius
+    // real：共享外轮廓下半径随进度连续插值（15 → 17），不能取整离散化
+    property real radius: Theme.cornerRadius
+
+    onRadiusChanged: requestPaint()
     
     // Custom dimensions for the outward "melt" (concave corners)
     // Increase flareHeight to make the corners "higher" / stretch further

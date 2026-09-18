@@ -114,10 +114,11 @@ PanelWindow {
             width: Math.max(0, controller.pageWidth - 32)
             height: Math.max(0, Theme.dashboardHeight - 24)
 
-            // 外壳接近展开完成才淡入内容（打开 100ms / 收起 40ms）；
-            // 透明度不阻止输入，enabled 需独立门控
+            // 外壳接近展开完成才淡入内容（打开 60ms / 收起 40ms）；
+            // 透明度不阻止输入，enabled 需独立门控。
+            // 0.98 为布局挤压问题解决后的放宽阈值，勿再回退到保守值
             readonly property bool contentVisible:
-                controller.open && root.p >= 0.99
+                controller.open && root.p >= 0.98
 
             opacity: contentVisible ? 1 : 0
             enabled: controller.open
@@ -126,7 +127,7 @@ PanelWindow {
                 NumberAnimation {
                     duration: controller.reducedMotion
                         || root.animDuration <= 0
-                        ? 0 : (controller.open ? 100 : 40)
+                        ? 0 : (controller.open ? 60 : 40)
                     easing.type: Easing.OutCubic
                 }
             }

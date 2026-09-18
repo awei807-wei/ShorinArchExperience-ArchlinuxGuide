@@ -129,7 +129,9 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 text: clockIsland.timeText
-                color: clockIsland.textColor
+                // 按下即反馈：按下变强调色，松开/按住移开取消恢复
+                color: hoverArea.pressed
+                    ? clockIsland.accentColor : clockIsland.textColor
                 font.family: clockIsland.monoFont
                 font.pixelSize: Config.BarTuning.clockTimeFontSize
                 font.weight: Font.DemiBold

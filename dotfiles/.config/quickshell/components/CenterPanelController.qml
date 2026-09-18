@@ -103,9 +103,11 @@ Item {
         shellAnimation.from = centerPanelProgress
         shellAnimation.to = targetProgress
         // 按剩余行程缩放时长：中途反向时小幅动作不再拖满全程；
-        // 下限 60ms 避免极小动作闪跳。这是行程等比而非严格速度连续
+        // 下限 60ms 避免极小动作闪跳。这是行程等比而非严格速度连续。
+        // 开 280ms / 关 220ms 为 OutQuad 下的建议起点，验收后可微调
+        const baseDuration = open ? 280 : 220
         shellAnimation.duration = Math.max(
-            60, Math.round(animationDuration * distance))
+            60, Math.round(baseDuration * distance))
         shellAnimation.restart()
     }
 
@@ -126,7 +128,9 @@ Item {
 
         target: root
         property: "centerPanelProgress"
-        easing.type: Easing.InOutCubic
+        // OutQuad：起步即有可见位移。InOutCubic 从零速加速，300ms 下
+        // 前 50ms 位移不足 10px，体感为"点了没反应"（右岛同款结论）
+        easing.type: Easing.OutQuad
         onFinished: {
             if (!root.open && root.centerPanelProgress <= 0.001)
                 root.scheduleWindowHide()
