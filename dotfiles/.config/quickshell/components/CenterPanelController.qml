@@ -17,6 +17,8 @@ Item {
     property string page: "home"
     property int animationDuration: 300
     property int hideDelay: 20
+    // 减少动画：开合直接落位到进度终点，仍走同一套关闭生命周期
+    property bool reducedMotion: false
     property bool windowVisible: false
     property var activeScreen: null
 
@@ -82,7 +84,16 @@ Item {
             windowVisible = true
 
         const targetProgress = open ? 1 : 0
-        if (Math.abs(centerPanelProgress - targetProgress) <= 0.0001) {
+        const distance = Math.abs(targetProgress - centerPanelProgress)
+        if (distance <= 0.0001) {
+            centerPanelProgress = targetProgress
+            if (!open)
+                scheduleWindowHide()
+            return
+        }
+
+        // 减少动画：直接落位，仍走同一套关闭生命周期
+        if (reducedMotion || animationDuration <= 0) {
             centerPanelProgress = targetProgress
             if (!open)
                 scheduleWindowHide()
@@ -91,7 +102,10 @@ Item {
 
         shellAnimation.from = centerPanelProgress
         shellAnimation.to = targetProgress
-        shellAnimation.duration = Math.max(1, animationDuration)
+        // 按剩余行程缩放时长：中途反向时小幅动作不再拖满全程；
+        // 下限 60ms 避免极小动作闪跳。这是行程等比而非严格速度连续
+        shellAnimation.duration = Math.max(
+            60, Math.round(animationDuration * distance))
         shellAnimation.restart()
     }
 

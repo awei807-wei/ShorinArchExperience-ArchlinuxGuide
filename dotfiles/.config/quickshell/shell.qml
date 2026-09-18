@@ -916,6 +916,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     CenterPanelController {
         id: centerPanelController
         animationDuration: Config.BarTuning.panelShellDuration
+        reducedMotion: Core.TopBarState.reducedMotion
     }
 
     Variants {

@@ -26,6 +26,10 @@ PanelWindow {
     readonly property int fh: Theme.notchRadius
     readonly property int animDuration: controller.animationDuration
 
+    // 归一化的开合进度（单一进度时钟的消费入口）
+    readonly property real p:
+        Math.max(0, Math.min(1, controller.centerPanelProgress))
+
     readonly property bool panelActiveOnScreen:
         controller.isScreenActive(modelData)
 
@@ -95,21 +99,28 @@ PanelWindow {
         Item {
             id: content
 
-            anchors {
-                fill: parent
-                topMargin: 16
-                leftMargin: 16
-                rightMargin: 16
-                bottomMargin: 8
-            }
+            // 不再跟随 sizer 重新排版：页面始终按最终尺寸布局，横向与
+            // 展开中的面板中心对齐，由 sizer 裁切逐步显露。此前外壳变形
+            // 的每一帧都在重排三列页面，中间列与时钟卡会经历负尺寸布局
+            x: (sizer.width - controller.pageWidth) / 2 + 16
+            y: 16
+            width: Math.max(0, controller.pageWidth - 32)
+            height: Math.max(0, Theme.dashboardHeight - 24)
 
-            opacity: controller.open ? 1 : 0
+            // 外壳接近展开完成才淡入内容（打开 100ms / 收起 40ms）；
+            // 透明度不阻止输入，enabled 需独立门控
+            readonly property bool contentVisible:
+                controller.open && root.p >= 0.99
+
+            opacity: contentVisible ? 1 : 0
             enabled: controller.open
+                && root.p >= 0.999 && opacity >= 0.99
             Behavior on opacity {
                 NumberAnimation {
-                    duration: controller.open
-                        ? root.animDuration * 0.5
-                        : root.animDuration * 0.15
+                    duration: controller.reducedMotion
+                        || root.animDuration <= 0
+                        ? 0 : (controller.open ? 100 : 40)
+                    easing.type: Easing.OutCubic
                 }
             }
 

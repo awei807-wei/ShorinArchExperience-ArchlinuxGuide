@@ -33,6 +33,14 @@ Canvas {
         var fw = flareWidth
         var fh = flareHeight
 
+        // 止损约束：attached 边垂直方向的空间不足时收缩半径，避免
+        // 圆弧路径反向（如 h < r 时 h - r 会越过顶边）。共享外轮廓
+        // 落地后，圆角将由 Bar + 面板的总高度空间承载，此约束可移除
+        if (attachedEdge === "top" || attachedEdge === "bottom")
+            r = Math.max(0, Math.min(r, h, w / 2))
+        else
+            r = Math.max(0, Math.min(r, w, h / 2))
+
         ctx.beginPath()
         ctx.fillStyle = root.color
 

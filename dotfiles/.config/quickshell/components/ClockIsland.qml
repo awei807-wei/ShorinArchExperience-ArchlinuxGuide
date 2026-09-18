@@ -24,6 +24,15 @@ Rectangle {
     property real shakeOffset: 0
     // 中岛子面板打开：内容淡出、岛体成为面板颈部
     property bool panelOpen: false
+    // 子面板开合进度 0..1（由 Bar 注入）：小时钟内容随进度在展开初段
+    // 退场、收起末段返回（smoothstep 0~0.16），替代独立时间线淡入淡出
+    property real panelProgress: 0
+
+    function smoothstep(a, b, value) {
+        const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+    }
+
     signal clicked()
     readonly property bool hovered: hoverArea.containsMouse
     readonly property bool ultraCompact: responsiveLevel >= 4
@@ -48,7 +57,9 @@ Rectangle {
 
     implicitWidth: ultraCompact ? Config.BarTuning.clockUltraWidth : (compact ? Config.BarTuning.clockCompactWidth : Config.BarTuning.clockWidth)
     implicitHeight: Config.BarTuning.islandHeight
-    color: panelOpen ? surfaceColor : (hovered ? hoverColor : surfaceColor)
+    // 面板存在期间（含收起途中）不显示 hover 高亮，避免中途亮出小矩形
+    color: panelOpen || panelProgress > 0
+        ? surfaceColor : (hovered ? hoverColor : surfaceColor)
     border.color: borderColor
     border.width: Config.BarTuning.islandBorderWidth
     radius: Config.Theme.radiusMedium
@@ -105,12 +116,10 @@ Rectangle {
         id: clockContent
 
         anchors.centerIn: parent
-        opacity: panelOpen ? 0 : 1
-
-        Behavior on opacity {
-            enabled: !clockIsland.reducedMotion
-            NumberAnimation { duration: Config.Theme.animNormal }
-        }
+        // 展开初段（progress 0~0.16）退场，收起末段随进度返回，
+        // 与大面板内容在时间上互斥，避免同屏
+        opacity: 1 - clockIsland.smoothstep(
+            0.0, 0.16, clockIsland.panelProgress)
 
         Item {
             width: clockIsland.timeColumnWidth

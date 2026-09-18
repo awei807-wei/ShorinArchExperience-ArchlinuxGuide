@@ -189,6 +189,7 @@ Rectangle {
         responsiveLevel: bar.layoutMode
         reducedMotion: Core.TopBarState.reducedMotion
         panelOpen: bar.centerPanelOpen
+        panelProgress: bar.centerPanelProgress
         surfaceColor: "transparent"
         hoverColor: bar.hoverSurface
         borderColor: "transparent"
