@@ -44,6 +44,10 @@ Rectangle {
         notchRadius + (Theme.cornerRadius - notchRadius)
             * Math.max(0, Math.min(1, centerPanelProgress))
 
+    // bar 窗口总高：条带 + 面板最大下探。共享外轮廓（含面板段）全部
+    // 画在 bar 窗口内，动态接缝随单 surface 消失
+    readonly property int shellHeight: barHeight + Theme.dashboardHeight
+
     // cWidth = 进度在（中岛宽 ↔ 页宽）之间线性插值
     readonly property real centerPanelCWidth:
         clockIslandItem.width

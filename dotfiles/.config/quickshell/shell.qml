@@ -795,7 +795,20 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     left: true // 贴左
                     right: true // 贴右（形成整条顶栏）
                 }
-                implicitHeight: configRoot.barHeight // 顶部连接带与下伸岛体共同占用的顶栏高度
+                // 窗口加高到“岛底 + 面板最大下探”：共享外轮廓（含面板段）
+                // 全部在 bar 窗口内绘制，动态接缝随单 surface 消失；
+                // 排除区钉回条带高度，不把窗口高度泄露给窗口布局
+                implicitHeight: mainBar.shellHeight
+                exclusionMode: ExclusionMode.Normal
+                exclusiveZone: configRoot.barHeight + configRoot.barMarginTop
+                // 输入区域固定为 bar 条带：条带以下的透明区域穿透点击，
+                // 面板展开时的内容交互由上层的 Dashboard 窗口承接
+                mask: Region {
+                    x: 0
+                    y: 0
+                    width: mainBar.width
+                    height: configRoot.barHeight
+                }
                 margins.top: configRoot.barMarginTop // 距离屏幕顶部的留白
                 margins.left: configRoot.barMarginSide // 左边距
                 margins.right: configRoot.barMarginSide // 右边距

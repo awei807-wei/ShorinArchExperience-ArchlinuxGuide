@@ -8,13 +8,10 @@ import "../vendor/brain/services/center/"
 import "../config" as Config
 
 // 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植：
-// sizer 为 clip 视口，宽/高与 bar 轮廓消费控制器的同一份
-// centerPanelProgress，并遵循同一份共享外轮廓：底边随进度从岛底
-// （barHeight）下移到面板底（barHeight + dashboardHeight），底角
-// 半径随动（15 → 17）；Bar 与面板各自绘制轮廓落在自己窗口内的部分，
-// 收拢末段由 CenterPanelShape 虚拟顶边绘制大圆角的可见下段；
-// CenterPanelShape 为平顶矩形（无凹角耳朵），窗口顶边与 bar 底边
-// 2px 同色重叠吸收接缝；内容固定最终尺寸、接近展开完成才淡入。
+// 共享外轮廓（岛底 → 面板底，含底角 15 → 17 随动）已全部由 bar 窗口
+// 绘制（单 surface，动态接缝消失），本窗口只承载两件无动画几何的事：
+// ① sizer 覆盖面板区域的吞点击层；② 固定最终尺寸的内容层（接近
+// 展开完成才淡入）；外加全屏关闭层（点击面板外即关闭）。
 PanelWindow {
     id: root
 
@@ -29,10 +26,6 @@ PanelWindow {
     // 归一化的开合进度（单一进度时钟的消费入口）
     readonly property real p:
         Math.max(0, Math.min(1, controller.centerPanelProgress))
-
-    // 面板底角半径随共享轮廓：岛底 15 → 面板底 17
-    readonly property real panelBottomRadius:
-        Theme.notchRadius + (Theme.cornerRadius - Theme.notchRadius) * root.p
 
     readonly property bool panelActiveOnScreen:
         controller.isScreenActive(modelData)
@@ -88,26 +81,20 @@ PanelWindow {
         // 同式）；高度 = 2px 重叠 + dashboardHeight × 进度，使面板底边与
         // bar 侧轮廓底边（barHeight + dashboardHeight × 进度）逐帧同值；
         // 底角半径随共享轮廓从岛底 15 过渡到面板底 17，高度不足以容纳
-        // 完整圆弧时由 CenterPanelShape 的虚拟顶边绘制圆弧下段
+        // 底角半径随共享轮廓插值（15 → 17），低高度大半径由 bar 侧
+        // Shape 的虚拟顶边处理
         width: controller.centerWidth
             + (controller.pageWidth - controller.centerWidth)
               * Math.max(0, Math.min(1, controller.centerPanelProgress))
         height: 2 + Theme.dashboardHeight
             * Math.max(0, Math.min(1, controller.centerPanelProgress))
 
-        // 吞掉面板内部点击，避免穿透到关闭层
+        // 吞掉面板内部点击，避免穿透到关闭层。
+        // 面板背景已由 bar 窗口的共享外轮廓绘制（单 surface），本窗口
+        // 只承载内容与关闭层，无动画几何，跨窗口无同步需求
         MouseArea {
             anchors.fill: parent
             onClicked: {}
-        }
-
-        // 平顶矩形：无凹角耳朵。底角半径随共享轮廓从岛底 15 过渡到
-        // 面板底 17；高度不足以容纳完整圆弧时由虚拟顶边绘制圆弧下段。
-        // Shape 后端：GPU 几何，替代 Canvas 的每帧软件栅格化 + 纹理上传
-        CenterPanelShape {
-            anchors.fill: parent
-            fillColor: Theme.background
-            radius: root.panelBottomRadius
         }
 
         Item {
