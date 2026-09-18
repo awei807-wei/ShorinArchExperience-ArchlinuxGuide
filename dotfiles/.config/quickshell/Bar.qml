@@ -27,9 +27,11 @@ Rectangle {
     property bool rightPanelOpen: false
     // 中岛子面板开合。cWidth 联动为 Brain_Shell TopBar 原方案：
     // 面板打开时中央缺口宽度跟随面板主体宽，一条 InOutCubic Behavior；
-    // 缺口形状（含底部圆角）不做特殊处理，熔接由面板 PopupShape 凹角完成。
+    // 岛底直角由 centerPanelFlat 开关控制（见下方 BarContour 绑定）。
     property bool centerPanelOpen: false
     property real centerPanelPageWidth: 0
+    // 子面板窗口存在期间（开合动画全程）岛底为直角
+    property bool centerPanelFlat: false
 
     // Brain TopBar: cWidth = dashboardOpen ? dashboardPageWidth : 内容宽
     property real centerPanelCWidth: centerPanelOpen
@@ -42,15 +44,6 @@ Rectangle {
         }
     }
 
-    // 面板打开时岛底圆角展平为方角，使中岛底边与面板顶边直接延续
-    property real centerPanelProgress: centerPanelOpen ? 1 : 0
-
-    Behavior on centerPanelProgress {
-        NumberAnimation {
-            duration: Config.BarTuning.panelShellDuration
-            easing.type: Easing.InOutCubic
-        }
-    }
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth
@@ -159,7 +152,7 @@ Rectangle {
         centerOffset: bar.clockLeft + clockIslandItem.width / 2
             - bar.width / 2
         rightWidth: bar.animatedRightContourWidth
-        centerOpen: bar.centerPanelProgress
+        centerFlat: bar.centerPanelFlat
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth

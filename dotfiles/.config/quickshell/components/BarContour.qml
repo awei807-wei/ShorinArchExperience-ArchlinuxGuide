@@ -10,8 +10,9 @@ Canvas {
     property real centerWidth: 240
     property real centerOffset: 0
     property real rightWidth: 180
-    // 中央岛熔接进度 0..1：1 = 底部圆角展平（与子面板顶边直接延续）
-    property real centerOpen: 0
+    // 中央岛底部直角开关：子面板存在期间（开合全程）岛底与面板顶边
+    // 同为方角直接延续，窗口隐藏后恢复底部圆角
+    property bool centerFlat: false
     property real notchHeight: 40
     property real notchRadius: 15
     property real topBorderWidth: 6
@@ -29,7 +30,7 @@ Canvas {
     onCenterWidthChanged: requestPaint()
     onCenterOffsetChanged: requestPaint()
     onRightWidthChanged: requestPaint()
-    onCenterOpenChanged: requestPaint()
+    onCenterFlatChanged: requestPaint()
     onNotchHeightChanged: requestPaint()
     onNotchRadiusChanged: requestPaint()
     onTopBorderWidthChanged: requestPaint()
@@ -60,8 +61,10 @@ Canvas {
         ctx.arcTo(leftEnd, b, leftEnd + r, b, r);
 
         // 中岛两侧都由上部内凹圆角、短直边和下部外凸圆角组成。
-        // 面板打开（centerOpen=1）时底部圆角展平，底边与面板顶边直接延续。
-        const cbr = r * (1 - Math.max(0, Math.min(1, root.centerOpen)));
+        // 子面板存在期间（centerFlat）底部为直角，与面板平顶直接延续；
+        // 面板关闭后恢复底部圆角。开关在窗口可见边界切换，无动画，
+        // 避免圆角与扩展边缘之间的露底缺口。
+        const cbr = root.centerFlat ? 0 : r;
         ctx.lineTo(centerStart - r, b);
         ctx.arcTo(centerStart, b, centerStart, b + r, r);
         ctx.lineTo(centerStart, h - cbr);

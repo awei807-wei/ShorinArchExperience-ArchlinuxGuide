@@ -8,10 +8,12 @@ import "../vendor/brain/services/"
 import "../vendor/brain/services/center/"
 import "../config" as Config
 
-// 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 的原样移植：
+// 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植：
 // sizer 为 clip 视口，宽度（页面宽 ↔ 中岛宽）与高度（notchHeight/2 ↔
 // dashboardHeight）以同一条 InOutCubic Behavior 同步开合；
-// PopupShape 随 sizer 当前尺寸重绘；内容仅在 sizer 内做透明度淡入淡出。
+// PopupShape 为平顶矩形（无凹角耳朵），顶边与中岛底边同宽直接延续，
+// 窗口顶边与 bar 底边 2px 同色重叠吸收接缝；
+// 内容仅在 sizer 内做透明度淡入淡出。
 PanelWindow {
     id: root
 
@@ -57,13 +59,13 @@ PanelWindow {
 
         // 水平对齐中岛中心（controller 记录点击时中岛中心的屏幕坐标；
         // 中岛无偏移时与 Brain 的 horizontalCenter 等价）
-        x: root.connectionCenterX > 0
-            ? root.connectionCenterX - width / 2
+        x: controller.centerCenterX > 0
+            ? controller.centerCenterX - width / 2
             : (parent.width - width) / 2
         anchors.top: parent.top
         clip: true
 
-        // 宽度与中岛轮廓严格同宽（无外翻耳朵），顶边与岛底直接延续
+        // 主体与中央缺口严格同宽（无外翻耳朵），顶边与岛底直接延续
         width: controller.open
             ? controller.pageWidth
             : controller.centerWidth
@@ -92,8 +94,7 @@ PanelWindow {
             onClicked: {}
         }
 
-        // 平顶矩形（无凹角耳朵）：顶边与中岛底边同宽直接延续，
-        // 只有底角保留圆角
+        // 平顶矩形：无凹角耳朵，顶边与中岛底边同宽直接延续
         PopupShape {
             anchors.fill: parent
             attachedEdge: "top"
