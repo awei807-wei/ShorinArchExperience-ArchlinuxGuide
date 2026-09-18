@@ -2,6 +2,7 @@ import "." as Core
 import QtQuick
 import "components"
 import "config" as Config
+import "vendor/brain"
 
 Rectangle {
     id: bar
@@ -31,8 +32,17 @@ Rectangle {
     property bool centerPanelOpen: false
     property real centerPanelPageWidth: 0
     property real centerPanelProgress: 0
-    // 子面板窗口存在期间（开合动画全程）岛底为直角
-    property bool centerPanelFlat: false
+
+    // 共享外轮廓：中岛底边随进度下移（岛底 barHeight → 面板底
+    // barHeight + dashboardHeight），底角半径随动（notchRadius →
+    // cornerRadius，15 → 17）。Bar 与面板窗口各自绘制同一轮廓落在
+    // 自己窗口内的部分，重叠区两份绘制天然一致
+    readonly property real centerBottomY:
+        barHeight + Theme.dashboardHeight
+            * Math.max(0, Math.min(1, centerPanelProgress))
+    readonly property real centerBottomRadius:
+        notchRadius + (Theme.cornerRadius - notchRadius)
+            * Math.max(0, Math.min(1, centerPanelProgress))
 
     // cWidth = 进度在（中岛宽 ↔ 页宽）之间线性插值
     readonly property real centerPanelCWidth:
@@ -148,7 +158,8 @@ Rectangle {
         centerOffset: bar.clockLeft + clockIslandItem.width / 2
             - bar.width / 2
         rightWidth: bar.animatedRightContourWidth
-        centerFlat: bar.centerPanelFlat
+        centerBottomY: bar.centerBottomY
+        centerBottomRadius: bar.centerBottomRadius
         notchHeight: bar.barHeight
         notchRadius: bar.notchRadius
         topBorderWidth: bar.topBorderWidth

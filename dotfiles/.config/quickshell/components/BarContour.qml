@@ -10,9 +10,11 @@ Canvas {
     property real centerWidth: 240
     property real centerOffset: 0
     property real rightWidth: 180
-    // 中央岛底部直角开关：子面板存在期间（开合全程）岛底与面板顶边
-    // 同为方角直接延续，窗口隐藏后恢复底部圆角
-    property bool centerFlat: false
+    // 中岛底边的共享外轮廓：底边随进度下移（岛底 40 → 面板底
+    // 40+dashboardHeight），底角半径随动（15 → cornerRadius）。
+    // Bar 与面板窗口各自绘制同一轮廓落在自己窗口内的部分
+    property real centerBottomY: notchHeight
+    property real centerBottomRadius: notchRadius
     property real notchHeight: 40
     property real notchRadius: 15
     property real topBorderWidth: 6
@@ -30,7 +32,8 @@ Canvas {
     onCenterWidthChanged: requestPaint()
     onCenterOffsetChanged: requestPaint()
     onRightWidthChanged: requestPaint()
-    onCenterFlatChanged: requestPaint()
+    onCenterBottomYChanged: requestPaint()
+    onCenterBottomRadiusChanged: requestPaint()
     onNotchHeightChanged: requestPaint()
     onNotchRadiusChanged: requestPaint()
     onTopBorderWidthChanged: requestPaint()
@@ -61,21 +64,17 @@ Canvas {
         ctx.arcTo(leftEnd, b, leftEnd + r, b, r);
 
         // 中岛两侧都由上部内凹圆角、短直边和下部外凸圆角组成。
-        // 子面板存在期间（centerFlat）底部为直角，与面板平顶直接延续；
-        // 面板关闭后恢复底部圆角。开关在窗口可见边界切换，无动画，
-        // 避免圆角与扩展边缘之间的露底缺口。
-        const cbr = root.centerFlat ? 0 : r;
+        // 共享外轮廓：底边位置与底角半径由进度驱动（岛底 40/15 →
+        // 面板底 560/17），路径允许超出 Bar 窗口画布，超出部分由
+        // Canvas 边界裁切；面板窗口绘制同一轮廓的其余部分
+        const cBottom = root.centerBottomY;
+        const cbr = root.centerBottomRadius;
         ctx.lineTo(centerStart - r, b);
         ctx.arcTo(centerStart, b, centerStart, b + r, r);
-        ctx.lineTo(centerStart, h - cbr);
-        if (cbr > 0.5) {
-            ctx.arcTo(centerStart, h, centerStart + cbr, h, cbr);
-            ctx.lineTo(centerEnd - cbr, h);
-            ctx.arcTo(centerEnd, h, centerEnd, h - cbr, cbr);
-        } else {
-            ctx.lineTo(centerStart, h);
-            ctx.lineTo(centerEnd, h);
-        }
+        ctx.lineTo(centerStart, cBottom - cbr);
+        ctx.arcTo(centerStart, cBottom, centerStart + cbr, cBottom, cbr);
+        ctx.lineTo(centerEnd - cbr, cBottom);
+        ctx.arcTo(centerEnd, cBottom, centerEnd, cBottom - cbr, cbr);
         ctx.lineTo(centerEnd, b + r);
         ctx.arcTo(centerEnd, b, centerEnd + r, b, r);
 

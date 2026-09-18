@@ -9,12 +9,13 @@ import "../vendor/brain/services/center/"
 import "../config" as Config
 
 // 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植：
-// sizer 为 clip 视口，宽/高由控制器的单一进度时钟（centerPanelProgress）
-// 线性插值驱动——与 bar 缺口共用同一份进度，收回时边缘逐帧同值不错拍；
-// 收拢终点高度为 0（面板在窗口隐藏前已完全消失），宽度始终 ≥ 中岛宽；
-// PopupShape 为平顶矩形（无凹角耳朵），顶边与中岛底边同宽直接延续，
-// 窗口顶边与 bar 底边 2px 同色重叠吸收接缝；
-// 内容仅在 sizer 内做透明度淡入淡出。
+// sizer 为 clip 视口，宽/高与 bar 轮廓消费控制器的同一份
+// centerPanelProgress，并遵循同一份共享外轮廓：底边随进度从岛底
+// （barHeight）下移到面板底（barHeight + dashboardHeight），底角
+// 半径随动（15 → 17）；Bar 与面板各自绘制轮廓落在自己窗口内的部分，
+// 收拢末段由 PopupShape 虚拟顶边绘制大圆角的可见下段；
+// PopupShape 为平顶矩形（无凹角耳朵），窗口顶边与 bar 底边
+// 2px 同色重叠吸收接缝；内容固定最终尺寸、接近展开完成才淡入。
 PanelWindow {
     id: root
 
@@ -29,6 +30,10 @@ PanelWindow {
     // 归一化的开合进度（单一进度时钟的消费入口）
     readonly property real p:
         Math.max(0, Math.min(1, controller.centerPanelProgress))
+
+    // 面板底角半径随共享轮廓：岛底 15 → 面板底 17
+    readonly property real panelBottomRadius:
+        Theme.notchRadius + (Theme.cornerRadius - Theme.notchRadius) * root.p
 
     readonly property bool panelActiveOnScreen:
         controller.isScreenActive(modelData)
@@ -70,14 +75,15 @@ PanelWindow {
         anchors.top: parent.top
         clip: true
 
-        // 与 bar 缺口共用同一份进度时钟：
-        // 宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth 同式，
-        // 逐帧同值）；高度在 0 ↔ dashboardHeight 之间插值，
-        // 收拢时面板在窗口隐藏前已完全缩没，不再与岛底抢拍
+        // 共享外轮廓：宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth
+        // 同式）；高度 = 2px 重叠 + dashboardHeight × 进度，使面板底边与
+        // bar 侧轮廓底边（barHeight + dashboardHeight × 进度）逐帧同值；
+        // 底角半径随共享轮廓从岛底 15 过渡到面板底 17，高度不足以容纳
+        // 完整圆弧时由 PopupShape 的虚拟顶边绘制圆弧下段
         width: controller.centerWidth
             + (controller.pageWidth - controller.centerWidth)
               * Math.max(0, Math.min(1, controller.centerPanelProgress))
-        height: Theme.dashboardHeight
+        height: 2 + Theme.dashboardHeight
             * Math.max(0, Math.min(1, controller.centerPanelProgress))
 
         // 吞掉面板内部点击，避免穿透到关闭层
@@ -86,12 +92,13 @@ PanelWindow {
             onClicked: {}
         }
 
-        // 平顶矩形：无凹角耳朵，顶边与中岛底边同宽直接延续
+        // 平顶矩形：无凹角耳朵。底角半径随共享轮廓从岛底 15 过渡到
+        // 面板底 17；高度不足以容纳完整圆弧时由虚拟顶边绘制圆弧下段
         PopupShape {
             anchors.fill: parent
             attachedEdge: "top"
             color: Theme.background
-            radius: Theme.cornerRadius
+            radius: root.panelBottomRadius
             flareWidth: 0
             flareHeight: 0
         }

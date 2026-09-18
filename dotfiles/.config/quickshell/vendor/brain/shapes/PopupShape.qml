@@ -33,13 +33,10 @@ Canvas {
         var fw = flareWidth
         var fh = flareHeight
 
-        // 止损约束：attached 边垂直方向的空间不足时收缩半径，避免
-        // 圆弧路径反向（如 h < r 时 h - r 会越过顶边）。共享外轮廓
-        // 落地后，圆角将由 Bar + 面板的总高度空间承载，此约束可移除
-        if (attachedEdge === "top" || attachedEdge === "bottom")
-            r = Math.max(0, Math.min(r, h, w / 2))
-        else
-            r = Math.max(0, Math.min(r, w, h / 2))
+        // 半径水平约束：避免左右圆弧相交。垂直方向不收缩——共享外轮廓
+        // 场景下（attachedEdge "top"）低高度 + 大半径是合法状态，
+        // 由下方虚拟顶边绘制大圆角的可见下段
+        r = Math.max(0, Math.min(r, (w - 2 * fw) / 2))
 
         ctx.beginPath()
         ctx.fillStyle = root.color
@@ -74,18 +71,24 @@ Canvas {
             ctx.closePath()
             break
 
-        case "top":
-            // Body inset by fw on Left/Right. Flare stretches horizontally by fw, vertically by fh.
-            ctx.moveTo(0, 0)
-            ctx.quadraticCurveTo(fw, 0, fw, fh)       // outward flare top-left
+        case "top": {
+            // 共享外轮廓支持：高度不足以容纳完整底角圆弧（收拢末段
+            // h < r）时，顶边上移到圆弧起点之上形成“虚拟顶边”，Canvas
+            // 自动裁掉窗口外的部分，窗口内呈现的正是大圆角圆弧的下段；
+            // 正常高度（h >= r）时 top = 0，路径与原始版本一致
+            const top = Math.min(0, h - r)
+            const bodyTop = top + fh
+            ctx.moveTo(0, top)
+            ctx.quadraticCurveTo(fw, top, fw, bodyTop)
             ctx.lineTo(fw, h - r)
             ctx.arcTo(fw, h, fw + r, h, r)            // normal bottom-left
             ctx.lineTo(w - fw - r, h)
             ctx.arcTo(w - fw, h, w - fw, h - r, r)    // normal bottom-right
-            ctx.lineTo(w - fw, fh)
-            ctx.quadraticCurveTo(w - fw, 0, w, 0)     // outward flare top-right
+            ctx.lineTo(w - fw, bodyTop)
+            ctx.quadraticCurveTo(w - fw, top, w, top) // outward flare top-right
             ctx.closePath()
             break
+        }
 
         case "bottom":
             // Body inset by fw on Left/Right. Flare stretches horizontally by fw, vertically by fh.
