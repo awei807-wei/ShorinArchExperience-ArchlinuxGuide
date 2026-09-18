@@ -9,8 +9,9 @@ import "../vendor/brain/services/center/"
 import "../config" as Config
 
 // 中岛子面板宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植：
-// sizer 为 clip 视口，宽度（页面宽 ↔ 中岛宽）与高度（notchHeight/2 ↔
-// dashboardHeight）以同一条 InOutCubic Behavior 同步开合；
+// sizer 为 clip 视口，宽/高由控制器的单一进度时钟（centerPanelProgress）
+// 线性插值驱动——与 bar 缺口共用同一份进度，收回时边缘逐帧同值不错拍；
+// 收拢终点高度为 0（面板在窗口隐藏前已完全消失），宽度始终 ≥ 中岛宽；
 // PopupShape 为平顶矩形（无凹角耳朵），顶边与中岛底边同宽直接延续，
 // 窗口顶边与 bar 底边 2px 同色重叠吸收接缝；
 // 内容仅在 sizer 内做透明度淡入淡出。
@@ -65,28 +66,15 @@ PanelWindow {
         anchors.top: parent.top
         clip: true
 
-        // 主体与中央缺口严格同宽（无外翻耳朵），顶边与岛底直接延续
-        width: controller.open
-            ? controller.pageWidth
-            : controller.centerWidth
-        // Brain: dashboardOpen ? dashboardHeight : notchHeight / 2
-        height: controller.open
-            ? Theme.dashboardHeight
-            : Theme.notchHeight / 2
-
-        Behavior on width {
-            NumberAnimation {
-                duration: root.animDuration
-                easing.type: Easing.InOutCubic
-            }
-        }
-
-        Behavior on height {
-            NumberAnimation {
-                duration: root.animDuration
-                easing.type: Easing.InOutCubic
-            }
-        }
+        // 与 bar 缺口共用同一份进度时钟：
+        // 宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth 同式，
+        // 逐帧同值）；高度在 0 ↔ dashboardHeight 之间插值，
+        // 收拢时面板在窗口隐藏前已完全缩没，不再与岛底抢拍
+        width: controller.centerWidth
+            + (controller.pageWidth - controller.centerWidth)
+              * Math.max(0, Math.min(1, controller.centerPanelProgress))
+        height: Theme.dashboardHeight
+            * Math.max(0, Math.min(1, controller.centerPanelProgress))
 
         // 吞掉面板内部点击，避免穿透到关闭层
         MouseArea {

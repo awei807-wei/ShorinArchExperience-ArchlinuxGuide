@@ -840,10 +840,18 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         && rightPanelActiveOnScreen
                     centerPanelOpen: centerPanelController.open
                         && centerPanelActiveOnScreen
-                    // 子面板窗口存在期间（开合动画全程）岛底保持直角，
-                    // 与面板平顶直接延续；窗口隐藏后恢复岛底圆角
-                    centerPanelFlat: centerPanelController.windowVisible
+                    // 岛底直角跟随进度时钟而非窗口生命周期：
+                    // open 或进度 > 0.001 期间保持直角；进度归零的同一帧
+                    // 面板高度也为 0（不可见），圆角即时恢复，无直角滞留
+                    centerPanelFlat:
+                        (centerPanelController.open
+                         || centerPanelController.centerPanelProgress
+                            > 0.001)
                         && centerPanelActiveOnScreen
+                    // 单一进度时钟注入：bar 缺口与面板壳体消费同一份进度
+                    centerPanelProgress:
+                        centerPanelActiveOnScreen
+                        ? centerPanelController.centerPanelProgress : 0
                     centerPanelPageWidth: centerPanelController.pageWidth
                     rightPanelProgress: rightPanelActiveOnScreen
                         ? rightPanelController.progress : 0

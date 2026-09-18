@@ -25,24 +25,20 @@ Rectangle {
     property var notificationSourceCounts: []
     property bool trayPanelExpanded: false
     property bool rightPanelOpen: false
-    // 中岛子面板开合。cWidth 联动为 Brain_Shell TopBar 原方案：
-    // 面板打开时中央缺口宽度跟随面板主体宽，一条 InOutCubic Behavior；
-    // 岛底直角由 centerPanelFlat 开关控制（见下方 BarContour 绑定）。
+    // 中岛子面板开合。缺口宽度由控制器的单一进度时钟线性插值驱动
+    // （与面板壳体共用同一份 centerPanelProgress），无独立 Behavior，
+    // 保证收回时缺口与面板边缘逐帧同值不错拍。
     property bool centerPanelOpen: false
     property real centerPanelPageWidth: 0
+    property real centerPanelProgress: 0
     // 子面板窗口存在期间（开合动画全程）岛底为直角
     property bool centerPanelFlat: false
 
-    // Brain TopBar: cWidth = dashboardOpen ? dashboardPageWidth : 内容宽
-    property real centerPanelCWidth: centerPanelOpen
-        ? centerPanelPageWidth : clockIslandItem.width
-
-    Behavior on centerPanelCWidth {
-        NumberAnimation {
-            duration: Config.BarTuning.panelShellDuration
-            easing.type: Easing.InOutCubic
-        }
-    }
+    // cWidth = 进度在（中岛宽 ↔ 页宽）之间线性插值
+    readonly property real centerPanelCWidth:
+        clockIslandItem.width
+        + (centerPanelPageWidth - clockIslandItem.width)
+          * Math.max(0, Math.min(1, centerPanelProgress))
 
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
