@@ -131,10 +131,13 @@ QtObject {
     // shell 的启动环境里 export 即可）；默认跟随当前安装位置
     // $HOME/Downloads/VCPChat。曲库文件由 FileView watchChanges 监听，
     // 路径失效时 onLoadFailed 静默、不影响其他播放器。
+    // 注意：Quickshell.env 未设置时返回 null（不是 ""），直接用 ?? 兜底；
+    // 之前用 `if (env !== "")` 判断，null 落进默认分支导致路径变成
+    // "/AppData/songlist.json"（读不到曲库 → 封面/时长全部失效）。
     readonly property string _appRoot: {
         const env = Quickshell.env("VCPCHAT_ROOT")
-        if (env !== "") return env
-        const home = Quickshell.env("HOME") ?? ""
+        if (env !== null && env !== undefined && env !== "") return env
+        const home = Quickshell.env("HOME") ?? "/home/shiyi"
         return home + "/Downloads/VCPChat"
     }
 
