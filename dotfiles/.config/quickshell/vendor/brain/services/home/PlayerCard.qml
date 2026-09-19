@@ -3,6 +3,7 @@ import QtQuick.Effects
 import Quickshell.Io
 import Quickshell.Services.Mpris
 import "../../"
+import ".."
 import "../../components"
 
 Item {
@@ -45,6 +46,48 @@ Item {
     property int selectedPlayerIndex: 0
     property bool _dropdownOpen: false
 
+    // ── Auto-follow the actively playing player ──────────────────────────────
+    // Index of the first player whose playbackState is "Playing"
+    // (-1 when nothing is playing). Pure reactive binding — the Mpris
+    // singleton re-evaluates it on playback state changes.
+    readonly property int playingIndex: {
+        for (var i = 0; i < root.filteredPlayers.length; i++) {
+            if (root.filteredPlayers[i].playbackState === MprisPlaybackState.Playing)
+                return i
+        }
+        return -1
+    }
+
+    // The index actually displayed. Auto-follows playingIndex unless the user
+    // has pinned a player manually. The pin only suppresses follow-up when a
+    // DIFFERENT player starts playing after the manual pick (see below).
+    property int activeIndex: {
+        if (root.playingIndex !== -1) {
+            var p = root._lastManualIndex
+            if (p !== -1 && p < root.filteredPlayers.length
+                    && p !== root.playingIndex
+                    && root._manualPickSeq > root._playingSeq)
+                return p   // user just pinned another player manually
+            return root.playingIndex
+        }
+        var m = root._lastManualIndex
+        return (m !== -1 && m < root.filteredPlayers.length) ? m : root.selectedPlayerIndex
+    }
+
+    // Track a manual pin and version-count playback-start events so a stale
+    // pin never overrides a NEW playback (state cycling without count change).
+    property int _lastManualIndex: -1
+    property int _manualPickSeq: 0
+    property int _playingSeq: 0
+    onPlayingIndexChanged: {
+        if (root.playingIndex !== -1) {
+            root._playingSeq++
+            root._manualPickSeq = 0   // a fresh start of playback always wins
+        }
+    }
+
+    onActiveIndexChanged: root.selectedPlayerIndex = root.activeIndex
+
     onVisibleChanged: if (!visible) root._dropdownOpen = false
 
     onFilteredPlayersChanged: {
@@ -64,11 +107,12 @@ Item {
     }
 
     // ── MPRIS ─────────────────────────────────────────────────────────────────
+    // Driven by activeIndex (auto-follows the playing player) instead of the
+    // raw manual selection, so "now playing" is displayed without manual pick.
     readonly property var player: root.filteredPlayers.length > 0
-                                  ? root.filteredPlayers[root.selectedPlayerIndex] : null
+                                  ? root.filteredPlayers[root.activeIndex] : null
 
     readonly property bool   isPlaying: root.player?.playbackState === MprisPlaybackState.Playing ?? false
-    readonly property string artUrl:    root.player?.trackArtUrl ?? ""
 
     readonly property string title: {
         var t = root.player?.trackTitle
@@ -82,11 +126,43 @@ Item {
         return a.toString()
     }
 
-    readonly property real length:   root.player?.length   ?? 0
-    readonly property real position: root.player?.position ?? 0
+    // ── VCPChat 增强（VcpSongInfo 单例）：封面 + 真实时长 + 真实进度 ────────────
+    // Chromium 的 MPRIS 元数据不含封面；幻影播放源（60s 静音 WAV）让 MPRIS 的
+    // length/position 全部失真。单例在"标题/艺术家命中曲库"时回查本地曲库，
+    // 并向 rust 音频引擎（127.0.0.1:63789）轮询真实 position/duration。
+    // 其他播放器不受影响（_vcpEnhanced 为 false 时全部回退 MPRIS 原始值）。
+    readonly property bool  _vcpEnhanced: root.title !== "Nothing Playing"
+                                          && VcpSongInfo.matched
+    readonly property string artUrl: root._vcpEnhanced && VcpSongInfo.artPath !== ""
+                                     ? "file://" + VcpSongInfo.artPath
+                                     : (root.player?.trackArtUrl ?? "")
+    readonly property real _vcpLength: VcpSongInfo.length
+    readonly property real length: root._vcpEnhanced && root._vcpLength > 0
+                                   ? root._vcpLength
+                                   : (root.player?.length ?? 0)
+    // 真实进度：引擎活着时用引擎的 current_time（MPRIS 位置是幻影源的）。
+    // 注意：不能写成 `readonly property real position:` —— 上一行 128 已有同名
+    // 属性（QML 同作用域重复声明 → "Duplicate property name"，且会连带整个
+    // 类型加载失败）。position 是仅此一处声明的普通绑定。
+    readonly property real vcpPosition: root._vcpEnhanced && VcpSongInfo.engineAlive
+                                        && VcpSongInfo.enginePolling
+                                        ? VcpSongInfo.enginePos
+                                        : (root.player?.position ?? 0)
+    readonly property real position: root.vcpPosition
 
+    // 本地缓存的位置（每秒自增 + onPositionChanged 同步；进度条/时间戳/seek 消费）
     property real _pos: 0
     onPositionChanged: root._pos = position
+    // 引擎轮询门控：仅 VCPChat 命中且正在播放时开启（1Hz，~1.3KB/次）
+    Binding {
+        target: VcpSongInfo
+        property: "enginePolling"
+        value: root._vcpEnhanced && root.isPlaying
+    }
+    onTitleChanged: VcpSongInfo.lookup(root.title, root.artist)
+    // 启动即播放的场景（Mpris 已就绪、title 初始求值）不会触发 onTitleChanged，
+    // 必须在完成时主动喂一次，否则曲库匹配永远不发生
+    Component.onCompleted: VcpSongInfo.lookup(root.title, root.artist)
 
     Timer {
         interval: 1000; running: root.isPlaying; repeat: true
@@ -473,6 +549,10 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
+                                // Manual pick: pin this player until a NEW
+                                // playback starts elsewhere (see activeIndex).
+                                root._lastManualIndex = index
+                                root._manualPickSeq = root._playingSeq + 1
                                 root.selectedPlayerIndex = index
                                 root._dropdownOpen = false
                             }

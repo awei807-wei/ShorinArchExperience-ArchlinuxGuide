@@ -3,6 +3,7 @@ ProfileCard   home/ProfileCard.qml
 CalendarCard  home/CalendarCard.qml
 ClockCard     home/ClockCard.qml
 PlayerCard    home/PlayerCard.qml
+singleton VcpSongInfo 1.0 VcpSongInfo.qml
 QuickSettings home/QuickSettings.qml
 KanbanBoard   KanbanBoard.qml
 singleton WallpaperService 1.0 WallpaperService.qml
