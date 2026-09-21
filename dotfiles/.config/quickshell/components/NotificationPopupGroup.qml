@@ -23,8 +23,8 @@ Rectangle {
         if (!notification)
             return ""
 
-        const desktopEntry = String(notification.desktopEntry ?? "").replace(/\.desktop$/, "")
-        const appIcon = String(notification.appIcon ?? "")
+        const desktopEntry = String(notification?.desktopEntry ?? "").replace(/\.desktop$/, "")
+        const appIcon = String(notification?.appIcon ?? "")
         const candidates = [desktopEntry, appIcon, appIcon.toLowerCase()]
 
         for (const candidate of candidates) {
@@ -57,6 +57,7 @@ Rectangle {
                 "action": action,
                 "label": text,
                 "notification": notification,
+                "resident": notification?.resident === true,
                 "owner": root
             })
         }
@@ -165,9 +166,15 @@ Rectangle {
         delegate: Timer {
             required property var modelData
             interval: 6000
-            running: modelData.urgency !== NotificationUrgency.Critical
+            running: modelData !== null
+                && modelData !== undefined
+                && modelData.urgency !== NotificationUrgency.Critical
             repeat: false
-            onTriggered: modelData.expire()
+            onTriggered: {
+                const notification = modelData
+                if (notification && typeof notification.expire === "function")
+                    notification.expire()
+            }
         }
     }
 
@@ -274,8 +281,10 @@ Rectangle {
                 acceptedButtons: Qt.LeftButton
                 onTapped: root.expanded = !root.expanded
                 onDoubleTapped: {
-                    if (root.notifications.length > 0)
-                        root.sourceRequested(root.notifications[0])
+                    const notification = root.notifications.length > 0
+                        ? root.notifications[0] : null
+                    if (notification)
+                        root.sourceRequested(notification)
                 }
             }
         }
@@ -290,14 +299,29 @@ Rectangle {
                 required property int index
                 required property var modelData
                 readonly property int rowIndex: index
-                readonly property var notification: modelData
+                readonly property var notification: modelData ?? null
+                property string summaryText: "(NO TITLE)"
+                property string bodyText: ""
                 readonly property var actionEntries: root.notificationActionEntries(notification)
                 width: content.width
                 spacing: root.unit * 0.18
 
+                function refreshTextSnapshot() {
+                    const current = noticeRow.notification
+                    if (!current)
+                        return
+
+                    const summary = String(current.summary ?? "").trim()
+                    noticeRow.summaryText = summary || "(NO TITLE)"
+                    noticeRow.bodyText = String(current.body ?? "")
+                }
+
+                Component.onCompleted: refreshTextSnapshot()
+                onNotificationChanged: refreshTextSnapshot()
+
                 Text {
                     width: parent.width
-                    text: noticeRow.notification.summary || "(NO TITLE)"
+                    text: noticeRow.summaryText
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     maximumLineCount: 1
@@ -310,7 +334,7 @@ Rectangle {
                 Text {
                     width: parent.width
                     visible: text.length > 0
-                    text: noticeRow.notification.body || ""
+                    text: noticeRow.bodyText
                     textFormat: Text.PlainText
                     wrapMode: root.expanded ? Text.WrapAtWordBoundaryOrAnywhere : Text.NoWrap
                     elide: Text.ElideRight
@@ -353,10 +377,11 @@ Rectangle {
                             Rectangle {
                                 id: actionButton
                                 required property var modelData
-                                readonly property var nativeAction: modelData.action
-                                readonly property var notification: modelData.notification
-                                readonly property var owner: modelData.owner
-                                readonly property string label: modelData.label
+                                readonly property var nativeAction: modelData?.action ?? null
+                                readonly property var notification: modelData?.notification ?? null
+                                readonly property bool resident: modelData?.resident === true
+                                readonly property var owner: modelData?.owner ?? root
+                                readonly property string label: String(modelData?.label ?? "")
                                 height: parent.height
                                 width: Math.max(owner.unit * 5, actionLabel.implicitWidth + owner.unit * 1.2)
                                 radius: Config.Theme.radiusSmall
@@ -383,10 +408,18 @@ Rectangle {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
+                                    enabled: actionButton.nativeAction !== null
+                                        && typeof actionButton.nativeAction.invoke === "function"
                                     onClicked: {
-                                        actionButton.nativeAction.invoke()
-                                        if (!actionButton.notification.resident)
-                                            actionButton.owner.dismissRequested(actionButton.notification)
+                                        const action = actionButton.nativeAction
+                                        if (!action || typeof action.invoke !== "function")
+                                            return
+
+                                        const notification = actionButton.notification
+                                        const shouldDismiss = !actionButton.resident
+                                        action.invoke()
+                                        if (shouldDismiss && notification)
+                                            actionButton.owner.dismissRequested(notification)
                                     }
                                 }
 
@@ -426,7 +459,12 @@ Rectangle {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.dismissRequested(noticeRow.notification)
+                                enabled: noticeRow.notification !== null
+                                onClicked: {
+                                    const notification = noticeRow.notification
+                                    if (notification)
+                                        root.dismissRequested(notification)
+                                }
                             }
 
                             AppToolTip {

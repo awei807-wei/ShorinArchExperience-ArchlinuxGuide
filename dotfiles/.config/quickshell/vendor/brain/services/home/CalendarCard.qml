@@ -1,5 +1,6 @@
 import QtQuick
 import "../../"
+import "../"
 import "../../components"
 
 // Calendar card — month grid with prev/next navigation.
@@ -8,6 +9,9 @@ import "../../components"
 StatCard {
     id: root
     padding: 0
+
+    property string selectedDate: ""
+    signal dateSelectionRequested(string dateKey)
 
     // ── State ─────────────────────────────────────────────────────────────────
     property int    _year:  0
@@ -47,12 +51,43 @@ StatCard {
     }
 
     function _prev() {
+        if (root.selectedDate !== "")
+            root.dateSelectionRequested("")
         if (_month === 0) { _month = 11; _year-- } else _month--
         _rebuild()
     }
     function _next() {
+        if (root.selectedDate !== "")
+            root.dateSelectionRequested("")
         if (_month === 11) { _month = 0; _year++ } else _month++
         _rebuild()
+    }
+
+    function _zp2(n) {
+        return n < 10 ? "0" + n : "" + n
+    }
+
+    function _dateKey(day) {
+        return root._year + "-" + root._zp2(root._month + 1) + "-" + root._zp2(day)
+    }
+
+    function _toggleDateSelection(dateKey) {
+        if (dateKey === "")
+            return
+        root.dateSelectionRequested(root.selectedDate === dateKey ? "" : dateKey)
+    }
+
+    function _hasOpenTask(dateKey) {
+        if (dateKey === "")
+            return false
+        var tasks = TaskService.tasks || []
+        for (var i = 0; i < tasks.length; ++i) {
+            var dueDate = tasks[i].dueDate || ""
+            if (tasks[i].column !== 2 && dueDate.length >= 10
+                    && dueDate.substring(0, 10) === dateKey)
+                return true
+        }
+        return false
     }
 
 	Timer {
@@ -146,26 +181,48 @@ StatCard {
                         modelData.cur && modelData.n === root._today &&
                         root._month === new Date().getMonth() &&
                         root._year  === new Date().getFullYear()
+                    readonly property string dateKey: modelData.cur ? root._dateKey(modelData.n) : ""
+                    readonly property bool isSelected:
+                        modelData.cur && dateKey === root.selectedDate
+                    readonly property bool hasOpenTask:
+                        modelData.cur && root._hasOpenTask(dateKey)
 
                     Rectangle {
                         anchors.centerIn: parent
                         width: Math.min(parent.width, parent.height) - 4
                         height: width; radius: width / 2
-                        color: isToday ? Qt.rgba(166/255,208/255,247/255,0.15)
+                        color: isSelected ? Theme.active
+                               : isToday ? Qt.rgba(166/255,208/255,247/255,0.15)
                                : dH.hovered && modelData.cur ? Qt.rgba(1,1,1,0.07) : "transparent"
-                        border.color: isToday ? Qt.rgba(166/255,208/255,247/255,0.3) : "transparent"
-                        border.width: 1
+                        border.color: isToday
+                            ? (isSelected
+                                ? Theme.background
+                                : Qt.rgba(Theme.active.r, Theme.active.g, Theme.active.b, 0.35))
+                            : "transparent"
+                        border.width: isToday ? 1 : 0
                         Behavior on color { ColorAnimation { duration: 80 } }
                         Text {
                             anchors.centerIn: parent; text: modelData.n
                             font.pixelSize: 9; font.family: "JetBrains Mono"
-                            font.weight: isToday ? Font.Bold : Font.Normal
-                            color: isToday ? Theme.active
+                            font.weight: isSelected || isToday ? Font.Bold : Font.Normal
+                            color: isSelected ? Theme.background
+                                   : isToday ? Theme.active
                                    : modelData.cur ? Qt.rgba(205/255,214/255,244/255,0.55)
                                                    : Qt.rgba(1,1,1,0.13)
                         }
+                        Rectangle {
+                            visible: hasOpenTask
+                            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 1 }
+                            width: 3; height: 3; radius: 1.5
+                            color: isSelected ? Theme.background : Theme.active
+                        }
                     }
                     HoverHandler { id: dH; enabled: modelData.cur; cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        enabled: modelData.cur
+                        acceptedButtons: Qt.LeftButton
+                        onTapped: root._toggleDateSelection(dateKey)
+                    }
                 }
             }
         }

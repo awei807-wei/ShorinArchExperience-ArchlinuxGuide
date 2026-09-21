@@ -273,7 +273,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         configRoot.addNotificationToGroups(notification) // 增量更新分组（替代全量重算，避免卡片重建闪烁）
         dropped.forEach(item => {
             try {
-                item.expire()
+                if (item && typeof item.expire === "function")
+                    item.expire()
             } catch (error) {
                 console.warn("[Notifications] failed to expire dropped notification: " + error)
             }
@@ -297,7 +298,11 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 输出：该通知是否在当前可见队列中
         // 副作用：无
 
-        return configRoot.activeNotifications.some(item => item.id === notification.id)
+        if (!notification)
+            return false
+        const notificationId = notification.id
+        return configRoot.activeNotifications.some(
+            item => item && item.id === notificationId)
     }
 
     function focusNotificationSource(notification) {
@@ -305,12 +310,14 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         // 输出：无返回值
         // 副作用：尝试让 niri 聚焦通知来源应用的窗口；无匹配窗口时静默忽略
 
+        if (!notification)
+            return
         notificationFocusProc.command = [
             "bash",
             "/home/shiyi/.config/quickshell/scripts/focus-notification-source.sh",
-            notification.desktopEntry || "",
-            notification.appName || "",
-            notification.summary || ""
+            String(notification?.desktopEntry ?? ""),
+            String(notification?.appName ?? ""),
+            String(notification?.summary ?? "")
         ]
         notificationFocusProc.running = true
     }
@@ -366,17 +373,28 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         inlineReplySupported: false // 当前未做行内回复
 
         onNotification: notification => {
-            // Notification QObject 只服务于临时浮窗；历史记录先压平为纯 JSON 快照。
-            const appName = configRoot.cleanNotificationText(notification.appName)
-            const summary = configRoot.cleanNotificationText(notification.summary)
-            const urgency = NotificationUrgency.toString(notification.urgency)
+            // Notification QObject 只服务于临时浮窗；历史记录和日志字段在入口处
+            // 立即压平为纯值，后续 closed/退场回调不再读取可能已失效的原生对象属性。
+            if (!notification)
+                return
+
+            const notificationId = Number(notification?.id ?? -1)
+            const appNameValue = String(notification?.appName ?? "")
+            const desktopEntryValue = String(notification?.desktopEntry ?? "")
+            const appIconValue = String(notification?.appIcon ?? "")
+            const summaryValue = String(notification?.summary ?? "")
+            const bodyValue = String(notification?.body ?? "")
+            const urgencyValue = notification?.urgency ?? NotificationUrgency.Normal
+            const appName = configRoot.cleanNotificationText(appNameValue)
+            const summary = configRoot.cleanNotificationText(summaryValue)
+            const urgency = NotificationUrgency.toString(urgencyValue)
             notificationHistoryStore.appendSnapshot({
-                "id": notification.id,
-                "appName": notification.appName || "",
-                "desktopEntry": notification.desktopEntry || "",
-                "appIcon": notification.appIcon || "",
-                "summary": notification.summary || "",
-                "body": notification.body || "",
+                "id": notificationId,
+                "appName": appNameValue,
+                "desktopEntry": desktopEntryValue,
+                "appIcon": appIconValue,
+                "summary": summaryValue,
+                "body": bodyValue,
                 "urgency": urgency,
                 "timestamp": Date.now()
             })
@@ -387,7 +405,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
             configRoot.trackNotification(notification)
 
             console.log("[Notifications] received #" + configRoot.notificationCount
-                        + " id=" + notification.id
+                        + " id=" + notificationId
                         + " app=\"" + appName + "\""
                         + " summary=\"" + summary + "\""
                         + " urgency=" + urgency)
@@ -396,7 +414,7 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
 
             notification.closed.connect(function(reason) {
                 configRoot.untrackNotification(notification)
-                console.log("[Notifications] closed id=" + notification.id
+                console.log("[Notifications] closed id=" + notificationId
                             + " reason=" + NotificationCloseReason.toString(reason))
             })
         }
@@ -964,7 +982,10 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                     smoke: configRoot.zenSmoke
                     cloud: configRoot.zenCloud
                     snow: configRoot.zenSnow
-                    onDismissRequested: notice => notice.dismiss()
+                    onDismissRequested: notice => {
+                        if (notice && typeof notice.dismiss === "function")
+                            notice.dismiss()
+                    }
                     onSourceRequested: notice => configRoot.focusNotificationSource(notice)
                 }
             }
@@ -987,6 +1008,23 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         id: centerPanelController
         animationDuration: Config.BarTuning.panelShellDuration
         reducedMotion: Core.TopBarState.reducedMotion
+    }
+
+    // 中岛与右岛子面板互斥：任一面板打开时，立即收起另一面板。
+    Connections {
+        target: centerPanelController
+        function onOpenChanged() {
+            if (centerPanelController.open && rightPanelController.open)
+                rightPanelController.close()
+        }
+    }
+
+    Connections {
+        target: rightPanelController
+        function onOpenChanged() {
+            if (rightPanelController.open && centerPanelController.open)
+                centerPanelController.close()
+        }
     }
 
     Variants {

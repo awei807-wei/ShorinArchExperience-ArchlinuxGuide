@@ -1,8 +1,10 @@
 DashHome      home/DashHome.qml
 ProfileCard   home/ProfileCard.qml
 CalendarCard  home/CalendarCard.qml
+AgendaCard    home/AgendaCard.qml
 ClockCard     home/ClockCard.qml
 PlayerCard    home/PlayerCard.qml
+singleton TaskService 1.0 TaskService.qml
 singleton VcpSongInfo 1.0 VcpSongInfo.qml
 QuickSettings home/QuickSettings.qml
 KanbanBoard   KanbanBoard.qml

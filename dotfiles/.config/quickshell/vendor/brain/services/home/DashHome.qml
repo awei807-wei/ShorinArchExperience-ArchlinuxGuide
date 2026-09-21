@@ -7,9 +7,9 @@ import "../../components"
 //
 //  ┌──────────────┬───────────────────────────┬──────────────┐
 //  │ ProfileCard  │  ClockCard                │              │
-//  ├──────────────┤                           │ QuickSettings│
-//  │ CalendarCard │  PlayerCard               │ (brightness  │
-//  │              │                           │  + toggles)  │
+//  ├──────────────┤                           │  AgendaCard  │
+//  │ CalendarCard │  PlayerCard               │  (open tasks)│
+//  │              │                           │              │
 //  └──────────────┴───────────────────────────┴──────────────┘
 
 Item {
@@ -19,6 +19,7 @@ Item {
     readonly property int gap:       8
     readonly property int profileH: 160
     readonly property int clockH:   220
+    property string agendaDateFilter: ""
 
     // ── Avatar path ───────────────────────────────────────────────────────────
     property string _avatarPath: ""
@@ -73,19 +74,24 @@ Item {
         }
 
         CalendarCard {
+            id: calendarCard
             anchors {
                 left: parent.left; right: parent.right
                 top: profileCard.bottom; topMargin: root.gap
                 bottom: parent.bottom
             }
+            selectedDate: root.agendaDateFilter
+            onDateSelectionRequested: dateKey => root.agendaDateFilter = dateKey
         }
     }
 
-    // ── Right column — QuickSettings fills full height ────────────────────────
-    QuickSettings {
+    // ── Right column — Agenda fills full height ───────────────────────────────
+    AgendaCard {
         id: rightCard
         anchors { right: parent.right; top: parent.top; bottom: parent.bottom; topMargin: root.gap }
         width: root.colW
+        selectedDate: root.agendaDateFilter
+        onClearDateFilterRequested: root.agendaDateFilter = ""
     }
 
     // ── Center column ─────────────────────────────────────────────────────────

@@ -1,9 +1,8 @@
 import QtQuick
-import Quickshell.Io
 import "../"
 import "../components"
 
-// KanbanBoard — three columns, JSON at $HOME/.config/Brain_Shell/src/user_data/tasks.json.
+// KanbanBoard — three columns backed by the shared TaskService singleton.
 //
 // Key behaviours:
 //   • Draft: task only saved when Enter pressed or focus lost with text.
@@ -18,10 +17,8 @@ Item {
     id: root
     focus: true
 
-    // ── Persistent state ──────────────────────────────────────────────────────
-    property var    _tasks:    []
-    property int    _nextId:   0
-    property string _filePath: ""
+    // ── Shared reactive task source ────────────────────────────────────────────
+    readonly property var tasks: TaskService.tasks || []
 
     // ── Animation tracking ────────────────────────────────────────────────────
     // Plain objects — mutated in-place, no signal needed, checked once per card.
@@ -47,62 +44,6 @@ Item {
     ]
     readonly property var _dowNames: ["Su","Mo","Tu","We","Th","Fr","Sa"]
 
-    // ── Boot: resolve $HOME → create file if missing → load ──────────────────
-    Process {
-        command: ["bash", "-c", "echo $HOME"]
-        running: true
-        stdout: SplitParser {
-            onRead: function(line) {
-                var h = line.trim()
-                if (h === "") return
-                root._filePath = h + "/.config/quickshell/vendor/brain/user_data/tasks.json"
-                mkProc.command = [
-                    "bash", "-c",
-                    "[ -f '" + root._filePath + "' ] || " +
-                    "(mkdir -p \"$HOME/.config/quickshell/vendor/brain/user_data\" && " +
-                    "printf '%s' '{\"tasks\":[],\"nextId\":0}' > '" + root._filePath + "')"
-                ]
-                mkProc.running = false; mkProc.running = true
-            }
-        }
-    }
-
-    Process {
-        id: mkProc; command: []; running: false
-        onRunningChanged: {
-            if (!running && root._filePath !== "") {
-                rdProc.command = ["cat", root._filePath]
-                rdProc.running = false; rdProc.running = true
-            }
-        }
-    }
-
-    Process {
-        id: rdProc; command: []; running: false
-        stdout: StdioCollector {
-            id: rdBuf
-            onStreamFinished: {
-                try {
-                    var o = JSON.parse(rdBuf.text)
-                    root._tasks  = o.tasks  || []
-                    root._nextId = o.nextId || 0
-                } catch(e) { root._tasks = []; root._nextId = 0 }
-            }
-        }
-    }
-
-    // ── Save ──────────────────────────────────────────────────────────────────
-    function _save() {
-        if (_filePath === "") return
-        var s = JSON.stringify({ tasks: _tasks, nextId: _nextId })
-        wrProc.command = [
-            "bash", "-c",
-            "printf '%s' '" + s.replace(/'/g, "'\\''") + "' > '" + _filePath + "'"
-        ]
-        wrProc.running = false; wrProc.running = true
-    }
-    Process { id: wrProc; command: []; running: false }
-
     // ── Reset state when dashboard closes ─────────────────────────────────────
     Connections {
         target: Popups
@@ -114,45 +55,75 @@ Item {
         }
     }
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
+    // ── TaskService adapters ──────────────────────────────────────────────────
     function _addTask(col, title) {
-        var id   = root._nextId++
-        var list = root._tasks.slice()
-        list.unshift({ id: id, title: title, column: col, urgency: "", dueDate: "" })
-        root._newCardIds = Object.assign({}, root._newCardIds, { [id]: true })
-        root._tasks = list
-        _save()
+        var cleanTitle = title === undefined || title === null ? "" : String(title).trim()
+        if (cleanTitle === "")
+            return -1
+
+        // Mark the predicted id before TaskService reassigns its task array so
+        // a synchronously-created delegate can consume the animation marker.
+        var predictedId = TaskService.nextId
+        var markers = Object.assign({}, root._newCardIds)
+        markers[predictedId] = true
+        root._newCardIds = markers
+
+        var id = TaskService.addTask(col, cleanTitle, "", "", false)
+        if (id < 0) {
+            var failedMarkers = Object.assign({}, root._newCardIds)
+            delete failedMarkers[predictedId]
+            root._newCardIds = failedMarkers
+            return -1
+        }
+        if (id !== predictedId) {
+            var correctedMarkers = Object.assign({}, root._newCardIds)
+            delete correctedMarkers[predictedId]
+            correctedMarkers[id] = true
+            root._newCardIds = correctedMarkers
+        }
+        return id
     }
 
     function _moveTask(id, dir) {
-        var list = root._tasks.slice()
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].id !== id) continue
-            var nc = list[i].column + dir
-            if (nc < 0 || nc > 2) return
-            // Record direction before model changes so new card can read it
-            root._entryDirections = Object.assign({}, root._entryDirections, { [id]: dir })
-            list[i] = Object.assign({}, list[i], { column: nc })
+        var direction = Number(dir)
+        if (!isFinite(direction) || direction === 0)
+            return false
+        direction = direction > 0 ? 1 : -1
+
+        var canMove = false
+        for (var i = 0; i < root.tasks.length; ++i) {
+            if (root.tasks[i].id !== id)
+                continue
+            var nextColumn = root.tasks[i].column + direction
+            canMove = nextColumn >= 0 && nextColumn <= 2
             break
         }
-        root._tasks = list
-        _save()
+        if (!canMove)
+            return false
+
+        // Record direction before TaskService changes the model so the delegate
+        // in the destination column sees it during Component.onCompleted.
+        var directions = Object.assign({}, root._entryDirections)
+        directions[id] = direction
+        root._entryDirections = directions
+        if (TaskService.moveTask(id, direction))
+            return true
+
+        var failedDirections = Object.assign({}, root._entryDirections)
+        delete failedDirections[id]
+        root._entryDirections = failedDirections
+        return false
     }
 
     function _removeTask(id) {
-        root._tasks = root._tasks.filter(function(t) { return t.id !== id })
-        if (root.delConfirmId === id) root.delConfirmId = -1
-        _save()
+        var removed = TaskService.removeTask(id)
+        if (removed && root.delConfirmId === id)
+            root.delConfirmId = -1
+        return removed
     }
 
     function _patchTask(id, key, val) {
-        var list = root._tasks.slice()
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].id !== id) continue
-            var t = Object.assign({}, list[i]); t[key] = val; list[i] = t; break
-        }
-        root._tasks = list
-        _save()
+        return TaskService.patchTask(id, key, val)
     }
 
     // ── Urgency helpers ───────────────────────────────────────────────────────
@@ -204,9 +175,9 @@ Item {
         root.pickerTimeH   = 12
         root.pickerTimeM   = 0
 
-        for (var i = 0; i < root._tasks.length; i++) {
-            if (root._tasks[i].id !== taskId) continue
-            var s = root._tasks[i].dueDate || ""
+        for (var i = 0; i < root.tasks.length; i++) {
+            if (root.tasks[i].id !== taskId) continue
+            var s = root.tasks[i].dueDate || ""
             if (s === "") break
             var dp2 = s.length >= 10 ? s.substring(0, 10) : ""
             var tp  = s.length >= 16 ? s.substring(11, 16) : ""
@@ -314,7 +285,7 @@ Item {
                 readonly property string cLabel: modelData.label
                 readonly property var    cTasks: {
                     var ci = cIdx
-                    return root._tasks.filter(function(t) { return t.column === ci })
+                    return root.tasks.filter(function(t) { return t.column === ci })
                 }
 
                 property bool draftOpen: false
