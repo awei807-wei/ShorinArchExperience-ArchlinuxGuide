@@ -37,15 +37,19 @@ if notify-send "Downloading Wallpaper ..." && curl -L -s -o "$FULL_PATH" "$API_U
         exit 1
     fi
 
-    # 3. 使用 swww 切换壁纸
-    # 这里直接使用你要求的参数
+    # 3. 使用 awww 首次应用原始壁纸，再交给统一 Hook 更新头像、主题与 overview 背景
     echo "正在切换壁纸..."
-    awww img "$FULL_PATH" --transition-duration 2 --transition-type center --transition-fps 60
-     ~/.config/scripts/matugen-update.sh "$FULL_PATH"
-     sleep 1
-     ~/.config/scripts/niri_set_overview_blur_dark_bg.sh
+    if ! awww img "$FULL_PATH" --transition-duration 2 --transition-type center --transition-fps 60; then
+        echo "壁纸应用失败。"
+        exit 1
+    fi
+
+    HOOK_STATUS=0
+    "$HOME/.config/scripts/wallpaper-changed.sh" "$FULL_PATH" || HOOK_STATUS=$?
+
     # (可选) 清理旧壁纸，只保留最近 10 张，防止硬盘塞满
-     cd "$SAVE_DIR" && ls -t | tail -n +11 | xargs -I {} rm -- {} 2>/dev/null
+    (cd "$SAVE_DIR" && ls -t | tail -n +11 | xargs -r rm --)
+    exit "$HOOK_STATUS"
 
 else
     echo "下载失败，请检查网络连接。"

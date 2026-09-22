@@ -9,6 +9,7 @@ singleton VcpSongInfo 1.0 VcpSongInfo.qml
 QuickSettings home/QuickSettings.qml
 KanbanBoard   KanbanBoard.qml
 singleton WallpaperService 1.0 WallpaperService.qml
+singleton HolidayService 1.0 HolidayService.qml
 PollTimer             system/PollTimer.qml
 CpuService            system/CpuService.qml
 MemService            system/MemService.qml

@@ -93,6 +93,10 @@ StatCard {
                 source:   root.avatarPath !== "" ? ("file://" + root.avatarPath) : ""
                 fillMode: Image.PreserveAspectCrop
                 smooth:   true
+                cache: false
+                asynchronous: true
+                sourceSize.width: 144
+                sourceSize.height: 144
                 visible:  root.avatarPath !== ""
                 layer.enabled: true
                 layer.effect: MultiEffect {
