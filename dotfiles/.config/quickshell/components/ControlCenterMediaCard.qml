@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../config" as Config
+import "ImageSourceSafety.js" as SourceSafety
 
 Rectangle {
     id: root
@@ -37,7 +38,7 @@ Rectangle {
             Image {
                 id: albumArt
                 anchors.fill: parent
-                source: root.shellRoot.mediaArtUrl
+                source: SourceSafety.safeSource(root.shellRoot.mediaArtUrl)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
             }

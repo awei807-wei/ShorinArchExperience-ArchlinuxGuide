@@ -19,6 +19,22 @@ Item {
     readonly property int profileH: 160
     readonly property int clockH:   220
     property string agendaDateFilter: ""
+    property string _pendingAgendaDateFilter: ""
+    property bool _agendaDateFilterUpdateScheduled: false
+
+    function applyAgendaDateFilterLater(dateKey) {
+        root._pendingAgendaDateFilter = String(dateKey ?? "")
+        if (root._agendaDateFilterUpdateScheduled)
+            return
+
+        root._agendaDateFilterUpdateScheduled = true
+        Qt.callLater(function() {
+            root._agendaDateFilterUpdateScheduled = false
+            const nextDate = root._pendingAgendaDateFilter
+            if (root.agendaDateFilter !== nextDate)
+                root.agendaDateFilter = nextDate
+        })
+    }
 
     // ── Avatar path ───────────────────────────────────────────────────────────
     property string _avatarPath: WallpaperService.avatarPath
@@ -62,7 +78,7 @@ Item {
                 bottom: parent.bottom
             }
             selectedDate: root.agendaDateFilter
-            onDateSelectionRequested: dateKey => root.agendaDateFilter = dateKey
+            onDateSelectionRequested: dateKey => root.applyAgendaDateFilterLater(dateKey)
         }
     }
 
@@ -72,7 +88,7 @@ Item {
         anchors { right: parent.right; top: parent.top; bottom: parent.bottom; topMargin: root.gap }
         width: root.colW
         selectedDate: root.agendaDateFilter
-        onClearDateFilterRequested: root.agendaDateFilter = ""
+        onClearDateFilterRequested: root.applyAgendaDateFilterLater("")
     }
 
     // ── Center column ─────────────────────────────────────────────────────────

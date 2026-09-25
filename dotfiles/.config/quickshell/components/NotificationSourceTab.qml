@@ -1,5 +1,6 @@
 import QtQuick
 import "../config" as Config
+import "ImageSourceSafety.js" as SourceSafety
 
 Item {
     id: sourceTab
@@ -19,6 +20,7 @@ Item {
         && source.trayItem.hasMenu
     readonly property var iconCandidates: resolveIconSources(source)
     property int iconCandidateIndex: 0
+    property int iconSourceGeneration: 0
     readonly property string iconSource: iconCandidateIndex < iconCandidates.length
         ? iconCandidates[iconCandidateIndex] : ""
     readonly property string sourceLabel: String(
@@ -48,9 +50,9 @@ Item {
         const liveTrayIcon = item.trayItem && item.trayItem.icon
             ? item.trayItem.icon : ""
         const candidates = [liveTrayIcon, item.iconSource,
-                            item.desktopEntry, item.appName]
+                            item.desktopEntry]
         for (const rawCandidate of candidates) {
-            const candidate = String(rawCandidate || "").trim()
+            const candidate = SourceSafety.safeSource(rawCandidate)
             if (candidate.length === 0)
                 continue
             let source = candidate
@@ -85,9 +87,26 @@ Item {
             nativeMenuLoader.item.openMenu()
     }
 
-    function tryNextIcon() {
+    function tryNextIcon(expectedSource, expectedGeneration) {
+        if (expectedGeneration !== undefined
+                && expectedGeneration !== iconSourceGeneration)
+            return
+        if (expectedSource !== undefined
+                && expectedSource !== iconSource)
+            return
         if (iconCandidateIndex + 1 < iconCandidates.length)
             iconCandidateIndex += 1
+    }
+
+    function scheduleIconFallback(failedSource, failedGeneration) {
+        Qt.callLater(function() {
+            if (failedGeneration !== sourceTab.iconSourceGeneration
+                    || failedSource !== sourceTab.iconSource
+                    || String(appIcon.source) !== failedSource
+                    || appIcon.status !== Image.Error)
+                return
+            sourceTab.tryNextIcon(failedSource, failedGeneration)
+        })
     }
 
     function syncNativeMenu() {
@@ -101,12 +120,17 @@ Item {
 
     onSourceChanged: {
         iconCandidateIndex = 0
+        iconSourceGeneration += 1
         if (hasNativeMenu)
             Qt.callLater(syncNativeMenu)
         else
             nativeMenuLoader.source = ""
     }
-    onIconCandidatesChanged: iconCandidateIndex = 0
+    onIconCandidatesChanged: {
+        iconCandidateIndex = 0
+        iconSourceGeneration += 1
+    }
+    onIconSourceChanged: iconSourceGeneration += 1
     onMenuWindowChanged: Qt.callLater(syncNativeMenu)
     onHasNativeMenuChanged: {
         if (!hasNativeMenu)
@@ -167,8 +191,12 @@ Item {
             asynchronous: true
             visible: status === Image.Ready
             onStatusChanged: {
-                if (status === Image.Error)
-                    sourceTab.tryNextIcon()
+                if (status !== Image.Error)
+                    return
+                const failedSource = String(sourceTab.iconSource)
+                const failedGeneration = sourceTab.iconSourceGeneration
+                if (failedSource !== "")
+                    sourceTab.scheduleIconFallback(failedSource, failedGeneration)
             }
         }
 

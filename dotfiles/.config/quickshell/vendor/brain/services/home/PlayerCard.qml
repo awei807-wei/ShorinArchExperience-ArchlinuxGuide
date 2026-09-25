@@ -5,6 +5,7 @@ import Quickshell.Services.Mpris
 import "../../"
 import ".."
 import "../../components"
+import "../../../../components/ImageSourceSafety.js" as SourceSafety
 
 Item {
     id: root
@@ -133,9 +134,14 @@ Item {
     // 其他播放器不受影响（_vcpEnhanced 为 false 时全部回退 MPRIS 原始值）。
     readonly property bool  _vcpEnhanced: root.title !== "Nothing Playing"
                                           && VcpSongInfo.matched
-    readonly property string artUrl: root._vcpEnhanced && VcpSongInfo.artPath !== ""
-                                     ? "file://" + VcpSongInfo.artPath
-                                     : (root.player?.trackArtUrl ?? "")
+    readonly property string artUrl: {
+        if (root._vcpEnhanced && VcpSongInfo.artPath !== "") {
+            const localArt = SourceSafety.safeFileUrl(VcpSongInfo.artPath)
+            if (localArt !== "")
+                return localArt
+        }
+        return SourceSafety.safeSource(root.player?.trackArtUrl ?? "")
+    }
     readonly property real _vcpLength: VcpSongInfo.length
     readonly property real length: root._vcpEnhanced && root._vcpLength > 0
                                    ? root._vcpLength

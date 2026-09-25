@@ -3,6 +3,7 @@ import "../config" as Config
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
+import "ImageSourceSafety.js" as SourceSafety
 
 Rectangle {
     id: notificationCard
@@ -97,7 +98,7 @@ Rectangle {
             return ""
         const candidates = [item.appIcon, item.desktopEntry, item.appName]
         for (const rawCandidate of candidates) {
-            const candidate = String(rawCandidate || "").trim()
+            const candidate = SourceSafety.safeSource(rawCandidate)
             if (candidate.length === 0)
                 continue
             if (candidate.startsWith("/"))

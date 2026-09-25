@@ -1,4 +1,5 @@
 import "../config" as Config
+import "ImageSourceSafety.js" as SourceSafety
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -27,7 +28,8 @@ Rectangle {
         const appIcon = String(notification?.appIcon ?? "")
         const candidates = [desktopEntry, appIcon, appIcon.toLowerCase()]
 
-        for (const candidate of candidates) {
+        for (const rawCandidate of candidates) {
+            const candidate = SourceSafety.safeSource(rawCandidate)
             if (!candidate)
                 continue
             if (candidate.startsWith("/"))
@@ -66,6 +68,21 @@ Rectangle {
     }
     property real unit: 13.6
     property bool expanded: false
+    property bool _expandedUpdateScheduled: false
+    property bool _pendingExpanded: false
+    function toggleExpandedLater() {
+        const current = root._expandedUpdateScheduled
+            ? root._pendingExpanded : root.expanded
+        root._pendingExpanded = !current
+        if (root._expandedUpdateScheduled)
+            return
+
+        root._expandedUpdateScheduled = true
+        Qt.callLater(function() {
+            root._expandedUpdateScheduled = false
+            root.expanded = root._pendingExpanded
+        })
+    }
     property color ink: Config.Theme.surface
     property color stone: Config.Theme.surfaceContainer
     property color mist: Config.Theme.outline
@@ -279,7 +296,7 @@ Rectangle {
 
             TapHandler {
                 acceptedButtons: Qt.LeftButton
-                onTapped: root.expanded = !root.expanded
+                onTapped: root.toggleExpandedLater()
                 onDoubleTapped: {
                     const notification = root.notifications.length > 0
                         ? root.notifications[0] : null
@@ -292,18 +309,21 @@ Rectangle {
         Rectangle { width: parent.width; height: 1; color: root.mist }
 
         Repeater {
-            model: root.expanded ? root.notifications : root.notifications.slice(0, 1)
+            model: root.notifications
 
             Column {
                 id: noticeRow
                 required property int index
                 required property var modelData
                 readonly property int rowIndex: index
+                readonly property bool rowVisible: root.expanded || index === 0
                 readonly property var notification: modelData ?? null
                 property string summaryText: "(NO TITLE)"
                 property string bodyText: ""
                 readonly property var actionEntries: root.notificationActionEntries(notification)
                 width: content.width
+                height: rowVisible ? implicitHeight : 0
+                visible: rowVisible
                 spacing: root.unit * 0.18
 
                 function refreshTextSnapshot() {

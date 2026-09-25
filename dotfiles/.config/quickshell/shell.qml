@@ -29,6 +29,7 @@ import "config" as Config
 import "components/AudioOutputModel.js" as AudioOutputModel
 import "components/NotificationLifecycleModel.js" as NotificationModel
 import "components/TrayNotificationModel.js" as TrayModel
+import "components/ImageSourceSafety.js" as SourceSafety
 
 ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态）
     id: configRoot
@@ -195,7 +196,8 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
     property string mediaTitle: mprisPlayer?.trackTitle ?? "No Media" // 当前曲目标题（无播放器/无曲目时回退）
     property string mediaArtist: mprisPlayer?.trackArtists?.join(", ") ?? "" // 当前曲目艺术家（数组拼接；无时回退空串）
     property bool mediaPlaying: mprisPlayer?.playbackState === MprisPlaybackState.Playing // 是否播放态（驱动 UI 图标/计时）
-    property string mediaArtUrl: mprisPlayer?.trackArtUrl ?? ""     // 当前曲目封面图 URL（MPRIS trackArtUrl；无时回退空串）
+    property string mediaArtUrl: SourceSafety.safeSource(
+        mprisPlayer?.trackArtUrl ?? "")     // 当前曲目封面图 URL（MPRIS trackArtUrl；无时回退空串）
     property real mediaPosition: 0                                  // 当前播放位置（秒；由 Timer 同步）
     Timer {
         id: mediaSyncTimer

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import "../config" as Config
+import "ImageSourceSafety.js" as SourceSafety
 
 Item {
     id: root
@@ -157,7 +158,8 @@ Item {
             anchors.centerIn: parent
             width: root.iconSize
             height: root.iconSize
-            source: root.trayItem ? root.trayItem.icon : ""
+            source: SourceSafety.safeSource(
+                root.trayItem ? root.trayItem.icon : "")
             sourceSize.width: width
             sourceSize.height: height
         }
