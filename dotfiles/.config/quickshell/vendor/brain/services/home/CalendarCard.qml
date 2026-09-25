@@ -18,6 +18,7 @@ StatCard {
     property int _todayYear: 0
     property int _todayMonth: 0
     property int _todayDay: 0
+    property bool _hasToday: false
     property var _days: []
     property string _label: ""
     property var _todayStatus: ({
@@ -36,16 +37,7 @@ StatCard {
     readonly property var _dowNames: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
     Component.onCompleted: {
-        var now = new Date()
-        root._todayYear = now.getFullYear()
-        root._todayMonth = now.getMonth()
-        root._todayDay = now.getDate()
-        root._year = root._todayYear
-        root._month = root._todayMonth
-        HolidayService.ensureYear(root._todayYear)
-        root._refreshTodayStatus()
-        root._rebuild()
-        root._scheduleMidnight()
+        root._syncToday()
     }
 
     function _zp2(number) {
@@ -194,17 +186,28 @@ StatCard {
         midnightTimer.restart()
     }
 
-    function _handleMidnight() {
-        var wasViewingCurrentMonth = root._year === root._todayYear
-            && root._month === root._todayMonth
+    function _syncToday() {
         var now = new Date()
         var nextTodayYear = now.getFullYear()
         var nextTodayMonth = now.getMonth()
         var nextTodayDay = now.getDate()
+        var firstSync = !root._hasToday
+        var changed = root._todayYear !== nextTodayYear
+            || root._todayMonth !== nextTodayMonth
+            || root._todayDay !== nextTodayDay
+        var wasViewingCurrentMonth = firstSync
+            || (root._year === root._todayYear
+                && root._month === root._todayMonth)
+
+        if (!changed && !firstSync) {
+            root._scheduleMidnight()
+            return false
+        }
 
         root._todayYear = nextTodayYear
         root._todayMonth = nextTodayMonth
         root._todayDay = nextTodayDay
+        root._hasToday = true
         HolidayService.ensureYear(nextTodayYear)
         root._refreshTodayStatus()
 
@@ -216,6 +219,11 @@ StatCard {
 
         root._rebuild()
         root._scheduleMidnight()
+        return true
+    }
+
+    function _handleMidnight() {
+        root._syncToday()
     }
 
     Connections {
@@ -226,10 +234,19 @@ StatCard {
         }
     }
 
+    // 午夜计时器提供即时刷新；周期校验覆盖休眠唤醒、时钟/时区调整等情况。
     Timer {
         id: midnightTimer
         repeat: false
         onTriggered: root._handleMidnight()
+    }
+
+    Timer {
+        id: todaySyncTimer
+        interval: 30000
+        repeat: true
+        running: true
+        onTriggered: root._syncToday()
     }
 
     // ── UI ────────────────────────────────────────────────────────────────────
