@@ -1,6 +1,7 @@
 DashHome      home/DashHome.qml
 ProfileCard   home/ProfileCard.qml
 CalendarCard  home/CalendarCard.qml
+CalendarDayCell home/CalendarDayCell.qml
 AgendaCard    home/AgendaCard.qml
 ClockCard     home/ClockCard.qml
 PlayerCard    home/PlayerCard.qml

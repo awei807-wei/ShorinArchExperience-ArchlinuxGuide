@@ -15,6 +15,7 @@
 - `RightPanelController` 以可写 `rightPanelOpen/rightPanelPage/rightPanelProgress` 汇聚 Metrics/Tray 两个入口、触发屏幕、右岛起始/目标颈宽与输入区域生命周期；仅触发屏幕的 `Bar`、`RightPanelHost` 和 `UnifiedRightPanel` 消费这一几何状态。面板 Canvas 始终保持最终几何，右锚定 reveal viewport 只做裁剪，Control / History 常驻并在壳内交叉淡入切页。
 - 面板窗口全部常驻映射在 Top 层：`RightPanelHost` 只覆盖右面板最终几何，`CenterDashboard` 覆盖 Bar 下方的面板条带，关闭态输入区域为空、内容透明；开合只动裁剪与透明度，不再随开合映射/卸载窗口或用 `visible` 卸载内容。外部点击与 Esc 关闭由共享的 `PanelOutsideClickCatcher` 承担，它只在任一面板打开时映射全屏透明窗口，输入区域扣除两个面板矩形（几何来自 `RightPanelGeometry.js`）。启动后 `1500ms` 内以 `0.001` 透明度预渲染两个面板内容，提前建好管线与图层。
 - `CenterPanelController` 持有中岛子面板的开合、当前页与单一进度时钟；`Bar` 缺口、`BarContour` 共享外轮廓与 `CenterDashboard` 的裁剪/内容透明度都消费同一份 `centerPanelProgress`。
+- Home 日历保留 42 个常驻日期槽位；节假日下载在独立进程执行，同内容响应不再递增 revision。宿主经 `DashHome.deferCalendarUpdates` 在开合过渡期间暂缓显示节假日变更，过渡结束后合并为一次最新状态更新，不延迟下载、不增加动画时长。
 - 临时通知浮层是每屏一个固定尺寸的常驻窗口，输入区域跟随卡片列高度；`NotificationPopupStack` 按应用键增量创建、就地更新和退场回收 `NotificationPopupGroup` 卡片，替代整体重建的 Repeater。
 - `TrayNotificationModel.js` 是通知来源与当前 `SystemTray.items` 的统一身份匹配层；顶栏角标排序和 History 来源筛选共同使用 Desktop Entry、应用名、歧义保护与 QQ 特殊兜底。`NotificationLifecycleModel.js` 独立处理活动通知 identity 清理与替换分组。`SystemTrayModelBridge` 把稳定托盘模型的内容变化转换为 revision，驱动 History 重算来源顺序与菜单能力。
 - `services/TopBarState.qml` 与上下文组件负责共享系统采集和桌面环境适配。

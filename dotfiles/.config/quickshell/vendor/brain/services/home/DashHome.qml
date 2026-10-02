@@ -19,6 +19,7 @@ Item {
     readonly property int profileH: 160
     readonly property int clockH:   220
     property string agendaDateFilter: ""
+    property bool deferCalendarUpdates: false
     property string _pendingAgendaDateFilter: ""
     property bool _agendaDateFilterUpdateScheduled: false
 
@@ -78,6 +79,7 @@ Item {
                 bottom: parent.bottom
             }
             selectedDate: root.agendaDateFilter
+            deferUpdates: root.deferCalendarUpdates
             onDateSelectionRequested: dateKey => root.applyAgendaDateFilterLater(dateKey)
         }
     }

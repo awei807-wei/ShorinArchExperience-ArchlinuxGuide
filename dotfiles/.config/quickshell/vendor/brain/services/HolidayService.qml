@@ -83,6 +83,18 @@ QtObject {
         return copy
     }
 
+    function _sameDays(previous, next) {
+        if (!previous || Object.keys(previous).length !== Object.keys(next).length)
+            return false
+        for (var date in next) {
+            var known = previous[date]
+            if (!known || known.name !== next[date].name
+                    || known.isOffDay !== next[date].isOffDay)
+                return false
+        }
+        return true
+    }
+
     function _applyPayload(expectedYear, text) {
         try {
             var payload = JSON.parse(text)
@@ -101,6 +113,10 @@ QtObject {
                     isOffDay: entry.isOffDay
                 }
             }
+
+            // 载入和后台刷新可能返回相同缓存，不能再次驱动整个月视图更新。
+            if (root._sameDays(root._daysByYear[String(expectedYear)], dateMap))
+                return true
 
             var nextYears = root._copyObject(root._daysByYear)
             nextYears[String(expectedYear)] = dateMap

@@ -40,6 +40,14 @@ commands:
   - qmllint -I /usr/lib/qt6/qml components/PanelOutsideClickCatcher.qml
   - qmllint -I /usr/lib/qt6/qml components/CenterPanelController.qml
   - qmllint -I /usr/lib/qt6/qml components/CenterDashboard.qml
+  - qmllint -I /usr/lib/qt6/qml vendor/brain/services/home/DashHome.qml
+  - qmllint -I /usr/lib/qt6/qml vendor/brain/services/home/CalendarCard.qml
+  - qmllint -I /usr/lib/qt6/qml vendor/brain/services/home/CalendarDayCell.qml
+  - qmllint -I /usr/lib/qt6/qml vendor/brain/services/HolidayService.qml
+  - qmllint -I /usr/lib/qt6/qml calendar-cold-start-check.qml
+  - qmllint -I /usr/lib/qt6/qml center-panel-cold-start-check.qml
+  - python3 scripts/test-calendar-cold-start.py
+  - python3 scripts/test-calendar-cold-start.py --panel
   - qmllint -I /usr/lib/qt6/qml components/ClockIsland.qml
   - quickshell --no-color -p audio-output-model-check.qml
   - QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic quickshell --no-color -p audio-output-selector-check.qml

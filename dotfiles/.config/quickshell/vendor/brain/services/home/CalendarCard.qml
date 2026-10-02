@@ -10,6 +10,9 @@ StatCard {
     padding: 0
 
     property string selectedDate: ""
+    // 下载照常进行，仅在宿主过渡期间保留已显示的数据。
+    property bool deferUpdates: false
+    property bool _holidayRefreshPending: false
     signal dateSelectionRequested(string dateKey)
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -54,6 +57,19 @@ StatCard {
             root._todayMonth,
             root._todayDay
         )
+    }
+
+    function _flushHolidayRefresh() {
+        if (root.deferUpdates || !root._holidayRefreshPending)
+            return
+        root._holidayRefreshPending = false
+        root._refreshTodayStatus()
+        root._rebuild()
+    }
+
+    onDeferUpdatesChanged: {
+        if (!root.deferUpdates && root._holidayRefreshPending)
+            Qt.callLater(root._flushHolidayRefresh)
     }
 
     function _makeupName(name) {
@@ -229,8 +245,8 @@ StatCard {
     Connections {
         target: HolidayService
         function onRevisionChanged() {
-            root._refreshTodayStatus()
-            root._rebuild()
+            root._holidayRefreshPending = true
+            root._flushHolidayRefresh()
         }
     }
 
@@ -349,120 +365,24 @@ StatCard {
             readonly property real cH: height / 6
 
             Repeater {
-                model: root._days
-                delegate: Item {
+                // 直接绑定日期数组会在每次数据返回时销毁并重建全部代理。
+                // 月视图始终有 42 个槽位，只更新其绑定数据。
+                model: 42
+                delegate: CalendarDayCell {
                     id: dayCell
-                    required property var modelData
                     required property int index
                     width: grid.cW
                     height: grid.cH
-
-                    readonly property bool isToday: modelData.cur
-                        && modelData.n === root._todayDay
+                    day: root._days[index] ?? null
+                    isToday: currentMonth
+                        && day.n === root._todayDay
                         && root._month === root._todayMonth
                         && root._year === root._todayYear
-                    readonly property string dateKey: modelData.cur ? modelData.dateKey : ""
-                    readonly property bool isSelected: modelData.cur
+                    isSelected: currentMonth
                         && dayCell.dateKey === root.selectedDate
-                    readonly property bool hasOpenTask: modelData.cur
+                    hasOpenTask: currentMonth
                         && root._hasOpenTask(dayCell.dateKey)
-                    readonly property var dayStatus: modelData.cur ? modelData.dayStatus : null
-                    readonly property bool showHolidayBadge: dayCell.dayStatus
-                        && (dayCell.dayStatus.kind === "holiday"
-                            || dayCell.dayStatus.kind === "makeup")
-                    readonly property color badgeTone: dayCell.dayStatus
-                        && dayCell.dayStatus.kind === "holiday"
-                        ? Config.Theme.danger : Config.Theme.accentTertiary
-
-                    Rectangle {
-                        id: dayCircle
-                        anchors.centerIn: parent
-                        width: Math.min(parent.width, parent.height) - 4
-                        height: width
-                        radius: width / 2
-                        color: dayCell.isSelected ? Theme.active
-                            : dayCell.isToday ? Qt.rgba(166 / 255, 208 / 255, 247 / 255, 0.15)
-                            : dH.hovered && modelData.cur ? Qt.rgba(1, 1, 1, 0.07)
-                            : "transparent"
-                        border.color: dayCell.isToday
-                            ? (dayCell.isSelected
-                                ? Theme.background
-                                : Qt.rgba(Theme.active.r, Theme.active.g, Theme.active.b, 0.35))
-                            : "transparent"
-                        border.width: dayCell.isToday ? 1 : 0
-                        Behavior on color { ColorAnimation { duration: 80 } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData.n
-                            font.pixelSize: 9
-                            font.family: "JetBrains Mono"
-                            font.weight: dayCell.isSelected || dayCell.isToday
-                                ? Font.Bold : Font.Normal
-                            color: dayCell.isSelected ? Theme.background
-                                : dayCell.isToday ? Theme.active
-                                : modelData.cur ? Qt.rgba(205 / 255, 214 / 255, 244 / 255, 0.55)
-                                : Qt.rgba(1, 1, 1, 0.13)
-                        }
-
-                        Rectangle {
-                            visible: dayCell.showHolidayBadge
-                            anchors {
-                                right: parent.right
-                                top: parent.top
-                                rightMargin: -2
-                                topMargin: -2
-                            }
-                            width: 12
-                            height: 10
-                            radius: 3
-                            color: dayCell.isSelected
-                                ? Config.Theme.surfaceContainer
-                                : Qt.rgba(
-                                    dayCell.badgeTone.r,
-                                    dayCell.badgeTone.g,
-                                    dayCell.badgeTone.b,
-                                    0.24
-                                )
-                            border.color: dayCell.isSelected
-                                ? dayCell.badgeTone : "transparent"
-                            border.width: dayCell.isSelected ? 1 : 0
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: dayCell.dayStatus ? dayCell.dayStatus.label : ""
-                                font.pixelSize: 7
-                                font.weight: Font.Bold
-                                color: dayCell.isSelected ? Config.Theme.textPrimary
-                                    : dayCell.dayStatus && dayCell.dayStatus.kind === "holiday"
-                                        ? Config.Theme.danger : Config.Theme.textMuted
-                            }
-                        }
-
-                        Rectangle {
-                            visible: dayCell.hasOpenTask
-                            anchors {
-                                horizontalCenter: parent.horizontalCenter
-                                bottom: parent.bottom
-                                bottomMargin: 1
-                            }
-                            width: 3
-                            height: 3
-                            radius: 1.5
-                            color: dayCell.isSelected ? Theme.background : Theme.active
-                        }
-                    }
-
-                    HoverHandler {
-                        id: dH
-                        enabled: modelData.cur
-                        cursorShape: Qt.PointingHandCursor
-                    }
-                    TapHandler {
-                        enabled: modelData.cur
-                        acceptedButtons: Qt.LeftButton
-                        onTapped: root._toggleDateSelection(dayCell.dateKey)
-                    }
+                    onDateSelectionRequested: dateKey => root._toggleDateSelection(dateKey)
                 }
             }
         }

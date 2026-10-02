@@ -13,6 +13,8 @@
 - `components/RightPanelGeometry.js`：右面板宽度与内容高度的纯函数，`RightPanelHost` 与 `PanelOutsideClickCatcher` 共用。
 - `components/PanelOutsideClickCatcher.qml`：任一面板打开时映射的全屏透明 Top 层窗口，点击面板外或 Esc 关闭全部面板；输入区域用减法 Region 扣除两个面板矩形。
 - `components/CenterPanelController.qml`、`CenterDashboard.qml`：中岛子面板的单一进度时钟与常驻内容窗口；内容按最终尺寸布局、由裁剪逐步显露，透明度随 `smoothstep(0.30, 0.90)` 派生，Home 页常驻渲染，频谱采集在完全展开后才拉起。
+- `vendor/brain/services/home/CalendarCard.qml`、`CalendarDayCell.qml`：固定 42 个日期槽位，数组变化只更新属性；Home 宿主注入 `deferUpdates`，在开合期间合并节假日显示刷新。`HolidayService.qml` 保持独立进程异步加载，并按日期、名称和休息日标志去重等价响应。
+- `calendar-cold-start-check.qml`、`center-panel-cold-start-check.qml`、`scripts/test-calendar-cold-start.py`：临时 HOME 与假下载器构造无缓存、动画中途返回数据的回归，检查代理复用、重复响应、反向开合、跨月/跨年/午夜更新；`--panel` 额外验证真实 Wayland 宿主与完整 Home 页。
 - `components/NotificationPopupStack.qml`：临时通知浮层的增量卡片栈，按应用键复用 `NotificationPopupGroup`，消失的分组先播退场再销毁；宿主窗口固定尺寸常驻，输入区域跟随卡片列高度。
 - `components/UnifiedRightPanel.qml`：以共享进度和触发 Bar 的两个颈宽端点驱动右锚定 reveal viewport；surface 空间允许时从 `54px` 安全高度揭示固定最终外壳，主体和内容进度只做阈值派生，常驻 Control / History 页面支持动画中途反向。
 - `components/RightPanelShape.qml`：用单个最终尺寸 Canvas 绘制 `304px` 连接颈部、`560–640px` 主体、`16px` flare 与 `18px` 圆角；动画期间纹理尺寸和路径拓扑不变，只水平平移以对齐 Bar 的活动颈部。
@@ -41,6 +43,7 @@
 依赖 Quickshell 0.3、QtQuick、SystemTray 与 UPower；niri 使用 `niri msg`，Hyprland 使用可选 `Quickshell.Hyprland`，天气沿用 Waybar weather 脚本。
 
 ## 经验
+- [2026-10-02] 冷启动节假日请求已是 Process 异步下载，不能把 shell 脚本内的同步 curl 等同于阻塞 QML。实际应关注返回后的主线程工作：原日历 Repeater 直接绑定日期数组，任何 revision 都销毁并重建 42 个日期代理；三轮隔离对照中 20 次真实变更耗时 57–74ms，固定槽位后为 10–14ms。新字形与角标首帧仍可能影响动画，因此过渡期间只接收数据、不更新日期视图，结束后统一显示最新状态。最后完整 Home 实屏检查首次/再次展开最大帧分别为 17.2/16.9ms；这不是重启机器后所有启动负载下的绝对保证。
 - [2026-07-28] 多屏 Bar 的长驻采集必须放在单例中，视图只按 screen/output 过滤；否则每块屏幕都会重复启动事件流和系统采集进程。
 - [2026-07-28] QML 紧凑组件应避开内建 `state` 命名，并用显式 Loader 绑定与 `ComponentBehavior: Bound` 固化作用域，不能只以运行时可加载作为静态质量标准。
 - [2026-07-28] 会写持久数据的状态检查必须注入独立临时路径；视觉/布局测试同时使用 `QUICKSHELL_TEST_MODE=1`，避免触发真实采集和用户数据链路。

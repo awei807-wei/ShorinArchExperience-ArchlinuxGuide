@@ -168,7 +168,10 @@ PanelWindow {
                                 easing.type: Easing.OutCubic
                             }
                         }
-                        DashHome { anchors.fill: parent }
+                        DashHome {
+                            anchors.fill: parent
+                            deferCalendarUpdates: root.inView && root.p < 1
+                        }
                     }
 
                     // 次要页面：交叉淡入，淡出结束后才卸载。采集门控由宿主
