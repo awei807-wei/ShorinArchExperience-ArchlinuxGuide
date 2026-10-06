@@ -101,14 +101,6 @@ Rectangle {
         }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: Config.BarTuning.powerFocusInset
-        color: "transparent"
-        border.width: power.activeFocus ? 1 : 0
-        border.color: power.osIconColor
-    }
-
     MouseArea {
         id: pointerArea
 
@@ -116,7 +108,6 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            power.forceActiveFocus();
             power.activate();
         }
     }
