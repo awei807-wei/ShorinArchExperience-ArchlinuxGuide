@@ -55,6 +55,11 @@ Rectangle {
         + (centerPanelPageWidth - clockIslandItem.width)
           * Math.max(0, Math.min(1, centerPanelProgress))
 
+    // 中岛下探实时几何（供 barWindow.mask 动态同步展开区域）
+    readonly property real centerNotchLeft: Math.round(clockLeft + clockIslandItem.width / 2 - centerPanelCWidth / 2)
+    readonly property real centerNotchWidth: Math.round(centerPanelCWidth)
+    readonly property real centerNotchHeight: Math.round(centerBottomY)
+
     property real rightPanelProgress: rightPanelOpen ? 1 : 0
     property real rightPanelBaseWidth: naturalRightContourWidth
     property real rightPanelTargetWidth: openRightContourWidth

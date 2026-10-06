@@ -835,13 +835,22 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                 implicitHeight: mainBar.shellHeight
                 exclusionMode: ExclusionMode.Normal
                 exclusiveZone: configRoot.barHeight + configRoot.barMarginTop
-                // 输入区域固定为 bar 条带：条带以下的透明区域穿透点击，
-                // 面板展开时的内容交互由上层的 Dashboard 窗口承接
+                // 联合输入与渲染区域：平时保持 bar 条带，展开时动态覆盖中岛下探外壳
                 mask: Region {
-                    x: 0
-                    y: 0
-                    width: mainBar.width
-                    height: configRoot.barHeight
+                    Region {
+                        x: 0
+                        y: 0
+                        width: mainBar.width
+                        height: configRoot.barHeight
+                    }
+                    Region {
+                        x: Math.max(0, mainBar.centerNotchLeft)
+                        y: configRoot.barHeight
+                        width: mainBar.centerPanelProgress > 0.001 ? mainBar.centerNotchWidth : 0
+                        height: mainBar.centerPanelProgress > 0.001
+                            ? Math.max(0, Math.ceil(mainBar.centerBottomY - configRoot.barHeight))
+                            : 0
+                    }
                 }
                 margins.top: configRoot.barMarginTop // 距离屏幕顶部的留白
                 margins.left: configRoot.barMarginSide // 左边距

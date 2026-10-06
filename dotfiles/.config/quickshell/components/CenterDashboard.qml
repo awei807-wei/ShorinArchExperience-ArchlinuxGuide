@@ -109,6 +109,19 @@ PanelWindow {
             + (controller.pageWidth - controller.centerWidth) * root.p
         height: 2 + Theme.dashboardHeight * root.p
 
+        // 连体底衬：具有与 BarContour 完全同调的平滑圆角和相同底色，
+        // 顶部伸入顶栏 2px 吸收跨窗口离散误差，消灭背景空洞与切角接缝
+        Rectangle {
+            id: panelBackdrop
+            anchors.fill: parent
+            color: Config.Theme.surface
+            topLeftRadius: 0
+            topRightRadius: 0
+            bottomLeftRadius: Math.round(Config.BarTuning.barNotchRadius
+                + (Theme.cornerRadius - Config.BarTuning.barNotchRadius) * root.p)
+            bottomRightRadius: bottomLeftRadius
+        }
+
         // 吞掉面板内部点击，避免穿透到桌面；外部点击由捕获层处理
         MouseArea {
             anchors.fill: parent

@@ -43,6 +43,12 @@ Shape {
     readonly property real rightStart:
         Math.max(r, Math.min(width - rightWidth, width - r))
 
+    // 安全底部圆角：严禁超过可用宽度的一半或可用垂直下探高度，杜绝圆弧回退自交
+    readonly property real safeCenterBottomRadius: Math.max(1,
+        Math.min(centerBottomRadius,
+                 (centerEnd - centerStart) / 2,
+                 Math.max(1, centerBottomY - (b + r))))
+
     // 与原 onPaint 路径一致的 SVG 序列；arcTo 切圆弧已换算为 SVG 椭圆弧
     //（large-arc=0，sweep 由行进方向转折方向决定，左/底外凸角 0、
     // 顶部内凹角 1）
@@ -54,12 +60,12 @@ Shape {
         " A " + r + " " + r + " 0 0 1 " + (leftEnd + r) + " " + b +
         " L " + (centerStart - r) + " " + b +
         " A " + r + " " + r + " 0 0 1 " + centerStart + " " + (b + r) +
-        " L " + centerStart + " " + (centerBottomY - centerBottomRadius) +
-        " A " + centerBottomRadius + " " + centerBottomRadius +
-        " 0 0 0 " + (centerStart + centerBottomRadius) + " " + centerBottomY +
-        " L " + (centerEnd - centerBottomRadius) + " " + centerBottomY +
-        " A " + centerBottomRadius + " " + centerBottomRadius +
-        " 0 0 0 " + centerEnd + " " + (centerBottomY - centerBottomRadius) +
+        " L " + centerStart + " " + Math.max(b + r, centerBottomY - safeCenterBottomRadius) +
+        " A " + safeCenterBottomRadius + " " + safeCenterBottomRadius +
+        " 0 0 0 " + (centerStart + safeCenterBottomRadius) + " " + centerBottomY +
+        " L " + (centerEnd - safeCenterBottomRadius) + " " + centerBottomY +
+        " A " + safeCenterBottomRadius + " " + safeCenterBottomRadius +
+        " 0 0 0 " + centerEnd + " " + Math.max(b + r, centerBottomY - safeCenterBottomRadius) +
         " L " + centerEnd + " " + (b + r) +
         " A " + r + " " + r + " 0 0 1 " + (centerEnd + r) + " " + b +
         " L " + (rightStart - r) + " " + b +

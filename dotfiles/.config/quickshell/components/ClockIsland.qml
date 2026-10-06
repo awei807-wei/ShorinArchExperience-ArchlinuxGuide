@@ -28,6 +28,7 @@ Rectangle {
     // 退场、收起末段返回（smoothstep 0~centerPanelClockFadeEnd），与面板
     // 内容的显露交叉过渡，替代独立时间线淡入淡出
     property real panelProgress: 0
+    readonly property real fadeProgress: clockContent ? clockContent.fadeProgress : 0
 
     function smoothstep(a, b, value) {
         const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
@@ -118,10 +119,17 @@ Rectangle {
 
         anchors.centerIn: parent
         // 展开初段退场，收起末段随进度返回；面板内容从
-        // centerPanelContentStartProgress 起显露，两者交叉衔接
-        opacity: 1 - clockIsland.smoothstep(
+        // centerPanelContentStartProgress 起显露，两者交叉衔接。
+        // 伴随微下沉与微缩放，形成自然沉入面板颈部的动量连续感。
+        readonly property real fadeProgress: clockIsland.smoothstep(
             0.0, Config.BarTuning.centerPanelClockFadeEnd,
             clockIsland.panelProgress)
+        opacity: 1 - fadeProgress
+        scale: 1.0 - 0.04 * fadeProgress
+        transformOrigin: Item.Center
+        transform: Translate {
+            y: 4 * clockContent.fadeProgress
+        }
 
         Item {
             width: clockIsland.timeColumnWidth
@@ -200,7 +208,8 @@ Rectangle {
         id: hoverArea
 
         anchors.fill: parent
-        hoverEnabled: true
+        hoverEnabled: !clockIsland.panelOpen && clockIsland.panelProgress <= 0.001
+        enabled: !clockIsland.panelOpen && clockIsland.panelProgress <= 0.001
         acceptedButtons: Qt.LeftButton
         onClicked: clockIsland.clicked()
     }
