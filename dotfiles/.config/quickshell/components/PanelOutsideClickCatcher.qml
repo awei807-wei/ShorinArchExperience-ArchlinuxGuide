@@ -14,6 +14,7 @@ Scope {
     required property var shellRoot
     required property var centerController
     required property var rightController
+    property var powerController: null
 
     readonly property real barBottom:
         shellRoot.barMarginTop + shellRoot.barHeight
@@ -37,6 +38,15 @@ Scope {
                 readonly property bool rightOpen:
                     host.rightController.open
                     && host.rightController.isScreenActive(modelData)
+                readonly property bool powerOpen:
+                    host.powerController !== null && host.powerController.open
+                    && host.powerController.isScreenActive(modelData)
+                readonly property int powerPanelWidth:
+                    host.powerController ? (host.powerController.menuWidth + 18) : 0
+                readonly property int powerPanelHeight:
+                    host.powerController ? (host.powerController.menuHeight + 36) : 0
+                readonly property real powerPanelTopInCatcher:
+                    Math.round((modelData.height - powerPanelHeight) / 2) - host.barBottom
                 readonly property real centerPanelLeft:
                     host.centerController.centerCenterX > 0
                     ? host.centerController.centerCenterX
@@ -55,10 +65,12 @@ Scope {
                 function closeAll() {
                     host.centerController.close()
                     host.rightController.close()
+                    if (host.powerController)
+                        host.powerController.close()
                 }
 
                 screen: modelData
-                visible: centerOpen || rightOpen
+                visible: centerOpen || rightOpen || powerOpen
                 anchors {
                     top: true
                     left: true
@@ -96,6 +108,14 @@ Scope {
                         y: 0
                         width: catcher.rightOpen ? catcher.rightPanelWidth : 0
                         height: catcher.rightPanelBodyHeight
+                    }
+
+                    Region {
+                        intersection: Intersection.Subtract
+                        x: catcher.modelData.width - catcher.powerPanelWidth
+                        y: Math.max(0, catcher.powerPanelTopInCatcher)
+                        width: catcher.powerOpen ? catcher.powerPanelWidth : 0
+                        height: catcher.powerPanelHeight
                     }
                 }
 

@@ -14,10 +14,13 @@ Rectangle {
     property color iconHoverColor: Config.Theme.textSecondary
     readonly property bool hovered: pointerArea.containsMouse
 
-    function activate() {
-        if (!powerProcess.running)
-            powerProcess.running = true;
+    signal triggerPowerMenu()
 
+    property string osIcon: ""
+    property color osIconColor: "#1793d1"
+
+    function activate() {
+        power.triggerPowerMenu();
     }
 
     implicitWidth: Config.BarTuning.powerIslandWidth
@@ -32,46 +35,70 @@ Rectangle {
     Keys.onReturnPressed: power.activate()
     Keys.onSpacePressed: power.activate()
 
+    // 动态检测 Linux 发行版，默认/Arch 下显示经典 Arch  图标
+    Process {
+        id: osProcess
+        command: ["bash", "-c", "source /etc/os-release 2>/dev/null && echo $ID"]
+        running: true
+        stdout: SplitParser {
+            onRead: data => {
+                const osId = data.trim().toLowerCase();
+                if (osId === "arch") {
+                    power.osIcon = "";
+                    power.osIconColor = "#1793d1";
+                } else if (osId === "nixos") {
+                    power.osIcon = "";
+                    power.osIconColor = "#5277c3";
+                } else if (osId === "manjaro") {
+                    power.osIcon = "";
+                    power.osIconColor = "#35bf5c";
+                } else if (osId === "endeavouros") {
+                    power.osIcon = "";
+                    power.osIconColor = "#7f71ad";
+                } else if (osId === "cachyos") {
+                    power.osIcon = "";
+                    power.osIconColor = "#00fde8";
+                } else if (osId === "artix") {
+                    power.osIcon = "";
+                    power.osIconColor = "#00fde8";
+                } else if (osId === "fedora") {
+                    power.osIcon = "";
+                    power.osIconColor = "#3c6eb4";
+                } else if (osId === "ubuntu") {
+                    power.osIcon = "";
+                    power.osIconColor = "#e95420";
+                } else if (osId === "debian") {
+                    power.osIcon = "";
+                    power.osIconColor = "#d70a53";
+                } else {
+                    power.osIcon = "";
+                    power.osIconColor = "#1793d1";
+                }
+            }
+        }
+    }
+
     Rectangle {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        // 水平内缩一个圆角半径，避免直角高亮条戳出圆角轮廓
         anchors.leftMargin: power.radius
         anchors.rightMargin: power.radius
         height: Config.BarTuning.islandTopHighlightHeight
         color: power.highlightColor
     }
 
-    Canvas {
-        id: powerGlyph
-
+    // Arch 图标展示（带悬停发光与动画）
+    Text {
+        id: iconText
         anchors.centerIn: parent
-        width: Config.BarTuning.powerGlyphSize
-        height: Config.BarTuning.powerGlyphSize
-        onPaint: {
-            const context = getContext("2d");
-            context.clearRect(0, 0, width, height);
-            context.strokeStyle = power.hovered ? power.iconHoverColor : power.iconColor;
-            context.lineWidth = Config.BarTuning.powerGlyphStrokeWidth;
-            context.lineCap = "round";
-            context.beginPath();
-            context.moveTo(width / 2, 1.5);
-            context.lineTo(width / 2, 7);
-            context.stroke();
-            context.beginPath();
-            context.arc(width / 2, height / 2 + 1, 5, -Math.PI * 0.25, Math.PI * 1.25, false);
-            context.stroke();
+        text: power.osIcon
+        font.pixelSize: 15
+        color: power.hovered ? Qt.lighter(power.osIconColor, 1.25) : power.osIconColor
+
+        Behavior on color {
+            ColorAnimation { duration: Config.Theme.animFast }
         }
-
-        Connections {
-            function onHoveredChanged() {
-                powerGlyph.requestPaint();
-            }
-
-            target: power
-        }
-
     }
 
     Rectangle {
@@ -79,13 +106,7 @@ Rectangle {
         anchors.margins: Config.BarTuning.powerFocusInset
         color: "transparent"
         border.width: power.activeFocus ? 1 : 0
-        border.color: power.iconColor
-    }
-
-    Process {
-        id: powerProcess
-
-        command: ["wlogout"]
+        border.color: power.osIconColor
     }
 
     MouseArea {

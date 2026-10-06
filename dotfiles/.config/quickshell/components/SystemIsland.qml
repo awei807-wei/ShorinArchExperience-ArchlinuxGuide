@@ -42,6 +42,7 @@ Row {
     signal toggleTrayPanel(real panelWidth)
     signal resizeTrayPanel(real panelWidth)
     signal closeTrayPanel()
+    signal togglePowerMenu()
 
     width: contentWidth
     spacing: Config.BarTuning.metricsUtilityGap
@@ -118,6 +119,7 @@ Row {
             highlightColor: systemIsland.integratedSurface ? "transparent" : systemIsland.highlightColor
             iconColor: systemIsland.textDim
             iconHoverColor: systemIsland.textSoft
+            onTriggerPowerMenu: systemIsland.togglePowerMenu()
         }
 
     }

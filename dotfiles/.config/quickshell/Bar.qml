@@ -32,6 +32,7 @@ Rectangle {
     property bool centerPanelOpen: false
     property real centerPanelPageWidth: 0
     property real centerPanelProgress: 0
+    signal powerClicked()
 
     // 共享外轮廓：中岛底边随进度下移（岛底 barHeight → 面板底
     // barHeight + dashboardHeight），底角半径随动（notchRadius →
@@ -253,5 +254,6 @@ Rectangle {
             return bar.trayPanelResizeRequested(panelWidth);
         }
         onCloseTrayPanel: bar.trayPanelCloseRequested()
+        onTogglePowerMenu: bar.powerClicked()
     }
 }

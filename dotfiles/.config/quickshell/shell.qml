@@ -934,6 +934,9 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
                         if (rightPanelController.page === rightPanelController.notificationsPage)
                             rightPanelController.close()
                     }
+                    onPowerClicked: {
+                        powerMenuController.toggle(barWindow.modelData)
+                    }
                 }
             }
         }
@@ -1012,20 +1015,46 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         reducedMotion: Core.TopBarState.reducedMotion
     }
 
-    // 中岛与右岛子面板互斥：任一面板打开时，立即收起另一面板。
+    // 电源菜单控制器（右侧弹出）
+    PowerMenuController {
+        id: powerMenuController
+        reducedMotion: Core.TopBarState.reducedMotion
+    }
+
+    // 中岛、右岛与电源菜单三方互斥：任一面板打开时，立即收起其他面板。
+    Connections {
+        target: powerMenuController
+        function onOpenChanged() {
+            if (powerMenuController.open) {
+                if (centerPanelController.open)
+                    centerPanelController.close()
+                if (rightPanelController.open)
+                    rightPanelController.close()
+            }
+        }
+    }
+
     Connections {
         target: centerPanelController
         function onOpenChanged() {
-            if (centerPanelController.open && rightPanelController.open)
-                rightPanelController.close()
+            if (centerPanelController.open) {
+                if (rightPanelController.open)
+                    rightPanelController.close()
+                if (powerMenuController.open)
+                    powerMenuController.close()
+            }
         }
     }
 
     Connections {
         target: rightPanelController
         function onOpenChanged() {
-            if (rightPanelController.open && centerPanelController.open)
-                centerPanelController.close()
+            if (rightPanelController.open) {
+                if (centerPanelController.open)
+                    centerPanelController.close()
+                if (powerMenuController.open)
+                    powerMenuController.close()
+            }
         }
     }
 
@@ -1038,11 +1067,17 @@ ShellRoot { // Quickshell 的顶层根对象（负责创建窗口与全局状态
         }
     }
 
+    PowerMenuHost {
+        shellRoot: configRoot
+        controller: powerMenuController
+    }
+
     // 面板外部点击捕获层：任一面板打开时映射，点击面板以外区域或按 Esc 关闭
     PanelOutsideClickCatcher {
         shellRoot: configRoot
         centerController: centerPanelController
         rightController: rightPanelController
+        powerController: powerMenuController
     }
 
 }
