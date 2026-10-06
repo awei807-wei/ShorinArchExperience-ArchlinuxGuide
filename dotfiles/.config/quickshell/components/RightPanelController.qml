@@ -1,4 +1,5 @@
 import "../config" as Config
+import ".." as Root
 import QtQuick
 
 // 统一管理右岛两个入口、当前页、触发屏幕、共享外壳进度和固定外窗
@@ -174,10 +175,11 @@ Item {
 
         target: root
         property: "rightPanelProgress"
-        // OutCubic：开合两端都是"即时响应 + 柔和收尾"。
-        // 原先的 InOutCubic 起步速度为零，点击后前 ~80ms 无明显位移，
-        // 体感为"点了没反应"，中段速度峰值又被感知为"强行加速"。
-        easing.type: Easing.OutCubic
+        // 动态曲线接入 Config.Anim：支持 spring 回弹与 smooth 平滑收尾
+        easing.type: Config.Anim.panelCurve
+        easing.overshoot: Config.Anim.panelOvershoot
+        easing.amplitude: Config.Anim.globalAmplitude
+        easing.period: Config.Anim.globalPeriod
         onFinished: {
             if (!root.rightPanelOpen
                     && root.rightPanelProgress <= 0.001)

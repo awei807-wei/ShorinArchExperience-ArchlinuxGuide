@@ -1,4 +1,5 @@
 import "../config" as Config
+import ".." as Root
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
@@ -82,11 +83,16 @@ Scope {
                     anchors.rightMargin: 12
                     width: host.controller.menuWidth - 24
 
-                    // 进度大于 0.2 时平滑淡入，轻微左移
+                    // 进度大于 0.2 时平滑淡入，轻微左移；预热期保持 0.001 下限透明度
+                    readonly property bool prewarming: Root.PrewarmService.active
                     readonly property real contentProgress: Math.max(0, Math.min(1, (window.p - 0.2) / 0.8))
 
-                    opacity: window.inView ? contentProgress : 0
-                    visible: opacity > 0.001
+                    opacity: window.inView
+                        ? contentProgress
+                        : (contentHost.prewarming ? Root.PrewarmService.opacityFloor : 0)
+                    visible: window.inView || contentHost.prewarming
+                    enabled: window.inView && contentHost.contentProgress > 0.95
+
                     transform: Translate {
                         x: 12 * (1 - contentHost.contentProgress)
                     }

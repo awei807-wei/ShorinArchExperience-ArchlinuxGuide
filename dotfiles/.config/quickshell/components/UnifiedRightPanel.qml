@@ -1,4 +1,5 @@
 import "../config" as Config
+import ".." as Root
 import QtQuick
 
 // 固定尺寸外层中的右面板。外壳始终按最终几何绘制，右锚定 viewport
@@ -15,9 +16,8 @@ Item {
     property bool open: false
     property int page: 0
     property bool reducedMotion: false
-    // 启动预热：见 BarTuning.panelPrewarmDuration；门禁可置 0 以获得精确几何
-    property int prewarmDuration: Config.BarTuning.panelPrewarmDuration
-    property bool prewarming: prewarmDuration > 0
+    // 全局启动预热：接入 PrewarmService 单例
+    readonly property bool prewarming: Root.PrewarmService.active
 
     property real shellProgress: open ? 1 : 0
     property real baseRightWidth: Config.BarTuning.rightPanelNeckWidth
@@ -100,12 +100,6 @@ Item {
     onOpenChanged: {
         if (open)
             Qt.callLater(forceActiveFocus)
-    }
-
-    Timer {
-        interval: Math.max(1, root.prewarmDuration)
-        running: root.prewarming
-        onTriggered: root.prewarming = false
     }
 
     Keys.onEscapePressed: closeRequested()

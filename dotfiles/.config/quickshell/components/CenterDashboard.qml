@@ -6,6 +6,7 @@ import "../vendor/brain/components"
 import "../vendor/brain/services/"
 import "../vendor/brain/services/center/"
 import "../config" as Config
+import ".." as Root
 
 // 中岛子面板内容宿主 — Brain_Shell Dashboard.qml (MIT) 改良移植。
 // 面板背景（共享外轮廓）由 bar 窗口绘制；本窗口只承载内容，并且常驻
@@ -35,16 +36,8 @@ PanelWindow {
         Config.BarTuning.centerPanelContentEndProgress, p)
     readonly property int pageFadeDuration: controller.reducedMotion
         ? 0 : Config.BarTuning.centerPanelPageFadeDuration
-    // 启动预热：先以 0.001 的下限透明度渲染一轮内容（低于 0.001 的子树会
-    // 被场景图整体跳过），提前建好着色器管线、图层与字形纹理；否则热重载
-    // 或登录后第一次打开的内容首帧实测 70–90ms
-    property bool prewarming: Config.BarTuning.panelPrewarmDuration > 0
-
-    Timer {
-        interval: Math.max(1, Config.BarTuning.panelPrewarmDuration)
-        running: root.prewarming
-        onTriggered: root.prewarming = false
-    }
+    // 全局启动预热：接入 PrewarmService 单例
+    readonly property bool prewarming: Root.PrewarmService.active
 
     function smoothstep(a, b, value) {
         const t = Math.max(0, Math.min(1, (value - a) / (b - a)))
@@ -102,18 +95,20 @@ PanelWindow {
         anchors.top: parent.top
         clip: true
 
-        // 共享外轮廓：宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth
-        // 同式）；高度 = 2px 重叠 + dashboardHeight × 进度，使面板底边与
-        // bar 侧轮廓底边逐帧同值
+        // 共享外轮廓：宽度在中岛宽 ↔ 页宽之间插值（与 Bar.centerPanelCWidth 同式）；
+        // 收拢状态高度严格归零，展开时才包含 2px 顶栏重叠与真实下探高度，彻底消除多余黑线露边。
         width: controller.centerWidth
             + (controller.pageWidth - controller.centerWidth) * root.p
-        height: 2 + Theme.dashboardHeight * root.p
+        height: (root.inView && root.p > 0.001)
+            ? Math.round(2 + Theme.dashboardHeight * root.p) : 0
 
-        // 连体底衬：具有与 BarContour 完全同调的平滑圆角和相同底色，
-        // 顶部伸入顶栏 2px 吸收跨窗口离散误差，消灭背景空洞与切角接缝
+        // 连体底衬：仅在面板真正处于展开运动/视图内（root.p > 0.001）时激活渲染，
+        // 关闭态绝不参与光栅化与像素合成，杜绝收拢状态下从中岛底边泄露 2px 矩形黑底。
         Rectangle {
             id: panelBackdrop
             anchors.fill: parent
+            visible: root.inView && root.p > 0.001
+            opacity: visible ? 1 : 0
             color: Config.Theme.surface
             topLeftRadius: 0
             topRightRadius: 0

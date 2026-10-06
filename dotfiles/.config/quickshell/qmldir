@@ -1,3 +1,4 @@
 singleton Niri 1.0 Niri.qml
 singleton TopBarState 1.0 services/TopBarState.qml
+singleton PrewarmService 1.0 services/PrewarmService.qml
 Bar 1.0 Bar.qml

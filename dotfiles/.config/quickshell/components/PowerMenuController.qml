@@ -1,4 +1,5 @@
 import "../config" as Config
+import ".." as Root
 import QtQuick
 
 // 右侧电源菜单控制器 — 管理电源菜单开闭状态、屏幕目标和单一进度时钟
@@ -100,7 +101,11 @@ Item {
 
         target: root
         property: "powerMenuProgress"
-        easing.type: Easing.OutCubic
+        // 动态曲线接入 Config.Anim：支持 spring 回弹与 smooth 平滑收尾
+        easing.type: Config.Anim.panelCurve
+        easing.overshoot: Config.Anim.panelOvershoot
+        easing.amplitude: Config.Anim.globalAmplitude
+        easing.period: Config.Anim.globalPeriod
         onFinished: {
             if (!root.open && root.powerMenuProgress <= 0.001)
                 root.scheduleWindowHide()

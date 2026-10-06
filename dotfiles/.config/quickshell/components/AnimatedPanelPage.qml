@@ -1,4 +1,5 @@
 import "../config" as Config
+import ".." as Root
 import QtQuick
 
 // 常驻页面包装器：把整页作为一张卡片做推拉、淡入和轻微缩放，
@@ -11,8 +12,8 @@ Item {
     property bool active: false
     property bool reducedMotion: false
     // 预热期：以 0.001 的下限透明度保持渲染（低于 0.001 的子树会被
-    // 场景图整体跳过），让非当前页也提前建好图层与管线
-    property bool prewarm: false
+    // 场景图整体跳过），让非当前页也提前建好图层与管线。默认跟随全局 PrewarmService。
+    property bool prewarm: Root.PrewarmService.active
     // Control 从左侧退场，History 传入正值从右侧退场。
     property real inactiveX: -Config.BarTuning.panelPageCardOffset
     property real inactiveScale:
@@ -48,7 +49,8 @@ Item {
             duration: root.active
                 ? Config.BarTuning.panelPageInDuration
                 : Config.BarTuning.panelPageOutDuration
-            easing.type: Easing.OutCubic
+            easing.type: Config.Anim.panelCurve
+            easing.overshoot: Config.Anim.panelOvershoot
         }
     }
 
