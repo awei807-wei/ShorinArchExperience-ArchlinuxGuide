@@ -30,7 +30,11 @@ environment {
     // 默认文本编辑器
     EDITOR "vim"
 }
-
+//窗口规则
+window-rule {
+  match title="FocusShift"
+  open-floating true
+}
 // 光标配置
 cursor {
     // 主题，存放路径在~/.local/share/icons
@@ -326,14 +330,17 @@ spawn-at-startup "waypaper" "--random"
 // 有聚焦窗口时桌面自动模糊的脚本
 spawn-at-startup "~/.config/scripts/niri_auto_blur_bg.sh"
 // 屏幕分享、录屏和 niri-clip 相关的环境设置（同时注入 systemd 用户会话环境）
-spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && systemctl --user restart niri-clip.service"
+spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE NIRI_SOCKET GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE && systemctl --user restart niri-clip.service xwayland-clip-bridge.service"
 // GNOME tracker修复
 spawn-sh-at-startup "systemctl --user set-environment XDG_SESSION_CLASS=user"
 // 通知程序
 // spawn-at-startup "mako"
 // 任务栏
+// Snow App 的 StatusNotifierItem 在仅提供 IconPixmap 时错误地让 IconName getter 抛错；
+// QuickShell 暂无按托盘项跳过属性抓取的 API，因此仅屏蔽该 DBus 属性告警类别。
+// 这不会影响托盘图标显示，但会同时隐藏此类别下其他 DBus 属性 warning。
 //spawn-sh-at-startup "GDK_BACKEND=wayland eww daemon && eww open island"
-spawn-sh-at-startup "quickshell &"
+spawn-sh-at-startup "quickshell --log-rules 'quickshell.dbus.properties.warning=false' &"
 // 输入法（显式注入WAYLAND_DISPLAY，禁用XDG autostart后由niri完全控制启动时机）
 spawn-sh-at-startup "WAYLAND_DISPLAY=wayland-1 fcitx5 -d --replace"
 // 剪贴板守护进程由 niri-clip 的 systemd 用户服务提供
@@ -363,3 +370,8 @@ hotkey-overlay {
 prefer-no-csd
 
 
+
+// 修复 NVIDIA 显卡在 Wayland 下页面滚动闪烁
+debug {
+    wait-for-frame-completion-before-queueing
+}

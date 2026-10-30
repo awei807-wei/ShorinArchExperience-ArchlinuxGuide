@@ -214,7 +214,7 @@ Item {
                 return
             const previousKey = historyPage.selectedSourceKey
             const previousAliases = historyPage.selectedSourceAliases.slice()
-            historyPage.entries = Array.isArray(items) ? items : []
+            historyPage.entries = Array.from(items || [])
             historyPage.currentIndex = 0
             historyPage.detailMessage = warning || ""
             historyPage.panelState = historyPage.entries.length > 0

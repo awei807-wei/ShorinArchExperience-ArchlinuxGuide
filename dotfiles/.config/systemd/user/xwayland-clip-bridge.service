@@ -1,0 +1,12 @@
+[Unit]
+Description=XWayland and Wayland Clipboard Bidirectional Sync Bridge
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/xwayland-clip-bridge.sh
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=default.target
